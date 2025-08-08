@@ -1,0 +1,24 @@
+[project]
+name = "pyqt6-music-player"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Dave",email = "davejoshua001@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pyqt6 (>=6.9.1,<7.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "pyqt6_music_player", from = "src"}]
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.7"
+mypy = "^1.17.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

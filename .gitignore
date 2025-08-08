@@ -1,0 +1,24 @@
+# PyCharm
+.idea/
+*.iml
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+.env/
+
+# Poetry cache and build artifacts
+.cache/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary ignore tests
+/tests

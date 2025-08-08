@@ -1,0 +1,27 @@
+QPushButton {
+    background-color: transparent;
+    border-style: none;
+}
+
+
+QPushButton#playBtn {
+    background-color: white;
+    border-color: black;
+    border-style: solid;
+    border-radius: 20px;
+    border-width: 1px;
+}
+
+QPushButton#playBtn:pressed {
+    background-color: #2e3237;
+}
+
+QFrame#playerControlFrame {
+    background-color: black;
+    border-radius: 10px;
+}
+
+QFrame#nowPlayingFrame {
+    background-color: #393E46;
+    border-radius: 10px;
+}

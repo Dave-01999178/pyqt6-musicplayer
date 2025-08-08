@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+  <!-- Speaker shape -->
+  <polygon points="4,9 4,15 9,15 14,20 14,4 9,9"></polygon>
+
+  <!-- First wave -->
+  <path d="M16,9c1.5,1.5 1.5,4.5 0,6" fill="none" stroke="white" stroke-width="2"></path>
+
+  <!-- Second wave -->
+  <path d="M18.5,7.5c2.5,2.0 2.5,7.0 0,9" fill="none" stroke="gray" stroke-width="2"></path>
+
+  <!-- Third wave (outermost) -->
+  <path d="M21,6c3.5,3.0 3.5,9.0 0,12" fill="none" stroke="gray" stroke-width="2"></path>
+</svg>
