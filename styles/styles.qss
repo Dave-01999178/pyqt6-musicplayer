@@ -1,27 +1,55 @@
 QPushButton {
     background-color: transparent;
-    border-style: none;
+    border-style: hidden;
+    border-radius: 10px;
 }
 
+QPushButton::hover {
+    background-color: #404252;
+}
 
 QPushButton#playBtn {
-    background-color: white;
-    border-color: black;
-    border-style: solid;
-    border-radius: 20px;
-    border-width: 1px;
+    background-color: #1DB954;
+    border-radius: 20;
+}
+
+QPushButton#playBtn:hover {
+    background-color: #31CD68;
 }
 
 QPushButton#playBtn:pressed {
     background-color: #2e3237;
 }
 
-QFrame#playerControlFrame {
-    background-color: black;
-    border-radius: 10px;
+#playlistButton {
+    font-size: 10px;
 }
 
-QFrame#nowPlayingFrame {
-    background-color: #393E46;
-    border-radius: 10px;
+#playlistTableView {
+    background-color: transparent;
+    border: none;
+    gridline-color: transparent;
+}
+
+#playlistTableView QHeaderView::section {
+    background-color: #2A2A2A;
+    border: none;
+}
+
+#playlistTableView::item:selected {
+    background-color: #343437;
+}
+
+#playlistTableView::item:!selected {
+    background-color: transparent;
+}
+
+#playlistFrame {
+    background-color: transparent;
+}
+
+#playerBarFrame {
+    /* old bg #0e1020 */
+    background-color: #0d0f12;
+    border-radius: 20px;
 }

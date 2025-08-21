@@ -20,5 +20,5 @@ build/
 .DS_Store
 Thumbs.db
 
-# Temporary ignore tests
-/tests
+# Temporary ignore empty folders/module
+tests/integration

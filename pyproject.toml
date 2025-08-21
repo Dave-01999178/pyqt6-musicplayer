@@ -18,6 +18,9 @@ packages = [{include = "pyqt6_music_player", from = "src"}]
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.7"
 mypy = "^1.17.1"
+isort = "^6.0.1"
+pytest = "^8.4.1"
+pytest-qt = "^4.5.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

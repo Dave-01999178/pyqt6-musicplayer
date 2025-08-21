@@ -5,12 +5,22 @@ import traceback
 from PyQt6.QtWidgets import QApplication
 
 from pyqt6_music_player.config import STYLESHEET_PATH
-from pyqt6_music_player.controllers.mp_controller import MusicPlayerController
-from src.pyqt6_music_player.views.main_view import MusicPlayerView
+from pyqt6_music_player.controllers.music_player_controller import (
+    NowPlayingMetadataController,
+    PlaybackControlsController,
+    PlaybackProgressController,
+    PlaylistController,
+    VolumeController,
+)
+from pyqt6_music_player.models.music_player_state import (
+    MusicPlayerState,
+    VolumeState, MetadataState, SongProgressState,
+)
+from src.pyqt6_music_player.views.music_player_view import MusicPlayerView
 
 
 def exception_hook(exc_type, value, tb):
-    """Handles uncaught exceptions."""
+    """Custom exception hook for handling uncaught exceptions."""
     traceback.print_exception(exc_type, value, tb)
     sys.exit(1)
 
@@ -32,17 +42,36 @@ def load_stylesheet(path: str) -> str | None:
 
 
 def main():
+    # App
     app = QApplication(sys.argv)
 
+    # Stylesheet
     stylesheet = load_stylesheet(STYLESHEET_PATH)
     if stylesheet:
         app.setStyleSheet(stylesheet)
 
-    # View
-    view = MusicPlayerView()
+    # States
+    volume_state = VolumeState()
+    metadata_state = MetadataState()
+    song_progress = SongProgressState()
 
-    # Controller
-    _controller = MusicPlayerController(view)
+    state = MusicPlayerState(
+        volume=volume_state,
+        metadata=metadata_state,
+        song_progress=song_progress
+    )
+
+    # Views
+    view = MusicPlayerView(state)
+
+    # Controllers
+    controllers = [
+        PlaybackProgressController(state, view),
+        PlaybackControlsController(state, view),
+        VolumeController(state, view),
+        NowPlayingMetadataController(state, view),
+        PlaylistController(state, view),
+    ]
 
     view.show()
     sys.exit(app.exec())
