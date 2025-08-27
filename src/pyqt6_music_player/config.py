@@ -43,6 +43,9 @@ PLAY_ICON_SIZE = (25, 25)
 VOLUME_RANGE = (0, 100)
 VOLUME_DEFAULT = 100
 
+# Default values: playlist state
+DEFAULT_CURRENT_SONG = None
+
 # State default
 DEFAULT_SONG_TITLE = "Song Title"
 DEFAULT_SONG_ARTIST = "Artist"
