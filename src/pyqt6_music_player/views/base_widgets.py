@@ -33,28 +33,28 @@ class IconButton(QPushButton):
         Args:
             icon_path: File system path to the icon image.
             widget_size: Width and height of the widget.
-            button_text Text displayed on the button. Defaults to None.
+            button_text: Text displayed on the button. Defaults to None.
             icon_size: Width and height of the button icon. Defaults to None.
             object_name: Widget object name, useful for QSS styling. Defaults to None.
         """
         super().__init__(text=button_text)
-        self._icon = self._to_qicon(icon_path)
-        self._widget_size = widget_size
-        self._icon_size = icon_size
-        self._object_name = object_name
+        self.icon = self._to_qicon(icon_path)
+        self.widget_size = widget_size
+        self.icon_size = icon_size
+        self.object_name = object_name
 
         self._configure_properties()
 
     def _configure_properties(self):
         """Configures the icon button's properties."""
-        self.setFixedSize(*self._widget_size)
-        self.setIcon(self._icon)
+        self.setFixedSize(*self.widget_size)
+        self.setIcon(self.icon)
 
-        if self._icon_size:
-            self.setIconSize(QSize(*self._icon_size))
+        if self.icon_size:
+            self.setIconSize(QSize(*self.icon_size))
 
-        if self._object_name:
-            self.setObjectName(self._object_name)
+        if self.object_name:
+            self.setObjectName(self.object_name)
 
     @staticmethod
     def _to_qicon(path: Path | str | QIcon) -> QIcon:
@@ -68,7 +68,7 @@ class IconButton(QPushButton):
             QIcon: A QIcon object created from the given path or returned directly if
             the input is already a QIcon.
         """
-        # If the `path` is already a QIcon, return it.
+        # If the `Path` is already a QIcon, return it.
         if isinstance(path, QIcon):
             return path
 

@@ -1,7 +1,22 @@
 from PyQt6.QtCore import Qt, QAbstractTableModel
 from PyQt6.QtGui import QBrush, QColor, QPalette
-from PyQt6.QtWidgets import QTableWidget, QHeaderView, QTableView, QStyledItemDelegate, QStyle, QStyleOptionViewItem, \
-    QAbstractItemView
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QHeaderView,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QTableView,
+    QTableWidget,
+)
+
+from pyqt6_music_player.config import (
+    ADD_ICON_PATH,
+    EDIT_BUTTON_DEFAULT_SIZE,
+    LOAD_FOLDER_ICON_PATH,
+    REMOVE_ICON_PATH,
+)
+from pyqt6_music_player.views.base_widgets import IconButton
 
 
 class PlayPauseDelegate(QStyledItemDelegate):
@@ -68,27 +83,16 @@ class PlaylistModel(QAbstractTableModel):
         ]
 
     def rowCount(self, parent=None):
-        return len(self.row_data)
+        return 0
 
     def columnCount(self, parent=None):
-        return len(self.header_label)
+        return 0
 
     def data(self, index, role=...):
-        if not index.isValid():
-            return None
-
-        if role == Qt.ItemDataRole.DisplayRole:
-            row_idx, col_idx = index.row(), index.column()
-            row = self.row_data[row_idx]
-            header = self.header_label[col_idx]
-
-            return row.get(header)
-        return None
+        pass
 
     def headerData(self, section, orientation, role=...):
-        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
-            return self.header_label[section]
-        return None
+        pass
 
 
 class PlaylistWindow(QTableView):
@@ -133,3 +137,32 @@ class PlaylistWindow(QTableView):
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
         self.verticalHeader().hide()
+
+
+# -------------------- Manage playlist buttons --------------------
+
+class AddSongButton(IconButton):
+    def __init__(self):
+        super().__init__(
+            icon_path=ADD_ICON_PATH,
+            widget_size=EDIT_BUTTON_DEFAULT_SIZE,
+            button_text="Add song"
+        )
+
+
+class RemoveSongButton(IconButton):
+    def __init__(self):
+        super().__init__(
+            icon_path=REMOVE_ICON_PATH,
+            widget_size=EDIT_BUTTON_DEFAULT_SIZE,
+            button_text="Remove song"
+        )
+
+
+class LoadSongFolderButton(IconButton):
+    def __init__(self):
+        super().__init__(
+            icon_path=LOAD_FOLDER_ICON_PATH,
+            widget_size=EDIT_BUTTON_DEFAULT_SIZE,
+            button_text="Load song folder"
+        )

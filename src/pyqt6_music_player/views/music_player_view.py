@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from pyqt6_music_player.views.frames import PlayerBarFrame, PlaylistSectionFrame
 
-from src.pyqt6_music_player.config import APP_DEFAULT_SIZE, APP_TITLE
+from pyqt6_music_player.config import APP_DEFAULT_SIZE, APP_TITLE
 
 
 class MusicPlayerSignals(QObject):
@@ -20,6 +20,11 @@ class MusicPlayerSignals(QObject):
     Signals are grouped into nested classes by feature domain
     (volume, playback progress, playback controls).
     """
+    class PlaylistManager(QObject):
+        add_song_button_clicked = pyqtSignal()
+        remove_song_button_clicked = pyqtSignal()
+        load_song_button_clicked = pyqtSignal()
+
     class Volume(QObject):
         """Signals related to volume control (mute button and slider)."""
         button_clicked = pyqtSignal(bool)
@@ -38,6 +43,7 @@ class MusicPlayerSignals(QObject):
     def __init__(self):
         """Initialize grouped signal containers."""
         super().__init__()
+        self.playlist_manager = self.PlaylistManager()
         self.volume = self.Volume()
         self.playback_progress = self.PlaybackProgress()
         self.playback_control = self.PlaybackControls()
@@ -66,12 +72,16 @@ class MusicPlayerView(QWidget):
         """
         super().__init__()
         self.state = state
-        self.player_bar_frame = PlayerBarFrame(state)
         self.playlist_frame = PlaylistSectionFrame()
+        self.player_bar_frame = PlayerBarFrame(state)
         self.signals = MusicPlayerSignals()
 
         self._init_ui()
         self._connect_signals()
+
+    @property
+    def playlist_manager_signals(self):
+        return self.signals.playlist_manager
 
     @property
     def playback_progress_signals(self):
@@ -111,6 +121,11 @@ class MusicPlayerView(QWidget):
 
     def _connect_signals(self):
         """Connect low-level widget signals to higher-level grouped signals."""
+        # Playlist manager
+        self.playlist_frame.add_song_button_clicked.connect(
+            self.playlist_manager_signals.add_song_button_clicked
+        )
+
         # Playback progress widget signals
         self.player_bar_frame.progress_bar_slider_changed.connect(
             self.playback_progress_signals.slider_changed

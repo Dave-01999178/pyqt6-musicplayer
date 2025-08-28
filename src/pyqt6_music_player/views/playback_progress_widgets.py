@@ -7,7 +7,7 @@ displaying elapsed and total song durations.
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSlider
 
-from pyqt6_music_player.models.music_player_state import MusicPlayerState
+from pyqt6_music_player.models.music_player_state import PlaybackProgressState
 from pyqt6_music_player.views.base_widgets import BaseLabel
 
 
@@ -25,28 +25,28 @@ class PlaybackProgressBar(QSlider):
 
 class ElapsedTimeLabel(BaseLabel):
     """A label widget for displaying the elapsed time of the current song."""
-    def __init__(self, state: MusicPlayerState):
+    def __init__(self, playback_progress_state: PlaybackProgressState):
         """
         Initializes the elapsed time label.
 
         Args:
-            state: The music player state object containing.
+            playback_progress_state: The music player playback progress state.
         """
         super().__init__(
-            label_text=f"{state.song_progress.elapsed_time}"
+            label_text=f"{playback_progress_state.elapsed_time}"
         )
 
 
 class TotalDurationLabel(BaseLabel):
     """A label widget for displaying the total duration of the current song."""
-    def __init__(self, state: MusicPlayerState):
+    def __init__(self, playback_progress_state: PlaybackProgressState):
         """
         Initializes the total duration label.
 
         Args:
-            state: The music player state object containing.
+            playback_progress_state: The music player playback progress state.
         """
         super().__init__(
-            label_text=f"{state.song_progress.time_remaining}",
+            label_text=f"{playback_progress_state.total_duration}",
             alignment=Qt.AlignmentFlag.AlignRight
         )

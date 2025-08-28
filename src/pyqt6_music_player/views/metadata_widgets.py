@@ -9,7 +9,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel
 
 from pyqt6_music_player.config import DEFAULT_ALBUM_ART_PATH
-from pyqt6_music_player.models.music_player_state import MusicPlayerState
+from pyqt6_music_player.models.music_player_state import MetadataState
 from pyqt6_music_player.views.base_widgets import BaseLabel
 
 
@@ -48,29 +48,29 @@ class SongTitleLabel(BaseLabel):
     """
     A label widget for displaying the current song's title.
     """
-    def __init__(self, state: MusicPlayerState):
+    def __init__(self, metadata_state: MetadataState):
         """
         Initializes the song title label.
 
         Args:
-            state: The music player state object.
+            metadata_state: The music player metadata state.
         """
         super().__init__(
-            label_text=f"Now Playing: {state.metadata.song_title}",
+            label_text=f"Now Playing: {metadata_state.song_title}",
             object_name="songTitleLabel"
         )
 
 
 class ArtistLabel(BaseLabel):
     """A label widget for displaying the current song's artist."""
-    def __init__(self, state: MusicPlayerState):
+    def __init__(self, metadata_state: MetadataState):
         """
         Initializes the artist label.
 
         Args:
-            state: The music player state object.
+            metadata_state: The music player metadata state.
         """
         super().__init__(
-            label_text=f"By: {state.metadata.song_artist}",
+            label_text=f"By: {metadata_state.song_artist}",
             object_name="artistLabel"
         )

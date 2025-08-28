@@ -17,7 +17,7 @@ from pyqt6_music_player.config import (
     VOLUME_MUTE_ICON_PATH,
     VOLUME_RANGE,
 )
-from pyqt6_music_player.models.music_player_state import MusicPlayerState
+from pyqt6_music_player.models.music_player_state import VolumeState
 from pyqt6_music_player.views.base_widgets import IconButton, BaseLabel
 
 
@@ -28,7 +28,7 @@ class VolumeButton(IconButton):
     This button changes its icon based on the volume level and can be toggled
     to mute or unmute the audio.
     """
-    def __init__(self):
+    def __init__(self, volume_state: VolumeState):
         """Initializes the volume button."""
         super().__init__(
             icon_path=VOLUME_HIGH_ICON_PATH,
@@ -43,7 +43,10 @@ class VolumeButton(IconButton):
 
         self.setCheckable(True)
 
-    def update_button_icon(self, volume: int):
+        # Reflect volume state changes
+        volume_state.volume_changed.connect(self._update_button_icon)
+
+    def _update_button_icon(self, volume: int):
         """
         Updates the button's icon based on the given volume level.
 
@@ -67,25 +70,19 @@ class VolumeSlider(QSlider):
     This slider is configured with a specific range (0-100) and a default value (100) for
     managing audio volume.
     """
-    def __init__(self, orientation=Qt.Orientation.Horizontal):
+    def __init__(self, volume_state: VolumeState, orientation=Qt.Orientation.Horizontal):
         """Initializes the volume slider."""
         super().__init__(orientation)
 
         self._configure_properties()
 
+        # Reflect volume state changes
+        volume_state.volume_changed.connect(self.setValue)
+
     def _configure_properties(self):
         """Configures the slider's properties"""
         self.setRange(*VOLUME_RANGE)
         self.setValue(VOLUME_DEFAULT)
-
-    def update_slider_position(self, new_value: int):
-        """
-        Updates the slider's position to a new value.
-
-        Args:
-            new_value: The new volume value (0-100) to set the slider to.
-        """
-        self.setValue(new_value)
 
 
 class VolumeLabel(BaseLabel):
@@ -94,20 +91,23 @@ class VolumeLabel(BaseLabel):
 
     This label shows the volume as a number (0-100).
     """
-    def __init__(self, state: MusicPlayerState):
+    def __init__(self, volume_state: VolumeState):
         """
         Initializes the volume label.
 
         Args:
-            state: The music player state object containing the current volume.
+            volume_state: The music player state object containing the current volume.
         """
         super().__init__(
-            label_text=str(state.volume.current_volume),
+            label_text=str(volume_state.current_volume),
             alignment=Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter
         )
-        self.state = state
+        self.state = volume_state
 
         self._configure_properties()
+
+        # Reflect volume state changes
+        volume_state.volume_changed.connect(lambda new_volume: self.setText(f"{new_volume}"))
 
     def _configure_properties(self):
         """Configures the label's properties"""
