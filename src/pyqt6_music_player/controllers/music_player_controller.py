@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QFileDialog
 
+from pyqt6_music_player.config import FILE_DIALOG_FILTER
 from pyqt6_music_player.models.music_player_state import MusicPlayerState
 from pyqt6_music_player.views.music_player_view import MusicPlayerView
 
@@ -111,12 +112,11 @@ class PlaylistController:
         self.view = view
 
         self._connect_signals()
-        # Future: connect playlist-related signals
 
-    def _on_add_song_clicked(self):
+    def _on_add_song_click(self):
         # The `getOpenFileNames()` returns a tuple containing the list of selected filenames and
         # the name of the selected filter. We use `_` to discard the filter name.
-        file_paths, _ = QFileDialog.getOpenFileNames()
+        file_paths, _ = QFileDialog.getOpenFileNames(filter=FILE_DIALOG_FILTER)
 
         if not file_paths:
             return
@@ -125,5 +125,5 @@ class PlaylistController:
 
     def _connect_signals(self):
         self.view.playlist_manager_signals.add_song_button_clicked.connect(
-            self._on_add_song_clicked
+            self._on_add_song_click
         )
