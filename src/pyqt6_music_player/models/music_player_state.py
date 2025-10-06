@@ -101,22 +101,6 @@ class PlaylistState(QObject):
                 self._playlist_set.add(resolved_path)
 
 
-class MetadataState(QObject):
-    def __init__(self):
-        super().__init__()
-        self.album_art = None
-        self._song_title = DEFAULT_SONG_TITLE
-        self._artist = DEFAULT_SONG_ARTIST
-
-    @property
-    def song_title(self):
-        return self._song_title
-
-    @property
-    def song_artist(self):
-        return self._artist
-
-
 class PlaybackProgressState(QObject):
     def __init__(self):
         super().__init__()
