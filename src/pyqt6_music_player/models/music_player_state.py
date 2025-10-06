@@ -2,8 +2,14 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.config import DEFAULT_VOLUME, DEFAULT_SONG_ARTIST, DEFAULT_SONG_TITLE, DEFAULT_ELAPSED_TIME, \
-    DEFAULT_TIME_DURATION, DEFAULT_PLAY_STATE, DEFAULT_CURRENT_SONG
+from src.pyqt6_music_player.config import (
+    DEFAULT_ELAPSED_TIME,
+    DEFAULT_PLAY_STATE,
+    DEFAULT_SONG_DURATION,
+    DEFAULT_VOLUME,
+    SUPPORTED_AUDIO_FORMAT,
+)
+from src.pyqt6_music_player.models.song import Song, DEFAULT_SONG
 
 
 class PlaylistState(QObject):
@@ -11,8 +17,7 @@ class PlaylistState(QObject):
     Manages the playlist of the music player, including loaded songs and
     current playback state.
     """
-    SUPPORTED_AUDIO_SUFFIXES: set[str] = {".mp3", ".wav", ".flac", ".ogg"}
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._current_song = DEFAULT_CURRENT_SONG
         self._playlist: list[Path] = []
