@@ -34,6 +34,7 @@ class PlaylistState(QObject):
 
     @property
     def song_count(self) -> int:
+        """Return the number of songs currently in the playlist."""
         return len(self._playlist)
 
     @staticmethod
