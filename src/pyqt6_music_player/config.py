@@ -60,3 +60,10 @@ SUPPORTED_AUDIO_FORMAT = {".mp3", ".wav", ".flac", ".ogg"}
 # File filter
 FILE_DIALOG_FILTER = "Audio files (*.mp3 *.wav *.flac *.ogg)"
 
+# Default metadata
+FALLBACK_METADATA = {
+    "title": "Unknown Title",
+    "artist": "Unknown Artist",
+    "album": "Unknown Album",
+    "duration": 0.0,
+}
