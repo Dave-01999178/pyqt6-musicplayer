@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 # Absolute path to the project root
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -43,12 +44,10 @@ PLAY_ICON_SIZE = (25, 25)
 VOLUME_RANGE = (0, 100)
 VOLUME_DEFAULT = 100
 
-# Default values: playlist state
-DEFAULT_CURRENT_SONG = None
-
 # State default
 DEFAULT_SONG_TITLE = "Song Title"
-DEFAULT_SONG_ARTIST = "Artist"
+DEFAULT_SONG_ARTIST = "Song Artist"
+DEFAULT_SONG_ALBUM = "Song Album"
 DEFAULT_PLAY_STATE = False
 DEFAULT_ELAPSED_TIME = 0.0
 DEFAULT_SONG_DURATION = 0.0
