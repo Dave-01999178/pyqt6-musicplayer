@@ -19,16 +19,12 @@ class PlaylistState(QObject):
     """
     def __init__(self) -> None:
         super().__init__()
-        self._current_song = DEFAULT_CURRENT_SONG
-        self._playlist: list[Path] = []
+        self._playlist: list[Song] = []
         self._playlist_set: set[Path] = set()
 
     @property
-    def current_song(self):
-        return self._current_song
-
-    @property
-    def playlist(self) -> list[Path]:
+    def playlist(self) -> list[Song]:
+        """Return the current playlist as a list of Songs."""
         return self._playlist
 
     @property
