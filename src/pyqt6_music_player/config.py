@@ -54,6 +54,9 @@ DEFAULT_ELAPSED_TIME = "0:00"
 DEFAULT_TIME_DURATION = "0:00"
 DEFAULT_VOLUME = 100
 
+# Initial supported audio formats.
+SUPPORTED_AUDIO_FORMAT = {".mp3", ".wav", ".flac", ".ogg"}
+
 # File filter
 FILE_DIALOG_FILTER = "Audio files (*.mp3 *.wav *.flac *.ogg)"
 
