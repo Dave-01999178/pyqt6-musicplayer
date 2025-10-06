@@ -52,14 +52,20 @@ class PlaylistState(QObject):
             TypeError: If the list contains unsupported types or if the argument type is not
                        supported.
         """
-        if not isinstance(file_paths, list):
-            raise TypeError(f"Expected list[str | Path], got {type(file_paths)}.")
+        normalized_paths = []
+        for file_path in file_paths:
+            # Ignore the strings that could point to directories/cwd.
+            if file_path in {"", "."}:
+                continue
 
-        # Ensure every item is str or Path
-        if any(not isinstance(p, (str, Path)) for p in file_paths):
-            raise TypeError(f"Unsupported type in list.")
+            path = Path(file_path)
 
-        return [Path(p) for p in file_paths]
+            # Skip cwd ('.'), empty values, or directories
+            if path in {Path(""), Path(".")} or path.is_dir():
+                continue
+            normalized_paths.append(path)
+
+        return normalized_paths
 
     def add_song(self, file_paths: list[str | Path]) -> None:
         """
