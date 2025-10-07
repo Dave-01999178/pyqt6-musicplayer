@@ -5,71 +5,42 @@ This module contains QWidget-based section containers for different parts of the
 such as playlist controls, playback progress, playback controls, volume controls,
 and audio metadata display.
 """
-# --- Standard library ---
-from enum import Enum
-from typing import TypeAlias
-
-# --- Third-party library ---
-from PyQt6.QtCore import Qt, pyqtSignal, pyqtBoundSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 
-# --- Local imports ---
-from pyqt6_music_player.models.music_player_state import (
-    MetadataState,
-    VolumeState,
+from src.pyqt6_music_player.button_mappings import (
+    PLAYBACK_BUTTON_MAP,
+    PLAYLIST_BUTTON_MAP,
+    PlaybackButtonDict,
+    PlaylistButtonDict,
+)
+from src.pyqt6_music_player.models.music_player_state import (
     PlaybackProgressState,
+    Song,
+    VolumeState,
 )
-from pyqt6_music_player.views.metadata_widgets import AlbumArtLabel, ArtistLabel, SongTitleLabel
-from pyqt6_music_player.views.playback_control_buttons import (
-    NextButton,
-    PlayPauseButton,
-    PreviousButton,
-    RepeatButton,
-    ReplayButton,
+from src.pyqt6_music_player.views.metadata_widgets import (
+    AlbumArtLabel,
+    ArtistLabel,
+    SongTitleLabel
 )
-from pyqt6_music_player.views.playback_progress_widgets import (
+from src.pyqt6_music_player.views.playback_progress_widgets import (
     ElapsedTimeLabel,
     PlaybackProgressBar,
     TotalDurationLabel,
 )
-from pyqt6_music_player.views.playlist_widgets import (
-    AddSongButton,
-    LoadSongFolderButton,
-    PlaylistWindow,
-    RemoveSongButton,
-)
-from pyqt6_music_player.views.volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
+from src.pyqt6_music_player.views.playlist_widgets import PlaylistWindow
+from src.pyqt6_music_player.views.volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
 
 
-# --- Enums ---
-class PlaylistButtons(Enum):
-    """Enum for playlist control button identifiers."""
-    ADD = "add_song"
-    REMOVE = "remove_song"
-    LOAD = "load_songs"
-
-
-class PlaybackButtons(Enum):
-    """Enum for playback control button identifiers."""
-    REPLAY = "replay"
-    PREVIOUS = "previous"
-    PLAY_PAUSE = "play_pause"
-    NEXT = "next"
-    REPEAT = "repeat"
-
-
-# --- Type Alias ---
-PlaylistButtonType: TypeAlias = AddSongButton | RemoveSongButton | LoadSongFolderButton
-PlaylistButtonDict: TypeAlias = dict[
-    PlaylistButtons, tuple[PlaylistButtonType, pyqtBoundSignal | pyqtSignal]
-]
-
-PlaybackButtonType: TypeAlias = (
-        ReplayButton | PreviousButton | PlayPauseButton | NextButton | RepeatButton
-)
-PlaybackButtonDict: TypeAlias = dict[
-    PlaybackButtons, tuple[PlaybackButtonType, pyqtBoundSignal | pyqtSignal]
-]
+# --- Helper function ---
+def build_button_dict(mapping: dict, parent: QWidget):
+    buttons = {}
+    for btn_name, (btn_cls, signal_name) in mapping.items():
+        btn_widget = btn_cls()
+        signal_obj = getattr(parent, signal_name)
+        buttons[btn_name] = (btn_widget, signal_obj)
+    return buttons
 
 
 # --- UI Sections ---
@@ -81,11 +52,7 @@ class PlaylistSection(QWidget):
     def __init__(self) -> None:
         """Initializes the playlist widget container."""
         super().__init__()
-        self.buttons: PlaylistButtonDict = {
-            PlaylistButtons.ADD: (AddSongButton(), self.add_song_button_clicked),
-            PlaylistButtons.REMOVE: (RemoveSongButton(), self.remove_song_button_clicked),
-            PlaylistButtons.LOAD: (LoadSongFolderButton(), self.load_song_button_clicked)
-        }
+        self.buttons: PlaylistButtonDict = build_button_dict(PLAYLIST_BUTTON_MAP, self)
         self.playlist_window = PlaylistWindow()
 
         self._init_ui()
@@ -157,7 +124,7 @@ class PlaybackControlSection(QWidget):
     """A QWidget-based section containers for playback control buttons."""
 
     replay_button_clicked: pyqtSignal = pyqtSignal()
-    prev_button_clicked: pyqtSignal = pyqtSignal()
+    previous_button_clicked: pyqtSignal = pyqtSignal()
     play_pause_button_clicked: pyqtSignal = pyqtSignal()
     next_button_clicked: pyqtSignal = pyqtSignal()
     repeat_button_clicked: pyqtSignal = pyqtSignal()
@@ -165,13 +132,7 @@ class PlaybackControlSection(QWidget):
     def __init__(self) -> None:
         """Initializes the playback control widget container."""
         super().__init__()
-        self.buttons: PlaybackButtonDict = {
-            PlaybackButtons.REPLAY: (ReplayButton(), self.replay_button_clicked),
-            PlaybackButtons.PREVIOUS: (PreviousButton(), self.prev_button_clicked),
-            PlaybackButtons.PLAY_PAUSE: (PlayPauseButton(), self.play_pause_button_clicked),
-            PlaybackButtons.NEXT: (NextButton(), self.next_button_clicked),
-            PlaybackButtons.REPEAT: (RepeatButton(), self.repeat_button_clicked)
-        }
+        self.buttons: PlaybackButtonDict = build_button_dict(PLAYBACK_BUTTON_MAP, self)
 
         self._init_ui()
         self._connect_signals()
