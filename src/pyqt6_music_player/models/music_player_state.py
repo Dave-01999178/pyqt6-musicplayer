@@ -115,7 +115,7 @@ class PlaybackProgressState(QObject):
         super().__init__()
         self._is_playing = DEFAULT_PLAY_STATE
         self._elapsed_time = DEFAULT_ELAPSED_TIME
-        self._total_duration = DEFAULT_TIME_DURATION
+        self._total_duration = DEFAULT_SONG_DURATION
 
     @property
     def elapsed_time(self):
