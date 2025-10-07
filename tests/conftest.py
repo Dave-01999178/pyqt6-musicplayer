@@ -65,3 +65,29 @@ def music_player(qtbot: QtBot, playlist_state, volume_state, playback_progress_s
     qtbot.addWidget(view)
 
     yield state, view, controllers
+
+
+@pytest.fixture
+def mock_path_resolve(mocker: MockerFixture):
+    target = "src.pyqt6_music_player.models.music_player_state.Path.resolve"
+
+    return mocker.patch(target)
+
+@pytest.fixture
+def mock_song_from_path(mocker: MockerFixture):
+    target = "pyqt6_music_player.models.music_player_state.Song.from_path"
+
+    return mocker.patch(target)
+
+
+@pytest.fixture
+def mock_mutagen_file(mocker: MockerFixture):
+    target = "src.pyqt6_music_player.models.song.mutagen.File"
+
+    return mocker.patch(target)
+
+@pytest.fixture
+def mock_get_metadata(mocker: MockerFixture):
+    target = "src.pyqt6_music_player.models.song.get_metadata"
+
+    return mocker.patch(target)
