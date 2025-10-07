@@ -132,7 +132,7 @@ class MusicPlayerView(QWidget):
         )
 
         # Playback control widget signals
-        self.player_bar_frame.prev_button_clicked.connect(
+        self.player_bar_frame.previous_button_clicked.connect(
             self.playback_control_signals.previous_clicked
         )
         self.player_bar_frame.play_pause_button_clicked.connect(

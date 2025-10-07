@@ -67,7 +67,7 @@ class PlayerBarFrame(QFrame):
     progress_bar_slider_changed: pyqtSignal = pyqtSignal(int)
 
     # Playback control signals
-    prev_button_clicked: pyqtSignal = pyqtSignal()
+    previous_button_clicked: pyqtSignal = pyqtSignal()
     play_pause_button_clicked: pyqtSignal = pyqtSignal()
     next_button_clicked: pyqtSignal = pyqtSignal()
 
@@ -128,7 +128,7 @@ class PlayerBarFrame(QFrame):
             self.progress_bar_slider_changed
         )
 
-        self.playback_control_section.prev_button_clicked.connect(self.prev_button_clicked)
+        self.playback_control_section.previous_button_clicked.connect(self.previous_button_clicked)
         self.playback_control_section.play_pause_button_clicked.connect(self.play_pause_button_clicked)
         self.playback_control_section.next_button_clicked.connect(self.next_button_clicked)
 
