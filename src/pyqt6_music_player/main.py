@@ -6,14 +6,13 @@ from PyQt6.QtWidgets import QApplication
 
 from pyqt6_music_player.config import STYLESHEET_PATH
 from pyqt6_music_player.controllers.music_player_controller import (
-    NowPlayingMetadataController,
     PlaybackControlsController,
     PlaybackProgressController,
     PlaylistController,
     VolumeController,
+    NowPlayingMetadataController,
 )
 from pyqt6_music_player.models.music_player_state import (
-    MetadataState,
     MusicPlayerState,
     PlaylistState,
     PlaybackProgressState,
@@ -56,13 +55,11 @@ def main():
     # States
     playlist_state = PlaylistState()
     volume_state = VolumeState()
-    metadata_state = MetadataState()
     playback_progress = PlaybackProgressState()
 
     state = MusicPlayerState(
         playlist=playlist_state,
         volume=volume_state,
-        metadata=metadata_state,
         playback_progress=playback_progress
     )
 

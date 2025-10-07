@@ -164,12 +164,10 @@ class MusicPlayerState(QObject):
     def __init__(
             self,
             playlist: PlaylistState,
-            metadata: MetadataState,
             playback_progress: PlaybackProgressState,
             volume: VolumeState
     ):
         super().__init__()
         self.playlist = playlist
-        self.metadata = metadata
         self.playback_progress = playback_progress
         self.volume = volume
