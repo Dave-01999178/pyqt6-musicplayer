@@ -197,19 +197,19 @@ class VolumeSection(QWidget):
 
 class AudioMetadataSection(QWidget):
     """A QWidget-based section containers for album art, song title, and performer label."""
-    def __init__(self, metadata_state: MetadataState):
+    def __init__(self, current_song: Song):
         """
         Initializes the audio metadata widget container.
 
         Args:
-            metadata_state: The global music player state object.
+            current_song: The current Song object.
         """
         super().__init__()
-        self.metadata_state = metadata_state
+        self.current_song = current_song
 
         self.album_art = AlbumArtLabel()
-        self.song_title = SongTitleLabel(self.metadata_state)
-        self.performer_label = ArtistLabel(self.metadata_state)
+        self.song_title = SongTitleLabel(self.current_song)
+        self.performer_label = ArtistLabel(self.current_song)
 
         self._init_ui()
 
