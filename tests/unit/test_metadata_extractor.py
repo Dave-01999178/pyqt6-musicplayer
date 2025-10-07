@@ -1,4 +1,4 @@
-from typing import TypedDict, Literal, cast
+from typing import cast
 from unittest.mock import Mock
 
 import pytest
@@ -6,23 +6,14 @@ from mutagen.mp3 import MP3
 from mutagen.oggflac import OggFLAC
 from mutagen.oggvorbis import OggVorbis
 
-from pyqt6_music_player.config import FALLBACK_METADATA
+from src.pyqt6_music_player.config import FALLBACK_METADATA
 from src.pyqt6_music_player.infra.metadata_extractor import (
     extract_id3_tags,
     extract_generic_tags
 )
-
-
-type SupportedFormat = Literal[".mp3", ".flac", ".ogg", ".wav"]
+from custom_types import SongMetadata, SupportedFormat
 
 MOCK_AUDIO_DURATION = 123.4  # Mocked audio duration used across tests.
-
-
-class SongMetadata(TypedDict, total=False):
-    title: str
-    artist: str
-    album: str
-    duration: float
 
 
 def make_fake_audio_object(tags: SongMetadata, file_format: SupportedFormat) -> Mock:
