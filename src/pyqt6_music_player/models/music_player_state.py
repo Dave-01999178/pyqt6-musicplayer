@@ -37,6 +37,10 @@ class PlaylistState(QObject):
         """Return the number of songs currently in the playlist."""
         return len(self._playlist)
 
+    @property
+    def current_song(self):
+        return DEFAULT_SONG
+
     @staticmethod
     def _normalize_to_paths(file_paths: list[str | Path]) -> list[Path]:
         """
