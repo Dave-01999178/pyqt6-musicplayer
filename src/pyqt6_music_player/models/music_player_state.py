@@ -67,14 +67,13 @@ class PlaylistState(QObject):
 
         return normalized_paths
 
-    def add_song(self, file_paths: list[str | Path]) -> None:
+    def add_song(self, file_paths: str | Path | list[str | Path]) -> None:
         """
         Add one or more audio files to the playlist.
 
         Args:
-            file_paths: List of file paths as str or Path objects.
+            file_paths: A single path (str or Path), or a list of paths (str and/or Path objects).
 
-        Behavior:
         - Normalizes inputs into Path objects and resolves them to absolute paths.
         - Ignores non-existent files and files with unsupported extensions.
         - Skips duplicates using an internal set for fast membership checks.
@@ -85,19 +84,29 @@ class PlaylistState(QObject):
         if not file_paths:
             return
 
+        # Allow single str/Path input by wrapping into a list.
+        if isinstance(file_paths, (str, Path)):
+            file_paths = [file_paths]
+
         paths = self._normalize_to_paths(file_paths)
 
+        from_path = Song.from_path  # Cache to avoid repeated lookups.
         for p in paths:
             try:
                 resolved_path = p.resolve(strict=True)
             except FileNotFoundError:
                 continue
 
-            if resolved_path.suffix.lower() not in self.SUPPORTED_AUDIO_SUFFIXES:
+            if resolved_path.suffix.lower() not in SUPPORTED_AUDIO_FORMAT:
                 continue
 
             if resolved_path not in self._playlist_set:
-                self._playlist.append(resolved_path)
+                song = from_path(resolved_path)
+
+                if not song:
+                    continue
+
+                self._playlist.append(song)
                 self._playlist_set.add(resolved_path)
 
 
