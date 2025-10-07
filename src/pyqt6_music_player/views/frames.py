@@ -82,7 +82,7 @@ class PlayerBarFrame(QFrame):
             state: The music player state object
         """
         super().__init__()
-        self.audio_metadata_section = AudioMetadataSection(state.metadata)
+        self.audio_metadata_section = AudioMetadataSection(state.playlist.current_song)
         self.playback_progress_section = PlaybackProgressSection(state.playback_progress)
         self.playback_control_section = PlaybackControlSection()
         self.volume_section = VolumeSection(state.volume)
