@@ -4,7 +4,7 @@ import traceback
 
 from PyQt6.QtWidgets import QApplication
 
-from pyqt6_music_player.config import STYLESHEET_PATH
+from pyqt6_music_player.config import STYLESHEET
 from pyqt6_music_player.controllers.music_player_controller import (
     PlaybackControlsController,
     PlaybackProgressController,
@@ -48,7 +48,7 @@ def main():
     app = QApplication(sys.argv)
 
     # Stylesheet
-    stylesheet = load_stylesheet(STYLESHEET_PATH)
+    stylesheet = load_stylesheet(STYLESHEET)
     if stylesheet:
         app.setStyleSheet(stylesheet)
 
