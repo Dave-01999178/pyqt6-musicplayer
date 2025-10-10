@@ -16,6 +16,7 @@ from pyqt6_music_player.config import (
     LOAD_FOLDER_ICON_PATH,
     REMOVE_ICON_PATH,
 )
+from pyqt6_music_player.models.music_player_state import PlaylistState
 from pyqt6_music_player.views.base_widgets import IconButton
 
 
@@ -71,34 +72,52 @@ class HoverRowDelegate(QStyledItemDelegate):
 
 
 class PlaylistModel(QAbstractTableModel):
-    def __init__(self):
+    def __init__(self, playlist_state: PlaylistState):
         super().__init__()
 
+        self.playlist_state = playlist_state
         self.header_label = ["Title", "Performer", "Album", "Duration"]
-        self.row_data = [
-            {"Title": "Song 1", "Performer" :"Performer 1", "Album": "Album 1", "Duration": "2:30"},
-            {"Title": "Song 2", "Performer" :"Performer 2", "Album": "Album 2", "Duration": "1:30"},
-            {"Title": "Song 3", "Performer" :"Performer 3", "Album": "Album 3", "Duration": "2:15"},
-            {"Title": "Song 4", "Performer" :"Performer 4", "Album": "Album 4", "Duration": "1:45"},
-        ]
+
+        playlist_state.playlist_changed.connect(self._update_playlist_window)
 
     def rowCount(self, parent=None):
-        return 0
+        return len(self.playlist_state.playlist)
 
     def columnCount(self, parent=None):
-        return 0
+        return len(self.header_label)
 
     def data(self, index, role=...):
-        pass
+        if not index.isValid() or role != Qt.ItemDataRole.DisplayRole:
+            return
+
+        song = self.playlist_state.playlist[index.row()]
+        col = index.column()
+
+        if col == 0:
+            return song.title
+        elif col == 1:
+            return song.artist
+        elif col == 2:
+            return song.album
+        elif col == 3:
+            return song.duration
 
     def headerData(self, section, orientation, role=...):
-        pass
+        if role != Qt.ItemDataRole.DisplayRole:
+            return
+
+        if orientation == Qt.Orientation.Horizontal:
+            return self.header_label[section]
+
+    def _update_playlist_window(self):
+        self.beginResetModel()
+        self.endResetModel()
 
 
 class PlaylistWindow(QTableView):
-    def __init__(self):
+    def __init__(self, playlist_state: PlaylistState):
         super().__init__()
-        self.model = PlaylistModel()
+        self.model = PlaylistModel(playlist_state)
         self.setModel(self.model)
 
         self._configure_properties()

@@ -8,6 +8,7 @@ and audio metadata display.
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 
+from pyqt6_music_player.models.music_player_state import PlaylistState
 from src.pyqt6_music_player.button_mappings import (
     PLAYBACK_BUTTON_MAP,
     PLAYLIST_BUTTON_MAP,
@@ -49,11 +50,11 @@ class PlaylistSection(QWidget):
     add_song_button_clicked = pyqtSignal()
     remove_song_button_clicked = pyqtSignal()
     load_song_button_clicked = pyqtSignal()
-    def __init__(self) -> None:
+    def __init__(self, playlist_state: PlaylistState) -> None:
         """Initializes the playlist widget container."""
         super().__init__()
         self.buttons: PlaylistButtonDict = build_button_dict(PLAYLIST_BUTTON_MAP, self)
-        self.playlist_window = PlaylistWindow()
+        self.playlist_window = PlaylistWindow(playlist_state)
 
         self._init_ui()
         self._connect_signals()

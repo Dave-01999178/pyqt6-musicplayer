@@ -72,7 +72,7 @@ class MusicPlayerView(QWidget):
         """
         super().__init__()
         self.state = state
-        self.playlist_frame = PlaylistSectionFrame()
+        self.playlist_frame = PlaylistSectionFrame(state)
         self.player_bar_frame = PlayerBarFrame(state)
         self.signals = MusicPlayerSignals()
 

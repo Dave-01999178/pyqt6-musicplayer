@@ -27,11 +27,11 @@ class PlaylistSectionFrame(QFrame):
     add_song_button_clicked = pyqtSignal()
     remove_song_button_clicked = pyqtSignal()
     load_song_button_clicked = pyqtSignal()
-    def __init__(self):
+    def __init__(self, state: MusicPlayerState):
         """Initializes the playlist section frame."""
         super().__init__()
 
-        self.playlist_section = PlaylistSection()
+        self.playlist_section = PlaylistSection(state.playlist)
 
         self._configure_properties()
         self._init_ui()

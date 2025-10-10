@@ -13,6 +13,7 @@ from src.pyqt6_music_player.models.song import Song, DEFAULT_SONG
 
 
 class PlaylistState(QObject):
+    playlist_changed = pyqtSignal(list)
     """
     Manages the playlist of the music player, including loaded songs and
     current playback state.
@@ -112,6 +113,8 @@ class PlaylistState(QObject):
 
                 self._playlist.append(song)
                 self._playlist_set.add(resolved_path)
+
+                self.playlist_changed.emit(self.playlist)  # type: ignore
 
 
 class PlaybackProgressState(QObject):
