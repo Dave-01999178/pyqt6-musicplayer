@@ -4,19 +4,21 @@ import traceback
 
 from PyQt6.QtWidgets import QApplication
 
-from pyqt6_music_player.config import STYLESHEET_PATH
+from pyqt6_music_player.config import STYLESHEET
 from pyqt6_music_player.controllers.music_player_controller import (
-    NowPlayingMetadataController,
     PlaybackControlsController,
     PlaybackProgressController,
     PlaylistController,
     VolumeController,
+    NowPlayingMetadataController,
 )
 from pyqt6_music_player.models.music_player_state import (
     MusicPlayerState,
-    VolumeState, MetadataState, SongProgressState,
+    PlaylistState,
+    PlaybackProgressState,
+    VolumeState,
 )
-from src.pyqt6_music_player.views.music_player_view import MusicPlayerView
+from pyqt6_music_player.views.music_player_view import MusicPlayerView
 
 
 def exception_hook(exc_type, value, tb):
@@ -46,19 +48,19 @@ def main():
     app = QApplication(sys.argv)
 
     # Stylesheet
-    stylesheet = load_stylesheet(STYLESHEET_PATH)
+    stylesheet = load_stylesheet(STYLESHEET)
     if stylesheet:
         app.setStyleSheet(stylesheet)
 
     # States
+    playlist_state = PlaylistState()
     volume_state = VolumeState()
-    metadata_state = MetadataState()
-    song_progress = SongProgressState()
+    playback_progress = PlaybackProgressState()
 
     state = MusicPlayerState(
+        playlist=playlist_state,
         volume=volume_state,
-        metadata=metadata_state,
-        song_progress=song_progress
+        playback_progress=playback_progress
     )
 
     # Views

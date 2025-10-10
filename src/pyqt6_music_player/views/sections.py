@@ -5,71 +5,56 @@ This module contains QWidget-based section containers for different parts of the
 such as playlist controls, playback progress, playback controls, volume controls,
 and audio metadata display.
 """
-from enum import Enum
-from typing import Tuple
-
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 
-from pyqt6_music_player.config import ADD_ICON_PATH, LOAD_FOLDER_ICON_PATH, REMOVE_ICON_PATH, EDIT_BUTTON_DEFAULT_SIZE
-from pyqt6_music_player.models.music_player_state import MusicPlayerState
-from pyqt6_music_player.views.base_widgets import IconButton
-from pyqt6_music_player.views.metadata_widgets import AlbumArtLabel, ArtistLabel, SongTitleLabel
-from pyqt6_music_player.views.playback_control_buttons import (
-    NextButton,
-    PlayPauseButton,
-    PreviousButton,
-    RepeatButton,
-    ReplayButton,
+from pyqt6_music_player.models.music_player_state import PlaylistState
+from src.pyqt6_music_player.button_mappings import (
+    PLAYBACK_BUTTON_MAP,
+    PLAYLIST_BUTTON_MAP,
+    PlaybackButtonDict,
+    PlaylistButtonDict,
 )
-from pyqt6_music_player.views.playback_progress_widgets import (
+from src.pyqt6_music_player.models.music_player_state import (
+    PlaybackProgressState,
+    Song,
+    VolumeState,
+)
+from src.pyqt6_music_player.views.metadata_widgets import (
+    AlbumArtLabel,
+    ArtistLabel,
+    SongTitleLabel
+)
+from src.pyqt6_music_player.views.playback_progress_widgets import (
     ElapsedTimeLabel,
     PlaybackProgressBar,
     TotalDurationLabel,
 )
-from pyqt6_music_player.views.playlist_widgets import PlaylistWindow
-from pyqt6_music_player.views.volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
+from src.pyqt6_music_player.views.playlist_widgets import PlaylistWindow
+from src.pyqt6_music_player.views.volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
 
 
-class PlaylistButtons(Enum):
-    """Enum for playlist control button identifiers."""
-    ADD = "add_song"
-    REMOVE = "remove_song"
-    LOAD = "load_songs"
+# --- Helper function ---
+def build_button_dict(mapping: dict, parent: QWidget):
+    buttons = {}
+    for btn_name, (btn_cls, signal_name) in mapping.items():
+        btn_widget = btn_cls()
+        signal_obj = getattr(parent, signal_name)
+        buttons[btn_name] = (btn_widget, signal_obj)
+    return buttons
 
 
-class PlaybackButtons(Enum):
-    """Enum for playback control button identifiers."""
-    REPLAY = "replay"
-    PREVIOUS = "previous"
-    PLAY_PAUSE = "play_pause"
-    NEXT = "next"
-    REPEAT = "repeat"
-
-
+# --- UI Sections ---
 class PlaylistSection(QWidget):
     """A QWidget-based section containers for edit playlist buttons and playlist window."""
-    def __init__(self):
+    add_song_button_clicked = pyqtSignal()
+    remove_song_button_clicked = pyqtSignal()
+    load_song_button_clicked = pyqtSignal()
+    def __init__(self, playlist_state: PlaylistState) -> None:
         """Initializes the playlist widget container."""
         super().__init__()
-        self.buttons: dict[PlaylistButtons, IconButton | QPushButton] = {
-            PlaylistButtons.ADD: IconButton(
-                ADD_ICON_PATH,
-                EDIT_BUTTON_DEFAULT_SIZE,
-                button_text="Add song"
-            ),
-            PlaylistButtons.REMOVE: IconButton(
-                REMOVE_ICON_PATH,
-                EDIT_BUTTON_DEFAULT_SIZE,
-                button_text="Remove song"
-            ),
-            PlaylistButtons.LOAD: IconButton(
-                LOAD_FOLDER_ICON_PATH,
-                EDIT_BUTTON_DEFAULT_SIZE,
-                button_text="Load song folder"
-            )
-        }
-        self.playlist_window = PlaylistWindow()
+        self.buttons: PlaylistButtonDict = build_button_dict(PLAYLIST_BUTTON_MAP, self)
+        self.playlist_window = PlaylistWindow(playlist_state)
 
         self._init_ui()
         self._connect_signals()
@@ -79,7 +64,7 @@ class PlaylistSection(QWidget):
         section_layout = QVBoxLayout()
         playlist_btn_layout = QHBoxLayout()
 
-        for btn_widget in self.buttons.values():
+        for btn_widget, _ in self.buttons.values():
             playlist_btn_layout.addWidget(btn_widget)
 
         section_layout.addLayout(playlist_btn_layout)
@@ -89,7 +74,8 @@ class PlaylistSection(QWidget):
 
     def _connect_signals(self):
         """Connects internal widget signals to section-level signals"""
-        pass
+        for btn_widget, signal_obj in self.buttons.values():
+            btn_widget.clicked.connect(signal_obj)
 
 
 class PlaybackProgressSection(QWidget):
@@ -97,19 +83,19 @@ class PlaybackProgressSection(QWidget):
 
     progress_bar_slider_changed: pyqtSignal = pyqtSignal(int)
 
-    def __init__(self, state: MusicPlayerState):
+    def __init__(self, playback_progress_state: PlaybackProgressState):
         """
         Initializes the playback progress widget container.
 
         Args:
-            state: The music player state object.
+            playback_progress_state: The music player state object.
         """
         super().__init__()
-        self.state = state
+        self.playback_progress_state = playback_progress_state
 
         self.progress_bar = PlaybackProgressBar()
-        self.elapsed_time = ElapsedTimeLabel(self.state)
-        self.total_duration = TotalDurationLabel(self.state)
+        self.elapsed_time = ElapsedTimeLabel(self.playback_progress_state)
+        self.total_duration = TotalDurationLabel(self.playback_progress_state)
 
         self._init_ui()
         self._connect_signals()
@@ -139,21 +125,15 @@ class PlaybackControlSection(QWidget):
     """A QWidget-based section containers for playback control buttons."""
 
     replay_button_clicked: pyqtSignal = pyqtSignal()
-    prev_button_clicked: pyqtSignal = pyqtSignal()
+    previous_button_clicked: pyqtSignal = pyqtSignal()
     play_pause_button_clicked: pyqtSignal = pyqtSignal()
     next_button_clicked: pyqtSignal = pyqtSignal()
     repeat_button_clicked: pyqtSignal = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes the playback control widget container."""
         super().__init__()
-        self.buttons: dict[PlaybackButtons, Tuple[IconButton | QPushButton, pyqtSignal]] = {
-            PlaybackButtons.REPLAY: (ReplayButton(), self.replay_button_clicked),
-            PlaybackButtons.PREVIOUS: (PreviousButton(), self.prev_button_clicked),
-            PlaybackButtons.PLAY_PAUSE: (PlayPauseButton(), self.play_pause_button_clicked),
-            PlaybackButtons.NEXT: (NextButton(), self.next_button_clicked),
-            PlaybackButtons.REPEAT: (RepeatButton(), self.repeat_button_clicked)
-        }
+        self.buttons: PlaybackButtonDict = build_button_dict(PLAYBACK_BUTTON_MAP, self)
 
         self._init_ui()
         self._connect_signals()
@@ -179,19 +159,19 @@ class VolumeSection(QWidget):
     """A QWidget-based section containers for volume button, slider, and label."""
     volume_button_clicked : pyqtSignal = pyqtSignal(bool)
     volume_slider_changed: pyqtSignal = pyqtSignal(int)
-    def __init__(self, state: MusicPlayerState):
+    def __init__(self, volume_state: VolumeState):
         """
         Initializes the volume widget container.
 
         Args:
-            state: The global music player state object.
+            volume_state: The global music player state object.
         """
         super().__init__()
-        self.state = state
+        self.volume_state = volume_state
 
-        self.volume_button = VolumeButton()
-        self.volume_slider = VolumeSlider()
-        self.volume_label = VolumeLabel(self.state)
+        self.volume_button = VolumeButton(self.volume_state)
+        self.volume_slider = VolumeSlider(self.volume_state)
+        self.volume_label = VolumeLabel(self.volume_state)
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
@@ -215,34 +195,22 @@ class VolumeSection(QWidget):
         self.volume_button.clicked.connect(self.volume_button_clicked)
         self.volume_slider.valueChanged.connect(self.volume_slider_changed)
 
-        self.state.volume.volume_changed.connect(self._update_widgets)
-
-    def _update_widgets(self, volume: int):
-        """Updates volume button, slider, and label when volume changes.
-
-        Args:
-            volume: The new volume level.
-        """
-        self.volume_button.update_button_icon(volume)
-        self.volume_slider.update_slider_position(volume)
-        self.volume_label.setText(f"{volume}")
-
 
 class AudioMetadataSection(QWidget):
     """A QWidget-based section containers for album art, song title, and performer label."""
-    def __init__(self, state: MusicPlayerState):
+    def __init__(self, current_song: Song):
         """
         Initializes the audio metadata widget container.
 
         Args:
-            state: The global music player state object.
+            current_song: The current Song object.
         """
         super().__init__()
-        self.state = state
+        self.current_song = current_song
 
         self.album_art = AlbumArtLabel()
-        self.song_title = SongTitleLabel(self.state)
-        self.performer_label = ArtistLabel(self.state)
+        self.song_title = SongTitleLabel(self.current_song)
+        self.performer_label = ArtistLabel(self.current_song)
 
         self._init_ui()
 

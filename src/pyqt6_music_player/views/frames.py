@@ -9,10 +9,11 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
 
 from pyqt6_music_player.models.music_player_state import MusicPlayerState
 from pyqt6_music_player.views.sections import (
-    PlaybackControlSection,
     AudioMetadataSection,
+    PlaybackControlSection,
     PlaybackProgressSection,
-    VolumeSection, PlaylistSection,
+    PlaylistSection,
+    VolumeSection,
 )
 
 
@@ -23,14 +24,18 @@ class PlaylistSectionFrame(QFrame):
     This class provides a styled frame to hold the playlist view,
     giving it a distinct visual appearance within the application.
     """
-    def __init__(self):
+    add_song_button_clicked = pyqtSignal()
+    remove_song_button_clicked = pyqtSignal()
+    load_song_button_clicked = pyqtSignal()
+    def __init__(self, state: MusicPlayerState):
         """Initializes the playlist section frame."""
         super().__init__()
 
-        self.playlist_section = PlaylistSection()
+        self.playlist_section = PlaylistSection(state.playlist)
 
         self._configure_properties()
         self._init_ui()
+        self._connect_signals()
 
     def _configure_properties(self):
         """Configures the frame's properties"""
@@ -45,6 +50,11 @@ class PlaylistSectionFrame(QFrame):
 
         self.setLayout(layout)
 
+    def _connect_signals(self):
+        self.playlist_section.add_song_button_clicked.connect(self.add_song_button_clicked)
+        self.playlist_section.remove_song_button_clicked.connect(self.remove_song_button_clicked)
+        self.playlist_section.load_song_button_clicked.connect(self.load_song_button_clicked)
+
 
 class PlayerBarFrame(QFrame):
     """
@@ -57,7 +67,7 @@ class PlayerBarFrame(QFrame):
     progress_bar_slider_changed: pyqtSignal = pyqtSignal(int)
 
     # Playback control signals
-    prev_button_clicked: pyqtSignal = pyqtSignal()
+    previous_button_clicked: pyqtSignal = pyqtSignal()
     play_pause_button_clicked: pyqtSignal = pyqtSignal()
     next_button_clicked: pyqtSignal = pyqtSignal()
 
@@ -72,10 +82,10 @@ class PlayerBarFrame(QFrame):
             state: The music player state object
         """
         super().__init__()
-        self.audio_metadata_section = AudioMetadataSection(state)
-        self.playback_progress_section = PlaybackProgressSection(state)
+        self.audio_metadata_section = AudioMetadataSection(state.playlist.current_song)
+        self.playback_progress_section = PlaybackProgressSection(state.playback_progress)
         self.playback_control_section = PlaybackControlSection()
-        self.volume_section = VolumeSection(state)
+        self.volume_section = VolumeSection(state.volume)
 
         self._configure_properties()
         self._init_ui()
@@ -118,7 +128,7 @@ class PlayerBarFrame(QFrame):
             self.progress_bar_slider_changed
         )
 
-        self.playback_control_section.prev_button_clicked.connect(self.prev_button_clicked)
+        self.playback_control_section.previous_button_clicked.connect(self.previous_button_clicked)
         self.playback_control_section.play_pause_button_clicked.connect(self.play_pause_button_clicked)
         self.playback_control_section.next_button_clicked.connect(self.next_button_clicked)
 
