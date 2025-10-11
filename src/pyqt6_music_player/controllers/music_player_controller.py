@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QFileDialog
 
-from pyqt6_music_player.config import FILE_DIALOG_FILTER
-from pyqt6_music_player.models.music_player_state import MusicPlayerState
-from pyqt6_music_player.views.music_player_view import MusicPlayerView
+from src.pyqt6_music_player.config import FILE_DIALOG_FILTER
+from src.pyqt6_music_player.models import MusicPlayerState
+from src.pyqt6_music_player.views import MusicPlayerView
 
 
 class PlaybackProgressController:

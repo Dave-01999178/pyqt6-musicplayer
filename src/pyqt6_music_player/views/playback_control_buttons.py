@@ -4,7 +4,7 @@ Custom PyQt6 button widgets for consistent UI components.
 This module provides button widgets for managing music playback, such as play/pause,
 next/previous track, and repeat functionality.
 """
-from pyqt6_music_player.config import (
+from src.pyqt6_music_player.config import (
     PLAYBACK_BUTTON_LARGE,
     PLAYBACK_BUTTON_SMALL,
     NEXT_ICON_PATH,
@@ -14,7 +14,7 @@ from pyqt6_music_player.config import (
     REPEAT_ICON_PATH,
     REPLAY_ICON_PATH,
 )
-from pyqt6_music_player.views.base_widgets import IconButton
+from src.pyqt6_music_player.views import IconButton
 
 
 class ReplayButton(IconButton):

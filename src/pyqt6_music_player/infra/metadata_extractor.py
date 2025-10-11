@@ -1,6 +1,6 @@
 from mutagen.mp3 import MP3
 
-from pyqt6_music_player.config import FALLBACK_METADATA
+from src.pyqt6_music_player.config import FALLBACK_METADATA
 
 
 def extract_id3_tags(audio, defaults=FALLBACK_METADATA):
