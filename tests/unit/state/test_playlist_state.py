@@ -89,6 +89,7 @@ def make_fake_path_and_song(path: FilePath) -> tuple[Path, Song]:
     return fake_resolved_path, fake_song
 
 
+@pytest.fixture
 def populate_playlist(playlist_state, mock_path_resolve, mock_song_from_path):
     def _populate(file_paths: Sequence[Path]) -> None:
         if isinstance(file_paths, str):
@@ -340,7 +341,6 @@ class TestAddSongSingleInput:
         assert added_song == resolved_input_path
         assert added_song in playlist_state.playlist_set
 
-
     # Test case: Adding a duplicate audio file.
     @pytest.mark.parametrize("duplicate_audio_file", [
         "path/to/initial.mp3",  # # Lowercase.
@@ -350,6 +350,7 @@ class TestAddSongSingleInput:
     ], ids=["str_lowercase", "path_uppercase", "str_upper_filename", "path_upper_ext"])
     def test_add_song_rejects_duplicate_song(
             self,
+            populate_playlist,
             playlist_state,
             mock_path_resolve,
             mock_song_from_path,
@@ -362,7 +363,7 @@ class TestAddSongSingleInput:
         # Insert the initial song into the playlist through `populate_playlist` fixture since playlist
         # has no direct setter.
         initial_audio_files = [Path("path/to/initial.mp3")]
-        populate_playlist(initial_audio_files, mock_path_resolve, mock_song_from_path)
+        populate_playlist(initial_audio_files)
 
         # Simulate input path resolution by making `mock_path_resolve` return `resolved_input_path`.
         mock_path_resolve.return_value = resolved_input_path
