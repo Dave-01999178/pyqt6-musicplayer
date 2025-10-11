@@ -11,7 +11,7 @@ from src.pyqt6_music_player.infra.metadata_extractor import (
     extract_id3_tags,
     extract_generic_tags
 )
-from tests.custom_types import SongMetadata, SupportedFormat
+from custom_types import SongMetadata, SupportedFormat
 
 MOCK_AUDIO_DURATION = 123.4  # Mocked audio duration used across tests.
 
