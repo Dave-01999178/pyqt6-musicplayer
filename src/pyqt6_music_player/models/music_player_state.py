@@ -9,7 +9,7 @@ from src.pyqt6_music_player.config import (
     DEFAULT_VOLUME,
     SUPPORTED_AUDIO_FORMAT,
 )
-from src.pyqt6_music_player.models.song import Song, DEFAULT_SONG
+from src.pyqt6_music_player.models import Song, DEFAULT_SONG
 
 
 class PlaylistState(QObject):

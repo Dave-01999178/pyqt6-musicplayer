@@ -3,14 +3,12 @@ from typing import TypeAlias
 
 from PyQt6.QtCore import pyqtBoundSignal, pyqtSignal
 
-from pyqt6_music_player.views.playback_control_buttons import (
+from src.pyqt6_music_player.views import (
     NextButton,
     PlayPauseButton,
     PreviousButton,
     RepeatButton,
     ReplayButton,
-)
-from pyqt6_music_player.views.playlist_widgets import (
     AddSongButton,
     LoadSongFolderButton,
     RemoveSongButton,

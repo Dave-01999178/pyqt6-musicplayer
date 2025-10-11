@@ -8,9 +8,9 @@ from PyQt6.QtCore import pyqtSignal, QObject
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
-from pyqt6_music_player.views.frames import PlayerBarFrame, PlaylistSectionFrame
+from src.pyqt6_music_player.views import PlayerBarFrame, PlaylistSectionFrame
 
-from pyqt6_music_player.config import APP_DEFAULT_SIZE, APP_TITLE
+from src.pyqt6_music_player.config import APP_DEFAULT_SIZE, APP_TITLE
 
 
 class MusicPlayerSignals(QObject):
