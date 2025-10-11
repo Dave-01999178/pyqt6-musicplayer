@@ -11,7 +11,7 @@ from src.pyqt6_music_player.config import (
     DEFAULT_SONG_DURATION,
     DEFAULT_SONG_TITLE,
 )
-from custom_types import SongMetadata
+from tests.custom_types import SongMetadata
 
 
 class TestSong:
