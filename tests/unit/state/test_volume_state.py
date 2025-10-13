@@ -1,13 +1,19 @@
 import pytest
 
 
+# --------------------------------------------------------------------------------
+# Volume state defaults unit tests
+# --------------------------------------------------------------------------------
+
 def test_should_return_volume_state_default_values(volume_state):
     """Ensure that the volume state"""
     assert volume_state.current_volume == 100
     assert volume_state.previous_volume == 100
 
 
-# ------------------------------ Update volume tests ------------------------------
+# --------------------------------------------------------------------------------
+# Volume update unit tests.
+# --------------------------------------------------------------------------------
 
 def test_current_volume_updates_when_assigning_new_value(volume_state):
     # Arrange: Ensure that the current volume starts at default value '100'.

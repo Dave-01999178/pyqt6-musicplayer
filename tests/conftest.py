@@ -1,22 +1,15 @@
+from pathlib import Path
+from typing import Sequence
+
 import pytest
 from pytest_mock import MockerFixture
-from pytestqt.qtbot import QtBot
 
-from src.pyqt6_music_player.controllers.music_player_controller import (
-    PlaylistController,
-    VolumeController,
-    NowPlayingMetadataController,
-    PlaybackControlsController,
-    PlaybackProgressController,
-)
-from src.pyqt6_music_player.models.music_player_state import (
-    MusicPlayerState,
-    PlaybackProgressState,
+from src.pyqt6_music_player.models import (
+    Song,
     PlaylistState,
-    VolumeState
+    VolumeState,
 )
-from src.pyqt6_music_player.models.song import Song
-from src.pyqt6_music_player.views.music_player_view import MusicPlayerView
+from tests.utils import make_fake_path_and_song
 
 
 @pytest.fixture
@@ -30,41 +23,8 @@ def playlist_state():
 
 
 @pytest.fixture
-def song_progress_state():
-    return PlaybackProgressState()
-
-
-@pytest.fixture
 def volume_state():
     return VolumeState()
-
-
-@pytest.fixture
-def playback_progress_state():
-    return PlaybackProgressState()
-
-
-@pytest.fixture
-def music_player(qtbot: QtBot, playlist_state, volume_state, playback_progress_state):
-    state = MusicPlayerState(
-        playlist=playlist_state,
-        volume=volume_state,
-        playback_progress=playback_progress_state
-    )
-
-    view = MusicPlayerView(state)
-
-    controllers = [
-        PlaybackProgressController(state, view),
-        PlaybackControlsController(state, view),
-        VolumeController(state, view),
-        NowPlayingMetadataController(state, view),
-        PlaylistController(state, view),
-    ]
-
-    qtbot.addWidget(view)
-
-    yield state, view, controllers
 
 
 @pytest.fixture
@@ -86,8 +46,31 @@ def mock_mutagen_file(mocker: MockerFixture):
 
     return mocker.patch(target)
 
+
 @pytest.fixture
 def mock_get_metadata(mocker: MockerFixture):
     target = "src.pyqt6_music_player.models.song.get_metadata"
 
     return mocker.patch(target)
+
+
+@pytest.fixture
+def populate_playlist(playlist_state, mock_path_resolve, mock_song_from_path):
+    def _populate(file_paths: Sequence[Path]) -> None:
+        if isinstance(file_paths, str):
+            raise TypeError("file_paths must be a sequence, not a bare string")
+
+        for path in file_paths:
+            initial_song_path, initial_song = make_fake_path_and_song(path)
+
+            # Temporarily mock Path.resolve() and Song.from_path() so the insert succeeds.
+            mock_path_resolve.return_value = initial_song_path
+            mock_song_from_path.return_value = initial_song
+
+            # Insert the initial song.
+            playlist_state.add_song(initial_song_path)
+
+        mock_path_resolve.reset_mock()
+        mock_song_from_path.reset_mock()
+
+    return _populate
