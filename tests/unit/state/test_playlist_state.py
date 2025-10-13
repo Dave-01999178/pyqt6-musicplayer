@@ -1,118 +1,22 @@
-from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Type, Optional
 
 import pytest
 
-from src.pyqt6_music_player.models.song import Song
+from tests.utils import (
+    make_fake_path,
+    make_fake_path_and_song,
+    make_fake_paths_and_songs,
+    FileAddExpectation
+)
 
 
-FilePath = str | Path
-
-
-# --- Helpers ---
-@dataclass(frozen=True)
-class FileAddExpectation:
-    path: FilePath
-    expected: bool
-    side_effect: Optional[Type[Exception]] = None  # Optional side effect for invalid files.
-
-
-@dataclass(frozen=True)
-class PathsAndSongs:
-    input_paths: list[FilePath]
-    fake_resolved_paths: list[type[Exception] | Path]
-    fake_songs: list[Song]
-    expected_paths: list[Path]
-
-
-@dataclass(frozen=True)
-class FakeSongData:
-    path: Path
-    title: str = "Fake Title"
-    artist: str =  "Fake Artist"
-    album: str = "Fake Album"
-    duration: float = 0.00
-
-    def to_song(self) -> Song:
-        """Convert this fake test data into an actual `Song` object."""
-        return Song(
-            path=self.path,
-            title=self.title,
-            artist=self.artist,
-            album=self.album,
-            duration=self.duration,
-        )
-
-
-def make_fake_path(path: FilePath) -> Path:
-    return Path(path)
-
-
-def make_fake_song(path: Path, base_data: FakeSongData | None = None):
-    data = base_data or FakeSongData(path)
-    return data.to_song()
-
-
-def make_fake_paths_and_songs(files: Sequence[FileAddExpectation]) -> PathsAndSongs:
-    input_paths = []
-    fake_resolved_paths = []
-    fake_songs = []
-    expected_paths = []
-
-    for file in files:
-        file_path = file.path
-        resolved_path = make_fake_path(file_path)
-
-        if file.expected:
-            fake_song = make_fake_song(resolved_path)
-            fake_songs.append(fake_song)
-            expected_paths.append(resolved_path)
-
-        input_paths.append(file_path)
-        fake_resolved_paths.append(file.side_effect or resolved_path)
-
-    return PathsAndSongs(
-        input_paths=input_paths,
-        fake_resolved_paths=fake_resolved_paths,
-        fake_songs=fake_songs,
-        expected_paths=expected_paths
-    )
-
-
-def make_fake_path_and_song(path: FilePath) -> tuple[Path, Song]:
-    path = Path(path)
-    fake_resolved_path = make_fake_path(path)
-    fake_song = make_fake_song(path)
-
-    return fake_resolved_path, fake_song
-
-
-@pytest.fixture
-def populate_playlist(playlist_state, mock_path_resolve, mock_song_from_path):
-    def _populate(file_paths: Sequence[Path]) -> None:
-        if isinstance(file_paths, str):
-            raise TypeError("file_paths must be a sequence, not a bare string")
-
-        for path in file_paths:
-            initial_song_path, initial_song = make_fake_path_and_song(path)
-
-            # Temporarily mock Path.resolve() and Song.from_path() so the insert succeeds.
-            mock_path_resolve.return_value = initial_song_path
-            mock_song_from_path.return_value = initial_song
-
-            # Insert the initial song.
-            playlist_state.add_song(initial_song_path)
-
-        mock_path_resolve.reset_mock()
-        mock_song_from_path.reset_mock()
-
-    return _populate
-
-
-# ------------------------------ PlaylistState.add_song unit tests ------------------------------
+# --------------------------------------------------------------------------------
+# PlaylistState.add_song method unit tests.
+# --------------------------------------------------------------------------------
+#
+# --- Single input ---
 class TestAddSongSingleInput:
+
     # Test case: Directory-like input handling.
     @pytest.mark.parametrize("dir_like_input", [
         # Empty inputs -> resolves to CWD (should be skipped).
@@ -130,15 +34,16 @@ class TestAddSongSingleInput:
             mock_song_from_path,
             dir_like_input
     ):
-        # --- Act ---
-        # Attempt to add directory like input.
+        # --- Act: Attempt to add directory like input. ---
         playlist_state.add_song(dir_like_input)
 
-        # --- Assert ---
+        # --- Assert: The directory like input should be rejected. ---
+        # Verify that `Path.resolve` and `Song.from_path` was not called because input
+        # was rejected during input path normalization.
         mock_path_resolve.assert_not_called()
         mock_song_from_path.assert_not_called()
 
-        # The playlist remains empty.
+        # Verify that the playlist remain unchanged.
         assert playlist_state.song_count == 0
         assert playlist_state.playlist == []
         assert playlist_state.playlist_set == set()
@@ -161,22 +66,21 @@ class TestAddSongSingleInput:
             mock_song_from_path,
             missing_file
     ):
-        # --- Arrange ---
-        # Simulate missing files by mocking `Path.resolve()` to raise FileNotFound error.
+        # --- Arrange: Prepare Path.resolve mock. ---
         mock_path_resolve.side_effect = FileNotFoundError
 
-        # --- Act ---
-        # Attempt to add the files.
+        # --- Act: Attempt to add non-existent file. ---
         playlist_state.add_song(missing_file)
 
-        # --- Assert ---
+        # --- Assert: The non-existent file should be rejected. ---
         # `Path.resolve()` should always be called per attempted add.
         mock_path_resolve.assert_called_once()
 
-        # `Song.from_path` should not be called as the path couldn't be resolved (FileNotFound).
+        # `Song.from_path` should not be called as the path couldn't be resolved
+        # (FileNotFoundError).
         mock_song_from_path.assert_not_called()
 
-        # The playlist should remain empty.
+        # Verify that the playlist remain unchanged.
         assert playlist_state.song_count == 0
         assert playlist_state.playlist == []
         assert playlist_state.playlist_set == set()
@@ -194,32 +98,28 @@ class TestAddSongSingleInput:
             mock_song_from_path,
             audio_file
     ):
-        # --- Arrange ---
-        # Prepare fake resolved path and Song for mocks.
-        resolved_input_path, fake_song = make_fake_path_and_song(audio_file)
+        # --- Arrange: Prepare fake resolved path and Song for mock dependencies. ---
+        fake_resolved_path, fake_song = make_fake_path_and_song(audio_file)
 
-        # Simulate input path resolution by mocking `Path.resolve()` to return `resolved_input_path`.
-        mock_path_resolve.return_value = resolved_input_path
-
-        # Simulate `Song` object creation by mocking `Song.from_path` to return `fake_song`.
+        mock_path_resolve.return_value = fake_resolved_path
         mock_song_from_path.return_value = fake_song
 
-        # --- Act ---
-        # Attempt to add the files.
+        # --- Act: Add the audio file. ---
         playlist_state.add_song(audio_file)
 
-        # --- Assert ---
+        # --- Assert: The valid audio file should be added. ---
         # `Path.resolve()` should always be called per attempted add.
         mock_path_resolve.assert_called_once()
 
         # `Song.from_path()` should always be called per valid/expected file.
-        mock_song_from_path.assert_called_once_with(resolved_input_path)
+        mock_song_from_path.assert_called_once_with(fake_resolved_path)
 
-        # Verify that the resolved input path was stored in `Song` and added to the playlist.
+        # Verify that a new Song object containing the resolved input path was created
+        # and added to playlist.
         added_song = playlist_state.playlist[0].path
 
         assert playlist_state.song_count == 1
-        assert added_song == resolved_input_path
+        assert added_song == fake_resolved_path
         assert added_song in playlist_state.playlist_set
 
 
@@ -231,23 +131,23 @@ class TestAddSongSingleInput:
             mock_path_resolve,
             mock_song_from_path,
     ):
-        input_path = make_fake_path("path/to/invalid.mp3")
+        # --- Arrange: Prepare fake resolved path ---
+        fake_resolved_path = make_fake_path("path/to/invalid.mp3")
 
-        # Simulate input path resolution by mocking `Path.resolve()` to return `input_path`.
-        mock_path_resolve.return_value = input_path
+        mock_path_resolve.return_value = fake_resolved_path
 
-        # Simulate invalid audio files by mocking `Song.from_path` to return None.
         # `Song.from_path` returns None when the audio file is invalid.
         mock_song_from_path.return_value = None
 
-        # --- Act ---
-        playlist_state.add_song(input_path)
+        # --- Act: Attempt to add the invalid audio file ---
+        playlist_state.add_song(fake_resolved_path)
 
-        # --- Assert ---
+        # --- Assert: The invalid audio file should be rejected. ---
+        # `Path.resolve()` and `Song.from_path` should always be called per attempted add.
         mock_path_resolve.assert_called_once()
-        mock_song_from_path.assert_called_once()
+        mock_song_from_path.assert_called_once_with(fake_resolved_path)
 
-        # The invalid audio file is not added and the playlist remain empty.
+        # Verify that the playlist remain unchanged.
         assert playlist_state.song_count == 0
         assert playlist_state.playlist == []
         assert playlist_state.playlist_set == set()
@@ -265,26 +165,22 @@ class TestAddSongSingleInput:
             mock_song_from_path,
             non_audio_file
     ):
-        # --- Arrange ---
-        # Prepare fake resolved path for mock.
-        resolved_input_path = Path(non_audio_file)
+        # --- Arrange: Prepare fake resolved path and mock Path.resolve. ---
+        fake_resolved_path = Path(non_audio_file)
 
-        # Simulate input path resolution by mocking `Path.resolve()` to return `resolved_input_path`.
-        mock_path_resolve.return_value = resolved_input_path
+        mock_path_resolve.return_value = fake_resolved_path
 
-        # --- Act ---
-        # Attempt to add the file.
+        # --- Act: Attempt to add non-audio file. ---
         playlist_state.add_song(non_audio_file)
 
-        # -- Assert ---
-
+        # -- Assert: The non-audio file should be rejected. ---
         # `Path.resolve()` should always be called per attempted add.
         mock_path_resolve.assert_called_once()
 
-        # `Song.from_path` was not called.
+        # Non-audio file was handled in `Playlist.add_song` and `Song.from_path` was not called.
         mock_song_from_path.assert_not_called()
 
-        # The playlist remains empty.
+        # Verify that the playlist remain unchanged.
         assert playlist_state.song_count == 0
         assert playlist_state.playlist == []
         assert playlist_state.playlist_set == set()
@@ -313,32 +209,28 @@ class TestAddSongSingleInput:
             mock_song_from_path,
             audio_file
     ):
-        # --- Arrange ---
-        # Prepare fake resolved path and Song for mocks.
-        resolved_input_path, fake_song = make_fake_path_and_song(audio_file)
+        # --- Arrange: Prepare fake resolved path and Song for mock dependencies. ---
+        fake_resolved_path, fake_song = make_fake_path_and_song(audio_file)
 
-        # Simulate input path resolution by making `mock_path_resolve` return `resolved_input_path`.
-        mock_path_resolve.return_value = resolved_input_path
-
-        # Simulate `Song` object creation by making `mock_song_from_path` return `fake_song`.
+        mock_path_resolve.return_value = fake_resolved_path
         mock_song_from_path.return_value = fake_song
 
-        # --- Act ---
-        # Attempt to add the file
+        # --- Act: Attempt to add the files with different cases. ---
         playlist_state.add_song(audio_file)
 
-        # --- Assert ---
+        # --- Assert: The audio files with valid cases should be added. ---
         # `Path.resolve()` should always be called per attempted add.
         mock_path_resolve.assert_called_once()
 
         # `Song.from_path()` should always be called per valid/expected file.
-        mock_song_from_path.assert_called_once_with(resolved_input_path)
+        mock_song_from_path.assert_called_once_with(fake_resolved_path)
 
-        # Verify that the resolved input path was stored in `Song` and added to the playlist.
+        # Verify that a new Song object containing the resolved input path was created
+        # and added to playlist.
         added_song = playlist_state.playlist[0].path
 
         assert playlist_state.song_count == 1
-        assert added_song == resolved_input_path
+        assert added_song == fake_resolved_path
         assert added_song in playlist_state.playlist_set
 
     # Test case: Adding a duplicate audio file.
@@ -356,31 +248,37 @@ class TestAddSongSingleInput:
             mock_song_from_path,
             duplicate_audio_file
     ):
-        # --- Arrange ---
-        # Prepare fake resolved path and Song for mocks.
+        # --- Arrange: Prepare fake resolved path and Song for mock dependencies. ---
         resolved_input_path, fake_song = make_fake_path_and_song(duplicate_audio_file)
 
         # Insert the initial song into the playlist through `populate_playlist` fixture since playlist
         # has no direct setter.
         initial_audio_files = [Path("path/to/initial.mp3")]
+
         populate_playlist(initial_audio_files)
 
-        # Simulate input path resolution by making `mock_path_resolve` return `resolved_input_path`.
+        # `return_value` for new input.
         mock_path_resolve.return_value = resolved_input_path
 
-        # --- Act ---
+        # --- Act: Attempt to add duplicate audio files. ---
         playlist_state.add_song(duplicate_audio_file)
 
-        # --- Assert ---
+        # --- Assert: The duplicate audio file should be rejected. ---
+        # `Path.resolve()` should always be called per attempted add.
         mock_path_resolve.assert_called_once()
+
+        # Duplicate audio file was handled in `Playlist.add_song`
+        # and `Song.from_path` was not called.
         mock_song_from_path.assert_not_called()
 
+        # Verify that the playlist only contains the initial song.
         playlist_path = [curr_song.path for curr_song in playlist_state.playlist]
 
         assert playlist_state.song_count == len(initial_audio_files)
         assert playlist_path == initial_audio_files
 
 
+# --- Batch inputs ---
 class TestAddSongBatchInput:
     # Test case: Adding new files.
     @pytest.mark.parametrize("files", [
@@ -425,8 +323,7 @@ class TestAddSongBatchInput:
             mock_song_from_path,
             files
     ):
-        # --- Arrange ---
-        # Prepare the test data.
+        # --- Arrange: Prepare the test data. ---
         test_data = make_fake_paths_and_songs(files)
 
         input_paths = test_data.input_paths
@@ -434,20 +331,20 @@ class TestAddSongBatchInput:
         fake_songs = test_data.fake_songs
         expected_paths = test_data.expected_paths
 
-        # Simulate input path resolution by making `mock_path_resolve` return `resolved_input_paths`.
         mock_path_resolve.side_effect = resolved_input_paths
-
-        # Simulate `Song` object creation by making `mock_song_from_path` return `fake_song`.
         mock_song_from_path.side_effect = fake_songs
 
-        # --- Act ---
-        # Attempt to add the files
+        # --- Act: Attempt to add multiple inputs. ---
         playlist_state.add_song(input_paths)
 
-        # --- Assert ---
+        # --- Assert: Only the valid/expected files should be added. ---
+        # `Path.resolve()` should always be called per attempted add.
         assert mock_path_resolve.call_count == len(input_paths)
+
+        # `Song.from_path` should always be called per expected/valid files.
         assert mock_song_from_path.call_count == len(expected_paths)
 
+        # Verify that the playlist only contains the expected files.
         playlist_paths = [curr_song.path for curr_song in playlist_state.playlist]
 
         assert playlist_paths == expected_paths
@@ -470,7 +367,7 @@ class TestAddSongBatchInput:
             mock_song_from_path,
             files
     ):
-        # --- Arrange ---
+        # --- Arrange: Prepare the test data. ---
         test_data = make_fake_paths_and_songs(files)
 
         input_paths = test_data.input_paths
@@ -481,13 +378,18 @@ class TestAddSongBatchInput:
         mock_path_resolve.side_effect = fake_resolved_paths
         mock_song_from_path.side_effect = fake_songs
 
-        # --- Act ---
+        # --- Act: Attempt to add multiple inputs. ---
         playlist_state.add_song(input_paths)
 
         # --- Assert ---
+        # `Path.resolve` was only called per expected files and directory-like inputs are rejected
+        # during input path normalization.
         assert mock_path_resolve.call_count == len(expected_paths)
+
+        # `Song.from_path` should always be called per expected/valid files.
         assert mock_song_from_path.call_count == len(expected_paths)
 
+        # Verify that the playlist only contains the expected files.
         playlist_paths = [curr_song.path for curr_song in playlist_state.playlist]
 
         assert playlist_paths == expected_paths

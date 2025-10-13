@@ -1,72 +1,31 @@
 from typing import cast
-from unittest.mock import Mock
 
 import pytest
-from mutagen.mp3 import MP3
-from mutagen.oggflac import OggFLAC
-from mutagen.oggvorbis import OggVorbis
 
 from src.pyqt6_music_player.config import FALLBACK_METADATA
 from src.pyqt6_music_player.infra.metadata_extractor import (
     extract_id3_tags,
     extract_generic_tags
 )
-from tests.custom_types import SongMetadata, SupportedFormat
-
-MOCK_AUDIO_DURATION = 123.4  # Mocked audio duration used across tests.
+from tests.utils import make_fake_audio_object, SupportedFormat, MOCK_AUDIO_DURATION
 
 
-def make_fake_audio_object(tags: SongMetadata, file_format: SupportedFormat) -> Mock:
-    """
-    Builds a fake Mutagen audio object for unit testing.
+# --------------------------------------------------------------------------------
+# ID3 Tags unit tests.
+# --------------------------------------------------------------------------------
 
-    Args:
-        tags: Metadata dictionary containing optional title, artist, and album.
-        file_format: Audio format extension (e.g., ".mp3", ".flac", ".ogg") for mock spec.
-
-    Returns:
-        Mock: A mock audio object with the specified metadata and a fixed duration.
-    """
-    spec_map = {
-        ".mp3": MP3,
-        ".flac": OggFLAC,
-        ".ogg": OggVorbis
-    }
-
-    id3_frame_map = {
-        "title": "TIT2",
-        "artist": "TPE1",
-        "album": "TALB"
-    }
-
-    if file_format == ".mp3":
-        fake_metadata = {id3_frame_map[tag]: Mock(text=[value]) for tag, value in tags.items()}
-    else:
-        fake_metadata = {tag: [value] for tag, value in tags.items()}
-
-    spec_to_use = spec_map.get(file_format)
-
-    fake_audio = Mock(spec=spec_to_use)
-    fake_audio.get.side_effect = fake_metadata.get
-    fake_audio.info.length = MOCK_AUDIO_DURATION
-
-    return fake_audio
-
-
-# ------------------------------------------------------------------------------------------
 class TestExtractID3TagsHelper:
-
     # Test case: Assigning fallback values for missing tag.
     @pytest.mark.parametrize("missing_tag", [
         "title",
         "artist",
         "album"
     ], ids=["missing_title_mp3", "missing_artist_mp3", "missing_album_mp3"])
-    def test_extract_id3_tags_helper_assigns_fallback_value_for_missing_tags(self, missing_tag):
+    def test_extract_id3_tags_helper_assigns_fallback_value_for_missing_tags(self, missing_tag) -> None:
         # --- Arrange: Create fake mp3 audio object with missing descriptive tags. ---
-        input_metadata: SongMetadata = {
+        input_metadata = {
             tag: f"Fake {tag}"
-            for tag in {"title", "artist", "album"}
+            for tag in ["title", "artist", "album"]
             if tag != missing_tag
         }
 
@@ -81,7 +40,7 @@ class TestExtractID3TagsHelper:
     # Test case: Assigning fallback values for all missing tags.
     def test_extract_id3_tags_helper_assigns_fallback_value_for_all_missing_tags(self):
         # --- Arrange: Create fake mp3 audio object with all descriptive tags missing. ---
-        input_metadata: SongMetadata = {}
+        input_metadata = {}
 
         fake_mp3_audio_object = make_fake_audio_object(input_metadata, ".mp3")
 
@@ -96,7 +55,7 @@ class TestExtractID3TagsHelper:
     # Test case: Extract and return values from present tags.
     def test_extract_id3_tags_helper_extracts_and_returns_values_from_present_tags(self):
         # --- Arrange: Create fake mp3 audio object with complete descriptive tags. ---
-        input_metadata: SongMetadata = {
+        input_metadata = {
             "title": "Fake Title",
             "artist": "Fake Artist",
             "album": "Fake Album",
@@ -114,7 +73,10 @@ class TestExtractID3TagsHelper:
         assert extracted_tags.get("duration") == MOCK_AUDIO_DURATION
 
 
-# ------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# Generic Tags unit tests.
+# --------------------------------------------------------------------------------
+
 class TestExtractGenericTagsHelper:
     # Test case: Assigning fallback values for missing tag.
     @pytest.mark.parametrize("missing_tag, file_format", [
@@ -141,9 +103,9 @@ class TestExtractGenericTagsHelper:
             file_format
     ):
         # --- Arrange: Create fake generic audio object with missing descriptive tags. ---
-        input_metadata: SongMetadata = {
+        input_metadata = {
             tag: f"Fake {tag}"
-            for tag in {"title", "artist", "album"}
+            for tag in ["title", "artist", "album"]
             if tag != missing_tag
         }
 
@@ -169,7 +131,7 @@ class TestExtractGenericTagsHelper:
             file_format
     ):
         # --- Arrange: Create fake generic audio object with all descriptive tags missing. ---
-        input_metadata: SongMetadata = {}
+        input_metadata = {}
 
         fake_generic_audio_object = make_fake_audio_object(
             input_metadata,
@@ -191,7 +153,7 @@ class TestExtractGenericTagsHelper:
             file_format
     ):
         # --- Arrange: Create fake generic audio object with complete descriptive tags. ---
-        input_metadata: SongMetadata = {
+        input_metadata = {
             "title": "Fake Title",
             "artist": "Fake Artist",
             "album": "Fake Album",

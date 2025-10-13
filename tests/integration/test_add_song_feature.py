@@ -3,18 +3,13 @@ from unittest.mock import Mock
 from mutagen.mp3 import MP3
 
 from src.pyqt6_music_player.models.song import Song
+from tests.utils import make_tmp_path
 
 
-def make_tmp_path(tmp_path, file_name: str, exist=True):
-    path = tmp_path / file_name
+# --------------------------------------------------------------------------------
+# PlaylistState.add_song -> Song.from_path integration test.
+# --------------------------------------------------------------------------------
 
-    if exist:
-        path.touch()
-
-    return path
-
-
-# Integration test: PlaylistState.add_song -> Song.from_path.
 class TestAddSongToFromPath:
     def test_playlist_add_song_to_song_from_path_integration_test(
             self,
@@ -46,7 +41,10 @@ class TestAddSongToFromPath:
         assert added_song.path == fake_song.path
 
 
-# Integration test: Song.from_path -> get_metadata() helper.
+# --------------------------------------------------------------------------------
+# Song.from_path -> get_metadata() helper integration test
+# --------------------------------------------------------------------------------
+
 class TestFromPathToGetMetadata:
     def test_song_from_path_to_get_metadata_integration_test(
             self,
@@ -79,7 +77,10 @@ class TestFromPathToGetMetadata:
         assert added_song.duration > 0
 
 
-# Integration test: PlaylistState.add_song -> Song.from_path -> get_metadata (full flow).
+# --------------------------------------------------------------------------------
+# PlaylistState.add_song -> Song.from_path -> get_metadata (full flow) integration test.
+# --------------------------------------------------------------------------------
+
 class TestPlaylistStateToGetMetadata:
     def test_playlist_add_song_integration_test(
             self,
@@ -156,7 +157,7 @@ class TestPlaylistStateToGetMetadata:
         # --- Act: Try to add invalid song ---
         playlist_state.add_song(invalid_song)
 
-        # --- Assert: Song should be skipped, no playlist updates ---
+        # --- Assert: Invalid audio file should be skipped, no playlist updates ---
         mock_song_from_path.assert_called_once_with(invalid_song)
 
         assert playlist_state.playlist == []
