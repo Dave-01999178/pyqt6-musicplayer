@@ -4,21 +4,21 @@ import traceback
 
 from PyQt6.QtWidgets import QApplication
 
-from src.pyqt6_music_player.config import STYLESHEET
-from src.pyqt6_music_player.controllers import (
+from pyqt6_music_player.config import STYLESHEET
+from pyqt6_music_player.controllers import (
     PlaybackControlsController,
     PlaybackProgressController,
     PlaylistController,
     VolumeController,
     NowPlayingMetadataController,
 )
-from src.pyqt6_music_player.models import (
+from pyqt6_music_player.models import (
     MusicPlayerState,
     PlaylistState,
     PlaybackProgressState,
     VolumeState,
 )
-from src.pyqt6_music_player.views import MusicPlayerView
+from pyqt6_music_player.views import MusicPlayerView
 
 
 def exception_hook(exc_type, value, tb):

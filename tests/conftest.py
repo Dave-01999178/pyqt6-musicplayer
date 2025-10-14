@@ -4,12 +4,12 @@ from typing import Sequence
 import pytest
 from pytest_mock import MockerFixture
 
-from src.pyqt6_music_player.models import (
+from pyqt6_music_player.models import (
     Song,
     PlaylistState,
     VolumeState,
 )
-from tests.utils import make_fake_path_and_song
+from utils import make_fake_path_and_song
 
 
 @pytest.fixture

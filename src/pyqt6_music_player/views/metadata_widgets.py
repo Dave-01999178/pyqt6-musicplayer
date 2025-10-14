@@ -8,9 +8,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel
 
-from src.pyqt6_music_player.config import DEFAULT_ALBUM_ART_PATH
-from src.pyqt6_music_player.models import Song
-from src.pyqt6_music_player.views import BaseLabel
+from pyqt6_music_player.config import DEFAULT_ALBUM_ART_PATH
+from pyqt6_music_player.models import Song
+from pyqt6_music_player.views import BaseLabel
 
 
 class AlbumArtLabel(QLabel):
