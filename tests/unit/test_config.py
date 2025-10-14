@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.pyqt6_music_player import config
+from pyqt6_music_player import config
 
 # Collect all asset path constants in one list
 ASSET_PATHS = [

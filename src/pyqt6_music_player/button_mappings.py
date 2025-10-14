@@ -3,7 +3,7 @@ from typing import TypeAlias
 
 from PyQt6.QtCore import pyqtBoundSignal, pyqtSignal
 
-from src.pyqt6_music_player.views import (
+from pyqt6_music_player.views import (
     NextButton,
     PlayPauseButton,
     PreviousButton,

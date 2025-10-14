@@ -7,7 +7,7 @@ from mutagen.mp3 import MP3
 from mutagen.oggflac import OggFLAC
 from mutagen.oggvorbis import OggVorbis
 
-from src.pyqt6_music_player.models import Song
+from pyqt6_music_player.models import Song
 
 
 MOCK_AUDIO_DURATION = 123.4  # Mocked audio duration used across tests.

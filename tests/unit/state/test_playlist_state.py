@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.utils import (
+from utils import (
     make_fake_path,
     make_fake_path_and_song,
     make_fake_paths_and_songs,

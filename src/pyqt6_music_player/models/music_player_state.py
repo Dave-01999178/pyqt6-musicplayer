@@ -2,14 +2,14 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from src.pyqt6_music_player.config import (
+from pyqt6_music_player.config import (
     DEFAULT_ELAPSED_TIME,
     DEFAULT_PLAY_STATE,
     DEFAULT_SONG_DURATION,
     DEFAULT_VOLUME,
     SUPPORTED_AUDIO_FORMAT,
 )
-from src.pyqt6_music_player.models import Song, DEFAULT_SONG
+from pyqt6_music_player.models import Song, DEFAULT_SONG
 
 
 class PlaylistState(QObject):

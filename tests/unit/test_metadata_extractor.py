@@ -2,12 +2,12 @@ from typing import cast
 
 import pytest
 
-from src.pyqt6_music_player.config import FALLBACK_METADATA
-from src.pyqt6_music_player.infra.metadata_extractor import (
+from pyqt6_music_player.config import FALLBACK_METADATA
+from pyqt6_music_player.infra.metadata_extractor import (
     extract_id3_tags,
     extract_generic_tags
 )
-from tests.utils import make_fake_audio_object, SupportedFormat, MOCK_AUDIO_DURATION
+from utils import make_fake_audio_object, SupportedFormat, MOCK_AUDIO_DURATION
 
 
 # --------------------------------------------------------------------------------

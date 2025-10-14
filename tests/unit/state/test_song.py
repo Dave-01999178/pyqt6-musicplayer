@@ -4,8 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.pyqt6_music_player.models.song import Song
-from src.pyqt6_music_player.config import (
+from pyqt6_music_player.models.song import Song
+from pyqt6_music_player.config import (
     DEFAULT_SONG_ALBUM,
     DEFAULT_SONG_ARTIST,
     DEFAULT_SONG_DURATION,

@@ -7,8 +7,8 @@ displaying elapsed and total song durations.
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSlider
 
-from src.pyqt6_music_player.models import PlaybackProgressState
-from src.pyqt6_music_player.views import BaseLabel
+from pyqt6_music_player.models import PlaybackProgressState
+from pyqt6_music_player.views import BaseLabel
 
 
 class PlaybackProgressBar(QSlider):

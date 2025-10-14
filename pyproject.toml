@@ -12,6 +12,12 @@ dependencies = [
     "mutagen (>=1.47.0,<2.0.0)"
 ]
 
+
+[tool.mypy]
+mypy_path = ["src", "tests"]
+explicit_package_bases = true
+
+
 [tool.poetry]
 packages = [{include = "pyqt6_music_player", from = "src"}]
 

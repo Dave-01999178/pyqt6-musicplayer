@@ -8,7 +8,7 @@ label to display the current volume value.
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSizePolicy, QSlider
 
-from src.pyqt6_music_player.config import (
+from pyqt6_music_player.config import (
     PLAYBACK_BUTTON_SMALL,
     VOLUME_DEFAULT,
     VOLUME_HIGH_ICON_PATH,
@@ -17,8 +17,8 @@ from src.pyqt6_music_player.config import (
     VOLUME_MUTE_ICON_PATH,
     VOLUME_RANGE,
 )
-from src.pyqt6_music_player.models import VolumeState
-from src.pyqt6_music_player.views.base_widgets import IconButton, BaseLabel
+from pyqt6_music_player.models import VolumeState
+from pyqt6_music_player.views.base_widgets import IconButton, BaseLabel
 
 
 class VolumeButton(IconButton):
