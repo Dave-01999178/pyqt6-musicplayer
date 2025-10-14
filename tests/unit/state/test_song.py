@@ -1,4 +1,4 @@
-from dataclasses import FrozenInstanceError, fields
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -11,6 +11,7 @@ from src.pyqt6_music_player.config import (
     DEFAULT_SONG_DURATION,
     DEFAULT_SONG_TITLE,
 )
+from utils import FakeSongData
 
 
 # --------------------------------------------------------------------------------
@@ -68,7 +69,7 @@ class TestSong:
 
 
     # Test case: Valid audio file with complete descriptive tags.
-    def test_from_path_returns_song_with_extracted_metadata(
+    def test_song_from_path_returns_song_with_extracted_metadata(
             self,
             song,
             mock_mutagen_file,
@@ -137,7 +138,7 @@ class TestSong:
             "duration": 123.4
         }
     ], ids=["missing_title", "missing_artist", "missing_album", "missing_all"])
-    def test_from_path_handles_missing_metadata_gracefully(
+    def test_song_from_path_handles_missing_metadata_gracefully(
             self,
             song,
             mock_mutagen_file,
@@ -164,3 +165,32 @@ class TestSong:
         assert curr_song.artist == input_metadata.get("artist")
         assert curr_song.album == input_metadata.get("album")
         assert curr_song.duration == input_metadata.get("duration")
+
+    def test_song_get_metadata_fields_returns_list_of_metadata_names(self, song):
+        expected_list = ["title", "artist", "album", "duration"]
+
+        assert song.get_metadata_fields() == expected_list
+
+    @pytest.mark.parametrize("duration, expected_duration", [
+        (0.0, "00:00"),
+        (123.4, "02:03")
+    ], ids=["empty_or_default", "non_empty"])
+    def test_song_formatted_duration_formats_and_returns_duration(
+            self,
+            duration,
+            expected_duration
+    ):
+        # --- Arrange: Prepare fake song. ---
+        fake_song = FakeSongData(
+            path=Path("path/to/fake.mp3"),
+            title="Does",
+            artist="not",
+            album="matter",
+            duration=duration
+        ).to_song()
+
+        # --- Act: Get the formatted duration. ---
+        actual_duration = fake_song.formatted_duration()
+
+        # --- Assert: The duration should be for ---
+        assert actual_duration == expected_duration
