@@ -10,14 +10,14 @@ from PyQt6.QtWidgets import (
     QTableWidget,
 )
 
-from src.pyqt6_music_player.config import (
+from pyqt6_music_player.config import (
     ADD_ICON_PATH,
     EDIT_BUTTON_DEFAULT_SIZE,
     LOAD_FOLDER_ICON_PATH,
     REMOVE_ICON_PATH,
 )
-from src.pyqt6_music_player.models import PlaylistState
-from src.pyqt6_music_player.views import IconButton
+from pyqt6_music_player.models import PlaylistState
+from pyqt6_music_player.views import IconButton
 
 
 class PlayPauseDelegate(QStyledItemDelegate):

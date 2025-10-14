@@ -8,19 +8,19 @@ and audio metadata display.
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 
-from src.pyqt6_music_player.button_mappings import (
+from pyqt6_music_player.button_mappings import (
     PLAYBACK_BUTTON_MAP,
     PLAYLIST_BUTTON_MAP,
     PlaybackButtonDict,
     PlaylistButtonDict,
 )
-from src.pyqt6_music_player.models import (
+from pyqt6_music_player.models import (
     PlaybackProgressState,
     PlaylistState,
     Song,
     VolumeState,
 )
-from src.pyqt6_music_player.views import (
+from pyqt6_music_player.views import (
     AlbumArtLabel,
     ArtistLabel,
     SongTitleLabel,

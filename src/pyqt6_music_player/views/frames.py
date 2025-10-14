@@ -7,8 +7,8 @@ UI, including the main player bar and the playlist display area.
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
 
-from src.pyqt6_music_player.models import MusicPlayerState
-from src.pyqt6_music_player.views import (
+from pyqt6_music_player.models import MusicPlayerState
+from pyqt6_music_player.views import (
     AudioMetadataSection,
     PlaybackControlSection,
     PlaybackProgressSection,
