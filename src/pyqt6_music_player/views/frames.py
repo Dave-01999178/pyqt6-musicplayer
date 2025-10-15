@@ -9,12 +9,44 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
 
 from pyqt6_music_player.models import MusicPlayerState
 from pyqt6_music_player.views import (
+    VolumeSection,
     AudioMetadataSection,
     PlaybackControlSection,
     PlaybackProgressSection,
-    PlaylistSection,
-    VolumeSection,
+    PlaylistToolbarSection,
+    PlaylistWindowSection,
 )
+
+
+class PlaylistToolbarSectionFrame(QFrame):
+    add_song_button_clicked = pyqtSignal()
+    remove_song_button_clicked = pyqtSignal()
+    load_song_button_clicked = pyqtSignal()
+    def __init__(self):
+        super().__init__()
+        self.playlist_toolbar = PlaylistToolbarSection()
+
+        self._configure_properties()
+        self._init_ui()
+        self._connect_signals()
+
+    def _configure_properties(self):
+        """Configures the frame's properties"""
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.setObjectName("playlistToolbarFrame")
+
+    def _init_ui(self):
+        layout = QHBoxLayout()
+
+        layout.addWidget(self.playlist_toolbar)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.setLayout(layout)
+
+    def _connect_signals(self):
+        self.playlist_toolbar.add_song_button_clicked.connect(self.add_song_button_clicked)
+        self.playlist_toolbar.remove_song_button_clicked.connect(self.remove_song_button_clicked)
+        self.playlist_toolbar.load_song_button_clicked.connect(self.load_song_button_clicked)
 
 
 class PlaylistSectionFrame(QFrame):
@@ -24,18 +56,13 @@ class PlaylistSectionFrame(QFrame):
     This class provides a styled frame to hold the playlist view,
     giving it a distinct visual appearance within the application.
     """
-    add_song_button_clicked = pyqtSignal()
-    remove_song_button_clicked = pyqtSignal()
-    load_song_button_clicked = pyqtSignal()
     def __init__(self, state: MusicPlayerState):
         """Initializes the playlist section frame."""
         super().__init__()
-
-        self.playlist_section = PlaylistSection(state.playlist)
+        self.playlist_window = PlaylistWindowSection(state.playlist)
 
         self._configure_properties()
         self._init_ui()
-        self._connect_signals()
 
     def _configure_properties(self):
         """Configures the frame's properties"""
@@ -46,14 +73,9 @@ class PlaylistSectionFrame(QFrame):
         """Initializes the frame's internal widgets and layouts"""
         layout = QVBoxLayout()
 
-        layout.addWidget(self.playlist_section)
+        layout.addWidget(self.playlist_window)
 
         self.setLayout(layout)
-
-    def _connect_signals(self):
-        self.playlist_section.add_song_button_clicked.connect(self.add_song_button_clicked)
-        self.playlist_section.remove_song_button_clicked.connect(self.remove_song_button_clicked)
-        self.playlist_section.load_song_button_clicked.connect(self.load_song_button_clicked)
 
 
 class PlayerBarFrame(QFrame):

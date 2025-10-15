@@ -19,6 +19,12 @@ STYLESHEET = BASE_DIR / "styles" / "styles.qss"
 # ICONS
 # ---------------------------------------------------------------------------
 
+# Album art
+DEFAULT_ALBUM_ART_PATH = ASSETS_PATH / "default_art.png"
+
+# App icon
+MUSIC_PLAYER_ICON_PATH = ASSETS_PATH / "mp_icon.svg"
+
 # Playlist / file management
 ADD_ICON_PATH = ASSETS_PATH / "add_icon.svg"
 REMOVE_ICON_PATH = ASSETS_PATH / "remove_icon.svg"
@@ -40,9 +46,6 @@ VOLUME_HIGH_ICON_PATH = ASSETS_PATH / "volume_high.svg"
 VOLUME_MEDIUM_ICON_PATH = ASSETS_PATH / "volume_medium.svg"
 VOLUME_LOW_ICON_PATH = ASSETS_PATH / "volume_low.svg"
 VOLUME_MUTE_ICON_PATH = ASSETS_PATH / "volume_muted.svg"
-
-# Album art
-DEFAULT_ALBUM_ART_PATH = ASSETS_PATH / "default_art.png"
 
 # ---------------------------------------------------------------------------
 # APPLICATION CONFIGURATION

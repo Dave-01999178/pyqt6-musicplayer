@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QTableWidget,
 )
 
+from pyqt6_music_player.models import Song
 from pyqt6_music_player.config import (
     ADD_ICON_PATH,
     EDIT_BUTTON_DEFAULT_SIZE,
@@ -76,7 +77,7 @@ class PlaylistModel(QAbstractTableModel):
         super().__init__()
 
         self.playlist_state = playlist_state
-        self.header_label = ["Title", "Performer", "Album", "Duration"]
+        self.header_label = Song.get_metadata_fields()
 
         playlist_state.playlist_changed.connect(self._update_playlist_window)
 
@@ -87,27 +88,34 @@ class PlaylistModel(QAbstractTableModel):
         return len(self.header_label)
 
     def data(self, index, role=...):
-        if not index.isValid() or role != Qt.ItemDataRole.DisplayRole:
+        if not index.isValid():
             return
 
         song = self.playlist_state.playlist[index.row()]
         col = index.column()
+        field_name = self.header_label[col]
 
-        if col == 0:
-            return song.title
-        elif col == 1:
-            return song.artist
-        elif col == 2:
-            return song.album
-        elif col == 3:
-            return song.duration
+        if role == Qt.ItemDataRole.DisplayRole:
+            if field_name == "duration":
+                return song.formatted_duration()
+            return getattr(song, field_name)
+
+        if role == Qt.ItemDataRole.TextAlignmentRole:
+            if field_name == "duration":
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
+
+        return None
 
     def headerData(self, section, orientation, role=...):
-        if role != Qt.ItemDataRole.DisplayRole:
-            return
+        field_name = self.header_label[section]
 
-        if orientation == Qt.Orientation.Horizontal:
-            return self.header_label[section]
+        if  role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+            return field_name.title()
+
+        elif role == Qt.ItemDataRole.TextAlignmentRole and field_name == "duration":
+            return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
+
+        return None
 
     def _update_playlist_window(self):
         self.beginResetModel()
@@ -125,7 +133,7 @@ class PlaylistWindow(QTableView):
         self.viewport().setMouseTracking(True)
         self.setMouseTracking(True)
 
-        self._hover_delegate = HoverRowDelegate(self, hover_color="#48484b")
+        self._hover_delegate = HoverRowDelegate(self, hover_color="#34495E")
         self.setItemDelegate(self._hover_delegate)
 
         self.entered.connect(lambda idx: self._hover_delegate.setHoverRow(idx.row()))
@@ -138,9 +146,9 @@ class PlaylistWindow(QTableView):
         # Make column headers take available space equally
         header = self.horizontalHeader()
 
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         header.setSectionsClickable(False)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         self.verticalHeader().setDefaultSectionSize(50)
 
@@ -165,7 +173,8 @@ class AddSongButton(IconButton):
         super().__init__(
             icon_path=ADD_ICON_PATH,
             widget_size=EDIT_BUTTON_DEFAULT_SIZE,
-            button_text="Add song"
+            button_text="Add song(s)",
+            object_name="addSongBtn"
         )
 
 
@@ -174,7 +183,8 @@ class RemoveSongButton(IconButton):
         super().__init__(
             icon_path=REMOVE_ICON_PATH,
             widget_size=EDIT_BUTTON_DEFAULT_SIZE,
-            button_text="Remove song"
+            button_text="Remove song",
+            object_name="removeSongBtn"
         )
 
 
@@ -183,5 +193,6 @@ class LoadSongFolderButton(IconButton):
         super().__init__(
             icon_path=LOAD_FOLDER_ICON_PATH,
             widget_size=EDIT_BUTTON_DEFAULT_SIZE,
-            button_text="Load song folder"
+            button_text="Load folder",
+            object_name="loadFolderBtn"
         )

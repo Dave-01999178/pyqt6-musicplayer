@@ -17,7 +17,12 @@ from .playback_control_buttons import (
 from .playback_progress_widgets import ElapsedTimeLabel, PlaybackProgressBar, TotalDurationLabel
 
 # Playlist widgets
-from .playlist_widgets import AddSongButton, LoadSongFolderButton, RemoveSongButton, PlaylistWindow
+from .playlist_widgets import (
+    PlaylistWindow,
+    AddSongButton,
+    LoadSongFolderButton,
+    RemoveSongButton
+)
 
 # Volume widgets
 from .volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
@@ -27,12 +32,13 @@ from .sections import (
     AudioMetadataSection,
     PlaybackControlSection,
     PlaybackProgressSection,
-    PlaylistSection,
+    PlaylistToolbarSection,
+    PlaylistWindowSection,
     VolumeSection
 )
 
 # Frames (section customizable container)
-from .frames import PlayerBarFrame, PlaylistSectionFrame
+from .frames import PlayerBarFrame, PlaylistSectionFrame, PlaylistToolbarSectionFrame
 
 # Music player view (main view)
 from .music_player_view import MusicPlayerView
@@ -62,10 +68,10 @@ __all__ = [
     "TotalDurationLabel",
 
     # Playlist widgets
+    "PlaylistWindow",
     "AddSongButton",
     "LoadSongFolderButton",
     "RemoveSongButton",
-    "PlaylistWindow",
 
     # Volume widgets
     "VolumeButton",
@@ -76,10 +82,12 @@ __all__ = [
     "AudioMetadataSection",
     "PlaybackControlSection",
     "PlaybackProgressSection",
-    "PlaylistSection",
+    "PlaylistToolbarSection",
+    "PlaylistWindowSection",
     "VolumeSection",
 
     # Frames
+    "PlaylistToolbarSectionFrame",
     "PlayerBarFrame",
     "PlaylistSectionFrame",
 
