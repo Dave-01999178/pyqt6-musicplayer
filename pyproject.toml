@@ -14,8 +14,8 @@ dependencies = [
 
 
 [tool.mypy]
-mypy_path = ["src", "tests"]
 explicit_package_bases = true
+mypy_path = ["src"]
 
 
 [tool.poetry]

@@ -33,7 +33,8 @@ class PreviousButton(IconButton):
         """Initializes previous track button."""
         super().__init__(
             icon_path=PREV_ICON_PATH,
-            widget_size=PLAYBACK_BUTTON_SMALL
+            widget_size=PLAYBACK_BUTTON_SMALL,
+            object_name="navigationBtn"
         )
 
 
@@ -45,7 +46,7 @@ class PlayPauseButton(IconButton):
             icon_path=PLAY_ICON_PATH,
             widget_size=PLAYBACK_BUTTON_LARGE,
             icon_size=PLAY_ICON_SIZE,
-            object_name="playBtn"
+            object_name="playPauseBtn"
         )
 
 
@@ -55,7 +56,8 @@ class NextButton(IconButton):
         """Initializes next track button."""
         super().__init__(
             icon_path=NEXT_ICON_PATH,
-            widget_size=PLAYBACK_BUTTON_SMALL
+            widget_size=PLAYBACK_BUTTON_SMALL,
+            object_name="navigationBtn"
         )
 
 

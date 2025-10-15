@@ -5,12 +5,16 @@ This module defines the `MusicPlayerView`, the central container widget
 that holds all major UI components (playlist, player bar, controls).
 """
 from PyQt6.QtCore import pyqtSignal, QObject
-from PyQt6.QtGui import QColor, QPalette
+from PyQt6.QtGui import QColor, QPalette, QIcon
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
-from pyqt6_music_player.views import PlayerBarFrame, PlaylistSectionFrame
+from pyqt6_music_player.views import (
+    PlayerBarFrame,
+    PlaylistSectionFrame,
+    PlaylistToolbarSectionFrame
+)
 
-from pyqt6_music_player.config import APP_DEFAULT_SIZE, APP_TITLE
+from pyqt6_music_player.config import APP_TITLE, APP_DEFAULT_SIZE, MUSIC_PLAYER_ICON_PATH
 
 
 class MusicPlayerSignals(QObject):
@@ -72,6 +76,7 @@ class MusicPlayerView(QWidget):
         """
         super().__init__()
         self.state = state
+        self.playlist_toolbar = PlaylistToolbarSectionFrame()
         self.playlist_frame = PlaylistSectionFrame(state)
         self.player_bar_frame = PlayerBarFrame(state)
         self.signals = MusicPlayerSignals()
@@ -100,9 +105,10 @@ class MusicPlayerView(QWidget):
 
     def _init_ui(self):
         """Configure window properties and initialize layouts."""
-        self.setWindowTitle(APP_TITLE)
-        self.setMinimumSize(*APP_DEFAULT_SIZE)
         self.resize(*APP_DEFAULT_SIZE)
+        self.setMinimumSize(*APP_DEFAULT_SIZE)
+        self.setWindowTitle(APP_TITLE)
+        self.setWindowIcon(QIcon(str(MUSIC_PLAYER_ICON_PATH)))
 
         palette = QPalette()
         palette.setColor(QPalette.ColorRole.Window, QColor("#07070b"))  # Old color #000213
@@ -111,6 +117,7 @@ class MusicPlayerView(QWidget):
 
         main_layout = QVBoxLayout()
 
+        main_layout.addWidget(self.playlist_toolbar, 0)
         main_layout.addWidget(self.playlist_frame, 1)
         main_layout.addWidget(self.player_bar_frame, 0)
 
@@ -122,7 +129,7 @@ class MusicPlayerView(QWidget):
     def _connect_signals(self):
         """Connect low-level widget signals to higher-level grouped signals."""
         # Playlist manager
-        self.playlist_frame.add_song_button_clicked.connect(
+        self.playlist_toolbar.add_song_button_clicked.connect(
             self.playlist_manager_signals.add_song_button_clicked
         )
 

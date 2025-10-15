@@ -45,37 +45,48 @@ def build_button_dict(mapping: dict, parent: QWidget):
 
 
 # --- UI Sections ---
-class PlaylistSection(QWidget):
-    """A QWidget-based section containers for edit playlist buttons and playlist window."""
+class PlaylistToolbarSection(QWidget):
     add_song_button_clicked = pyqtSignal()
     remove_song_button_clicked = pyqtSignal()
     load_song_button_clicked = pyqtSignal()
-    def __init__(self, playlist_state: PlaylistState) -> None:
-        """Initializes the playlist widget container."""
+    def __init__(self):
         super().__init__()
         self.buttons: PlaylistButtonDict = build_button_dict(PLAYLIST_BUTTON_MAP, self)
-        self.playlist_window = PlaylistWindow(playlist_state)
 
         self._init_ui()
         self._connect_signals()
 
     def _init_ui(self):
-        """Initializes the container's internal widgets and layouts"""
-        section_layout = QVBoxLayout()
-        playlist_btn_layout = QHBoxLayout()
+        section_layout = QHBoxLayout()
 
-        for btn_widget, _ in self.buttons.values():
-            playlist_btn_layout.addWidget(btn_widget)
+        for widget, _ in self.buttons.values():
+            section_layout.addWidget(widget)
 
-        section_layout.addLayout(playlist_btn_layout)
-        section_layout.addWidget(self.playlist_window)
+        section_layout.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter)
 
         self.setLayout(section_layout)
 
     def _connect_signals(self):
-        """Connects internal widget signals to section-level signals"""
-        for btn_widget, signal_obj in self.buttons.values():
-            btn_widget.clicked.connect(signal_obj)
+        for widget, signal_obj in self.buttons.values():
+            widget.clicked.connect(signal_obj)
+
+
+class PlaylistWindowSection(QWidget):
+    """A QWidget-based section container for playlist window."""
+    def __init__(self, playlist_state: PlaylistState) -> None:
+        """Initializes the playlist window widget container."""
+        super().__init__()
+        self.playlist_window = PlaylistWindow(playlist_state)
+
+        self._init_ui()
+
+    def _init_ui(self):
+        """Initializes the container's internal widgets and layouts"""
+        section_layout = QVBoxLayout()
+
+        section_layout.addWidget(self.playlist_window)
+
+        self.setLayout(section_layout)
 
 
 class PlaybackProgressSection(QWidget):
