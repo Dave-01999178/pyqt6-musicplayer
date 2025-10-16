@@ -11,7 +11,7 @@ from pyqt6_music_player.config import (
     DEFAULT_SONG_DURATION,
     DEFAULT_SONG_TITLE,
 )
-from utils import FakeSongData
+from tests.utils import FakeSongData
 
 
 # --------------------------------------------------------------------------------

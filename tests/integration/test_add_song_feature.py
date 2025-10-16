@@ -3,7 +3,7 @@ from unittest.mock import Mock
 from mutagen.mp3 import MP3
 
 from pyqt6_music_player.models.song import Song
-from utils import make_tmp_path
+from tests.utils import make_tmp_path
 
 
 # --------------------------------------------------------------------------------
