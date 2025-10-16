@@ -9,7 +9,7 @@ from pyqt6_music_player.models import (
     PlaylistState,
     VolumeState,
 )
-from utils import make_fake_path_and_song
+from tests.utils import make_fake_path_and_song
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def volume_state():
 
 @pytest.fixture
 def mock_path_resolve(mocker: MockerFixture):
-    target = "src.pyqt6_music_player.models.music_player_state.Path.resolve"
+    target = "pyqt6_music_player.models.music_player_state.Path.resolve"
 
     return mocker.patch(target)
 
@@ -42,14 +42,14 @@ def mock_song_from_path(mocker: MockerFixture):
 
 @pytest.fixture
 def mock_mutagen_file(mocker: MockerFixture):
-    target = "src.pyqt6_music_player.models.song.mutagen.File"
+    target = "pyqt6_music_player.models.song.mutagen.File"
 
     return mocker.patch(target)
 
 
 @pytest.fixture
 def mock_get_metadata(mocker: MockerFixture):
-    target = "src.pyqt6_music_player.models.song.get_metadata"
+    target = "pyqt6_music_player.models.song.get_metadata"
 
     return mocker.patch(target)
 

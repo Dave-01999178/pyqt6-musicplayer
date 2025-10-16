@@ -7,7 +7,7 @@ from pyqt6_music_player.infra.metadata_extractor import (
     extract_id3_tags,
     extract_generic_tags
 )
-from utils import make_fake_audio_object, SupportedFormat, MOCK_AUDIO_DURATION
+from tests.utils import make_fake_audio_object, SupportedFormat, MOCK_AUDIO_DURATION
 
 
 # --------------------------------------------------------------------------------
