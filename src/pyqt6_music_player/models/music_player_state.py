@@ -14,10 +14,7 @@ from pyqt6_music_player.models import Song, DEFAULT_SONG
 
 class PlaylistState(QObject):
     playlist_changed = pyqtSignal(list)
-    """
-    Manages the playlist of the music player, including loaded songs and
-    current playback state.
-    """
+    """Manages the music player's playlist state."""
     def __init__(self) -> None:
         super().__init__()
         self._playlist: list[Song] = []
@@ -25,7 +22,7 @@ class PlaylistState(QObject):
 
     @property
     def playlist(self) -> list[Song]:
-        """Return the current playlist as a list of Songs."""
+        """Return the current playlist."""
         return self._playlist
 
     @property
@@ -135,6 +132,7 @@ class PlaybackProgressState(QObject):
 
 class VolumeState(QObject):
     volume_changed: pyqtSignal = pyqtSignal(int)
+    """Manages the music player's volume state."""
     def __init__(self) -> None:
         super().__init__()
         self._current_volume: int = DEFAULT_VOLUME
@@ -157,6 +155,12 @@ class VolumeState(QObject):
         return self._previous_volume
 
     def toggle_mute(self, mute: bool) -> None:
+        """
+        Toggles mute/unmute state.
+
+        Args:
+            mute: True if mute state is toggled, Otherwise, False.
+        """
         prev_volume = self._current_volume
 
         self._update_volume(0 if mute else self._previous_volume)
@@ -164,6 +168,12 @@ class VolumeState(QObject):
         self._previous_volume = prev_volume
 
     def _update_volume(self, new_value: int) -> None:
+        """
+        Updates the current volume based on the new clamped value or volume state (mute/unmute).
+
+        Args:
+            new_value: The volume's new value.
+        """
         # Ensure that the new value is within the 0-100 bounds.
         clamped_value = max(0, min(100, new_value))
 
