@@ -74,3 +74,10 @@ def populate_playlist(playlist_state, mock_path_resolve, mock_song_from_path):
         mock_song_from_path.reset_mock()
 
     return _populate
+
+
+@pytest.fixture
+def mock_audio_segment_from_file(mocker: MockerFixture):
+    mock_target = "pyqt6_music_player.models.player_engine.AudioSegment.from_file"
+
+    return mocker.patch(mock_target)

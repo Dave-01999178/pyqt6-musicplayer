@@ -47,34 +47,34 @@ VOLUME_MEDIUM_ICON_PATH = ASSETS_PATH / "volume_medium.svg"
 VOLUME_LOW_ICON_PATH = ASSETS_PATH / "volume_low.svg"
 VOLUME_MUTE_ICON_PATH = ASSETS_PATH / "volume_muted.svg"
 
+
 # ---------------------------------------------------------------------------
 # APPLICATION CONFIGURATION
 # ---------------------------------------------------------------------------
-
 APP_TITLE = "Music Player"
 APP_MIN_SIZE = (325, 475)
 APP_DEFAULT_SIZE = (750, 750)
 
+
 # ---------------------------------------------------------------------------
 # WIDGET CONFIGURATION
 # ---------------------------------------------------------------------------
-
 EDIT_BUTTON_DEFAULT_SIZE = (120, 40)
 PLAYBACK_BUTTON_SMALL = (30, 30)
 PLAYBACK_BUTTON_LARGE = (40, 40)
 PLAY_ICON_SIZE = (25, 25)
 
+
 # ---------------------------------------------------------------------------
 # SLIDER CONFIGURATION
 # ---------------------------------------------------------------------------
-
 VOLUME_RANGE = (0, 100)
 VOLUME_DEFAULT = 100
+
 
 # ---------------------------------------------------------------------------
 # STATE DEFAULTS
 # ---------------------------------------------------------------------------
-
 DEFAULT_SONG_TITLE = "Song Title"
 DEFAULT_SONG_ARTIST = "Song Artist"
 DEFAULT_SONG_ALBUM = "Song Album"
@@ -86,9 +86,10 @@ DEFAULT_VOLUME = 100
 # ---------------------------------------------------------------------------
 # AUDIO FORMATS & FILE DIALOG
 # ---------------------------------------------------------------------------
-
-SUPPORTED_AUDIO_FORMAT = {".mp3", ".wav", ".flac", ".ogg"}
+SUPPORTED_BYTES = {1, 2, 4}
 FILE_DIALOG_FILTER = "Audio files (*.mp3 *.wav *.flac *.ogg)"
+SUPPORTED_AUDIO_FORMAT = {".mp3", ".wav", ".flac", ".ogg"}
+
 
 # ---------------------------------------------------------------------------
 # METADATA FALLBACKS
