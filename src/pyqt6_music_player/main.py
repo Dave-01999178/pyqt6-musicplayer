@@ -19,7 +19,7 @@ from pyqt6_music_player.models import (
     VolumeState,
 )
 from pyqt6_music_player.views import MusicPlayerView
-
+    
 
 def exception_hook(exc_type, value, tb):
     """Custom exception hook for handling uncaught exceptions."""

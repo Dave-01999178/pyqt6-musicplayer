@@ -9,18 +9,18 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pyqt6 (>=6.9.1,<7.0.0)",
-    "mutagen (>=1.47.0,<2.0.0)"
+    "mutagen (>=1.47.0,<2.0.0)",
+    "pydub (>=0.25.1,<0.26.0)",
+    "pyaudio (>=0.2.14,<0.3.0)",
+    "numpy (>=2.3.4,<3.0.0)"
 ]
-
 
 [tool.mypy]
 explicit_package_bases = true
 mypy_path = ["src"]
 
-
 [tool.poetry]
 packages = [{include = "pyqt6_music_player", from = "src"}]
-
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.7"

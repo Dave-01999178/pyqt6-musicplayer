@@ -6,6 +6,7 @@ from unittest.mock import Mock
 from mutagen.mp3 import MP3
 from mutagen.oggflac import OggFLAC
 from mutagen.oggvorbis import OggVorbis
+from pydub import AudioSegment
 
 from pyqt6_music_player.models import Song
 
@@ -148,3 +149,20 @@ def make_fake_audio_object(tags, file_format: SupportedFormat) -> Mock:
     fake_audio.info.length = MOCK_AUDIO_DURATION
 
     return fake_audio
+
+
+def make_fake_audio_segment(
+        channels: int = 1,
+        raw_data: bytes = bytes([1, 2, 3, 4, 4, 3, 2, 1]),
+        sample_width: int = 2
+) -> Mock:
+
+    fake_audio_segment = Mock(spec=AudioSegment)
+
+    fake_audio_segment.channels = channels
+    fake_audio_segment.frame_rate = 44100
+    fake_audio_segment.frame_width = channels * sample_width
+    fake_audio_segment.raw_data = raw_data
+    fake_audio_segment.sample_width = sample_width
+
+    return fake_audio_segment
