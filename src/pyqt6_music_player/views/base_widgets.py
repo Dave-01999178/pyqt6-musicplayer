@@ -1,15 +1,16 @@
 """
-Custom PyQt6 reusable widgets for creating consistent UI components.
-
-This module provides a collection of base widgets, including a customizable icon button,
-a base label, and a base slider, designed for reuse across various UI projects.
+This module provides reusable widgets for creating consistent UI components.
 """
 from pathlib import Path
-from typing import Tuple
 
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QSize
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QPushButton, QLabel, QSlider
+from PyQt6.QtWidgets import QPushButton
+
+from pyqt6_music_player.config import (
+    DEFAULT_ICON_BUTTON_SIZE,
+    DEFAULT_ICON_SIZE
+)
 
 
 class IconButton(QPushButton):
@@ -23,95 +24,50 @@ class IconButton(QPushButton):
     def __init__(
             self,
             icon_path: Path,
-            widget_size: Tuple[int, int],
+            icon_size: tuple[int, int] = DEFAULT_ICON_SIZE,
+            widget_size: tuple[int, int] = DEFAULT_ICON_BUTTON_SIZE,
             button_text: str | None = None,
-            icon_size: Tuple[int, int] | None = None,
             object_name: str | None = None
-    ):
-        """Initializes a new IconButton instance.
+    ) -> None:
+        """
+        Initializes IconButton instance.
 
         Args:
-            icon_path: File system path to the icon image.
+            icon_path: Icon image path.
+            icon_size: Width and height of the icon.
+                       Defaults to `DEFAULT_ICON_SIZE` (15, 15).
             widget_size: Width and height of the widget.
+                         Defaults to `DEFAULT_ICON_BUTTON_SIZE` (30, 30).
             button_text: Text displayed on the button. Defaults to None.
-            icon_size: Width and height of the button icon. Defaults to None.
             object_name: Widget object name, useful for QSS styling. Defaults to None.
         """
         super().__init__(text=button_text)
-        self.icon = self._to_qicon(icon_path)
-        self.widget_size = widget_size
+        self.icon_path = icon_path
         self.icon_size = icon_size
+        self.widget_size = widget_size
         self.object_name = object_name
 
         self._configure_properties()
 
     def _configure_properties(self):
-        """Configures the icon button's properties."""
-        self.setFixedSize(*self.widget_size)
-        self.setIcon(self.icon)
+        """Configures the instance properties."""
+        self.setIcon(QIcon(str(self.icon_path)))
+        self.setIconSize(QSize(*self.icon_size))
 
-        if self.icon_size:
-            self.setIconSize(QSize(*self.icon_size))
+        self.setFixedSize(*self.widget_size)
 
         if self.object_name:
             self.setObjectName(self.object_name)
 
     @staticmethod
-    def _to_qicon(path: Path | str | QIcon) -> QIcon:
+    def to_qicon(icon_path: Path) -> QIcon:
         """
-        Convert a file path or QIcon into a QIcon instance.
+        Converts icon's path into a QIcon instance.
 
         Args:
-            path: The file path to the icon image or an existing QIcon instance.
+            icon_path: Icon image path.
 
         Returns:
-            QIcon: A QIcon object created from the given path or returned directly if
-            the input is already a QIcon.
+            A QICon instance.
         """
-        # If the `Path` is already a QIcon, return it.
-        if isinstance(path, QIcon):
-            return path
-
-        return QIcon(str(path))
-
-
-class BaseLabel(QLabel):
-    """
-    A customizable QLabel with fixed text and configurable properties.
-
-    This class extends the QLabel widget to provide a consistent and reusable label with options
-    for a fixed text string, a custom object name for styling, and text alignment.
-    """
-    def __init__(
-            self,
-            label_text: str,
-            object_name: str | None = None,
-            alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft
-    ):
-        """
-        Initializes a new BaseLabel instance.
-
-        Args:
-            label_text: The text to display on the label.
-            object_name: An optional name for the widget. This is useful for applying specific
-            styles using QSS (Qt Style Sheets).
-            alignment: An optional flag to specify the text alignment within the label.
-            Defaults to Qt.AlignmentFlag.AlignLeft.
-        """
-        super().__init__(text=label_text)
-        self.object_name = object_name
-        self.widget_alignment = alignment
-
-        self._configure_properties()
-
-    def _configure_properties(self):
-        """Configures the label's properties"""
-        if self.object_name:
-            self.setObjectName(self.object_name)
-
-        self.setAlignment(self.widget_alignment)
-
-
-class BaseSlider(QSlider):
-    def __init__(self):
-        super().__init__()
+        return QIcon(str(icon_path))

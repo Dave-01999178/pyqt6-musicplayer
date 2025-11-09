@@ -1,11 +1,11 @@
 # Base widgets
-from .base_widgets import BaseLabel, BaseSlider, IconButton
+from .base_widgets import IconButton
 
 # Metadata widgets
-from .metadata_widgets import AlbumArtLabel, ArtistLabel, SongTitleLabel
+from .now_playing_widgets import AlbumArtLabel, AudioArtistLabel, AudioTitleLabel
 
 # Playback control widgets
-from .playback_control_buttons import (
+from .playback_control_widgets import (
     NextButton,
     PlayPauseButton,
     PreviousButton,
@@ -14,13 +14,17 @@ from .playback_control_buttons import (
 )
 
 # Playback progress widgets
-from .playback_progress_widgets import ElapsedTimeLabel, PlaybackProgressBar, TotalDurationLabel
+from .playback_progress_widgets import (
+    ElapsedTimeLabel,
+    PlaybackProgressSlider,
+    TotalDurationLabel
+)
 
 # Playlist widgets
 from .playlist_widgets import (
-    PlaylistWindow,
     AddSongButton,
     LoadSongFolderButton,
+    PlaylistTableWidget,
     RemoveSongButton
 )
 
@@ -29,31 +33,25 @@ from .volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
 
 # Sections (grouped widgets)
 from .sections import (
-    AudioMetadataSection,
-    PlaybackControlSection,
-    PlaybackProgressSection,
-    PlaylistToolbarSection,
-    PlaylistWindowSection,
-    VolumeSection
+    NowPlayingDisplay,
+    PlaybackControls,
+    PlaybackProgress,
+    PlaylistDisplay,
+    PlaylistManager,
+    VolumeControls
 )
 
-# Frames (section customizable container)
-from .frames import PlayerBarFrame, PlaylistSectionFrame, PlaylistToolbarSectionFrame
-
 # Music player view (main view)
-from .music_player_view import MusicPlayerView
-
+from .music_player_view import MusicPlayerView, PlayerbarView, PlaylistView, PlaylistManagerView
 
 __all__ = [
     # Base widgets
-    "BaseLabel",
-    "BaseSlider",
     "IconButton",
 
     # Metadata widgets
     "AlbumArtLabel",
-    "ArtistLabel",
-    "SongTitleLabel",
+    "AudioArtistLabel",
+    "AudioTitleLabel",
 
     # Playback control widgets
     "NextButton",
@@ -64,13 +62,13 @@ __all__ = [
 
     # Playback progress widgets
     "ElapsedTimeLabel",
-    "PlaybackProgressBar",
+    "PlaybackProgressSlider",
     "TotalDurationLabel",
 
     # Playlist widgets
-    "PlaylistWindow",
     "AddSongButton",
     "LoadSongFolderButton",
+    "PlaylistTableWidget",
     "RemoveSongButton",
 
     # Volume widgets
@@ -79,18 +77,16 @@ __all__ = [
     "VolumeSlider",
 
     # Sections
-    "AudioMetadataSection",
-    "PlaybackControlSection",
-    "PlaybackProgressSection",
-    "PlaylistToolbarSection",
-    "PlaylistWindowSection",
-    "VolumeSection",
-
-    # Frames
-    "PlaylistToolbarSectionFrame",
-    "PlayerBarFrame",
-    "PlaylistSectionFrame",
+    "NowPlayingDisplay",
+    "PlaybackControls",
+    "PlaybackProgress",
+    "PlaylistDisplay",
+    "PlaylistManager",
+    "VolumeControls",
 
     # Music player view
     "MusicPlayerView",
+    "PlayerbarView",
+    "PlaylistView",
+    "PlaylistManagerView"
 ]

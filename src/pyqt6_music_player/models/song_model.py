@@ -4,36 +4,34 @@ from pathlib import Path
 
 import mutagen
 
-from pyqt6_music_player.config import (
-    DEFAULT_SONG_ALBUM,
-    DEFAULT_SONG_ARTIST,
-    DEFAULT_SONG_DURATION,
-    DEFAULT_SONG_TITLE,
-)
+from pyqt6_music_player.constant import DefaultAudioInfo
 from pyqt6_music_player.infra.metadata_extractor import get_metadata
 
 
 @dataclass(frozen=True, eq=True)
 class Song:
     path: Path | None = None
-    title: str = DEFAULT_SONG_TITLE
-    artist: str = DEFAULT_SONG_ARTIST
-    album: str = DEFAULT_SONG_ALBUM
-    duration: float = DEFAULT_SONG_DURATION
+    title: str = DefaultAudioInfo.title
+    artist: str = DefaultAudioInfo.artist
+    album: str = DefaultAudioInfo.album
+
+    # TODO: Move duration to `AudioData` dataclass.
+    duration: str | float = DefaultAudioInfo.total_duration
     # album_art: QPixmap
 
     @classmethod
     def from_path(cls, path: Path):
+        # Load audio file.
         try:
             audio = mutagen.File(path)
+        except (mutagen.MutagenError, OSError) as e:
+            logging.warning("Invalid or unreadable audio file: %s (%s)", path, e)
+            return None
         except Exception as e:
-            logging.warning("Invalid audio file: %s, %s", path, e)
+            logging.error("Unexpected error while reading %s: %s", path, e)
             return None
 
-        if audio is None:
-            logging.warning("Corrupted or unreadable audio file: %s", path)
-            return None
-
+        # Extract metadata.
         metadata = get_metadata(audio)
 
         return cls(

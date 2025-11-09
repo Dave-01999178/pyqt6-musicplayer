@@ -4,151 +4,213 @@ Main application view for the PyQt6 Music Player.
 This module defines the `MusicPlayerView`, the central container widget
 that holds all major UI components (playlist, player bar, controls).
 """
-from PyQt6.QtCore import pyqtSignal, QObject
-from PyQt6.QtGui import QColor, QPalette, QIcon
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QColor, QIcon, QPalette
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QWidget
 
+from pyqt6_music_player.config import (
+    APP_DEFAULT_SIZE,
+    APP_TITLE,
+    MUSIC_PLAYER_ICON_PATH
+)
+from pyqt6_music_player.models import PlaylistModel
 from pyqt6_music_player.views import (
-    PlayerBarFrame,
-    PlaylistSectionFrame,
-    PlaylistToolbarSectionFrame
+    NowPlayingDisplay,
+    PlaybackControls,
+    PlaybackProgress,
+    PlaylistDisplay,
+    PlaylistManager,
+    VolumeControls,
 )
 
-from pyqt6_music_player.config import APP_TITLE, APP_DEFAULT_SIZE, MUSIC_PLAYER_ICON_PATH
 
-
-class MusicPlayerSignals(QObject):
-    """
-    Container for all high-level signals of the music player view.
-
-    Signals are grouped into nested classes by feature domain
-    (volume, playback progress, playback controls).
-    """
-    class PlaylistManager(QObject):
-        add_song_button_clicked = pyqtSignal()
-        remove_song_button_clicked = pyqtSignal()
-        load_song_button_clicked = pyqtSignal()
-
-    class Volume(QObject):
-        """Signals related to volume control (mute button and slider)."""
-        button_clicked = pyqtSignal(bool)
-        slider_changed = pyqtSignal(int)
-
-    class PlaybackProgress(QObject):
-        """Signals related to playback progress (timeline slider)."""
-        slider_changed = pyqtSignal(int)
-
-    class PlaybackControls(QObject):
-        """Signals related to playback control buttons."""
-        previous_clicked = pyqtSignal()
-        play_pause_clicked = pyqtSignal()
-        next_clicked = pyqtSignal()
-
-    def __init__(self):
-        """Initialize grouped signal containers."""
-        super().__init__()
-        self.playlist_manager = self.PlaylistManager()
-        self.volume = self.Volume()
-        self.playback_progress = self.PlaybackProgress()
-        self.playback_control = self.PlaybackControls()
-
-
-# ------------------------------ Main view ------------------------------
-
+# ================================================================================
+# MAIN VIEW
+# ================================================================================
 class MusicPlayerView(QWidget):
-    """
-    The main application view for the music player.
-
-    This widget arranges and manages the primary UI components:
-
-    - `PlaylistSectionFrame` for the playlist view.
-    - `PlayerBarFrame` for playback controls, progress, and volume.
-
-    It also forwards all widget-level signals into a higher-level
-    `MusicPlayerSignals` object.
-    """
     def __init__(self, state):
         """
         Initialize the main music player view.
-
-        Args:
-            state: Application state object (MusicPlayerState).
         """
         super().__init__()
         self.state = state
-        self.playlist_toolbar = PlaylistToolbarSectionFrame()
-        self.playlist_frame = PlaylistSectionFrame(state)
-        self.player_bar_frame = PlayerBarFrame(state)
-        self.signals = MusicPlayerSignals()
+        self.playlist_manager_view = PlaylistManagerView()
+        self.playlist_view = PlaylistView(state)
+        self.player_bar_view = PlayerbarView()
 
+        self._configure_properties()
         self._init_ui()
-        self._connect_signals()
 
-    @property
-    def playlist_manager_signals(self):
-        return self.signals.playlist_manager
-
-    @property
-    def playback_progress_signals(self):
-        """Return the signal group for playback progress."""
-        return self.signals.playback_progress
-
-    @property
-    def playback_control_signals(self):
-        """Return the signal group for playback controls."""
-        return self.signals.playback_control
-
-    @property
-    def volume_signals(self):
-        """Return the signal group for volume control."""
-        return self.signals.volume
-
-    def _init_ui(self):
-        """Configure window properties and initialize layouts."""
+    def _configure_properties(self):
+        """Configures the instance's properties"""
         self.resize(*APP_DEFAULT_SIZE)
         self.setMinimumSize(*APP_DEFAULT_SIZE)
         self.setWindowTitle(APP_TITLE)
         self.setWindowIcon(QIcon(str(MUSIC_PLAYER_ICON_PATH)))
 
         palette = QPalette()
-        palette.setColor(QPalette.ColorRole.Window, QColor("#07070b"))  # Old color #000213
+        palette.setColor(QPalette.ColorRole.Window, QColor("#07070b"))
 
         self.setPalette(palette)
 
+    def _init_ui(self):
+        """Initializes the instance's internal widgets and layouts"""
         main_layout = QVBoxLayout()
 
-        main_layout.addWidget(self.playlist_toolbar, 0)
-        main_layout.addWidget(self.playlist_frame, 1)
-        main_layout.addWidget(self.player_bar_frame, 0)
+        # Top (Playlist manager): add, remove, and load song buttons.
+        main_layout.addWidget(self.playlist_manager_view, 0)
+
+        # Middle (Playlist window): QTableView.
+        main_layout.addWidget(self.playlist_view, 1)
+
+        # Bottom (Player bar): playback controls, volume controls, and current song display.
+        main_layout.addWidget(self.player_bar_view, 0)
 
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
 
         self.setLayout(main_layout)
 
+
+# ================================================================================
+# SUBVIEWS
+# ================================================================================
+class PlaylistManagerView(QFrame):
+    add_song_button_clicked = pyqtSignal()
+    remove_song_button_clicked = pyqtSignal()
+    load_song_button_clicked = pyqtSignal()
+    def __init__(self):
+        super().__init__()
+        self._playlist_manager = PlaylistManager()
+
+        self._connect_signals()
+        self._init_ui()
+
+    def _init_ui(self):
+        instance_layout = QHBoxLayout()
+
+        instance_layout.addWidget(self._playlist_manager)
+
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.setObjectName("playlistManagerFrame")
+
+        self.setLayout(instance_layout)
+
     def _connect_signals(self):
-        """Connect low-level widget signals to higher-level grouped signals."""
-        # Playlist manager
-        self.playlist_toolbar.add_song_button_clicked.connect(
-            self.playlist_manager_signals.add_song_button_clicked
-        )
+        self._playlist_manager.add_song_button_clicked.connect(self.add_song_button_clicked)
+        self._playlist_manager.remove_song_button_clicked.connect(self.remove_song_button_clicked)
+        self._playlist_manager.load_song_button_clicked.connect(self.load_song_button_clicked)
 
-        # Playback progress widget signals
-        self.player_bar_frame.progress_bar_slider_changed.connect(
-            self.playback_progress_signals.slider_changed
-        )
+    @property
+    def playlist_manager(self):
+        return self._playlist_manager
 
-        # Playback control widget signals
-        self.player_bar_frame.previous_button_clicked.connect(
-            self.playback_control_signals.previous_clicked
-        )
-        self.player_bar_frame.play_pause_button_clicked.connect(
-            self.playback_control_signals.play_pause_clicked
-        )
-        self.player_bar_frame.next_button_clicked.connect(
-            self.playback_control_signals.next_clicked
-        )
 
-        # Volume widget signals
-        self.player_bar_frame.volume_button_clicked.connect(self.volume_signals.button_clicked)
-        self.player_bar_frame.volume_slider_changed.connect(self.volume_signals.slider_changed)
+class PlaylistView(QFrame):
+    def __init__(self, playlist_state: PlaylistModel):
+        super().__init__()
+        self._playlist_display = PlaylistDisplay(playlist_state)
+
+        self._init_ui()
+
+    def _init_ui(self):
+        instance_layout = QVBoxLayout()
+
+        instance_layout.addWidget(self._playlist_display)
+
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.setObjectName("playlistFrame")
+
+        self.setLayout(instance_layout)
+
+    @property
+    def playlist_display(self):
+        return self._playlist_display
+
+
+class PlayerbarView(QFrame):
+    # Playback progress signal
+    playback_slider_moved = pyqtSignal(int)
+
+    # Playback control signals
+    replay_button_clicked = pyqtSignal()
+    previous_button_clicked = pyqtSignal()
+    play_pause_button_clicked = pyqtSignal()
+    next_button_clicked = pyqtSignal()
+    repeat_button_clicked = pyqtSignal()
+
+    # Volume control signals
+    volume_button_toggled = pyqtSignal(bool)
+    volume_slider_moved = pyqtSignal(int)
+
+    def __init__(self):
+        super().__init__()
+        self._playback_progress = PlaybackProgress()
+        self._now_playing_display = NowPlayingDisplay()
+        self._playback_controls = PlaybackControls()
+        self._volume_controls = VolumeControls()
+
+        self._init_ui()
+        self._connect_signals()
+
+    def _init_ui(self):
+        instance_layout = QVBoxLayout()
+
+        # --- Top section ---
+        top_layout = QHBoxLayout()
+
+        # Top (Playback progress widgets): Progress bar, elapsed time and total duration label.
+        top_layout.addWidget(self._playback_progress)
+
+        # --- Bottom section ---
+        bottom_layout = QHBoxLayout()  # For grouping bottom sections horizontally.
+
+        # Bottom left (Now playing display widgets): Album art, title and artist label.
+        bottom_layout.addWidget(self._now_playing_display, 0)
+        bottom_layout.addStretch(1)  # Pushes the next layout (add spacing).
+
+        # Bottom middle (Playback control widgets): Play/pause and playback navigation buttons.
+        bottom_layout.addWidget(self._playback_controls, 1)
+        bottom_layout.addStretch(1)  # Pushes the next layout (add spacing).
+
+        # Bottom right (Volume control widgets): Volume button, slider and label.
+        bottom_layout.addWidget(self._volume_controls, 0)
+
+        instance_layout.addLayout(top_layout)
+        instance_layout.addLayout(bottom_layout)
+
+        self.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Raised)
+        self.setObjectName("playerBarFrame")
+
+        self.setLayout(instance_layout)
+
+    def _connect_signals(self):
+        # Playback progress signal
+        self._playback_progress.playback_slider_moved.connect(self.playback_slider_moved)
+
+        # Playback control signals
+        self._playback_controls.replay_button_clicked.connect(self.replay_button_clicked)
+        self._playback_controls.previous_button_clicked.connect(self.previous_button_clicked)
+        self._playback_controls.play_pause_button_clicked.connect(self.play_pause_button_clicked)
+        self._playback_controls.next_button_clicked.connect(self.next_button_clicked)
+        self._playback_controls.repeat_button_clicked.connect(self.repeat_button_clicked)
+
+        # Volume control signals
+        self._volume_controls.volume_button_toggled.connect(self.volume_button_toggled)
+        self._volume_controls.volume_slider_moved.connect(self.volume_slider_moved)
+
+    @property
+    def playback_progress(self):
+        return self._playback_progress
+
+    @property
+    def now_playing_display(self):
+        return self._now_playing_display
+
+    @property
+    def playback_controls(self):
+        return self._playback_controls
+
+    @property
+    def volume_controls(self):
+        return self._volume_controls

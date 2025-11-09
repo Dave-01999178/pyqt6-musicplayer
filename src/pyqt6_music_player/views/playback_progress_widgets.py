@@ -1,52 +1,46 @@
 """
-Widgets for visualizing and controlling music playback.
-
-This module contains UI components such as a progress bar, and labels for
-displaying elapsed and total song durations.
+This module contains UI components playback progress such as progress bar, and labels for
+displaying song's elapsed time and total duration.
 """
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QSlider
+from PyQt6.QtWidgets import QLabel, QSlider
 
-from pyqt6_music_player.models import PlaybackProgressState
-from pyqt6_music_player.views import BaseLabel
+from pyqt6_music_player.constant import DefaultAudioInfo
 
 
-class PlaybackProgressBar(QSlider):
+class PlaybackProgressSlider(QSlider):
     """
-    A horizontal slider for visualizing and controlling music playback progress.
+    A horizontal slider widget (QSlider) for visualizing and controlling music playback progress.
 
     This widget represents the current playback position of a song. Users can drag
     the slider to seek to a specific point in the music.
     """
     def __init__(self):
-        """Initializes the playback progress bar."""
+        """Initializes PlaybackProgressSlider instance."""
         super().__init__(orientation=Qt.Orientation.Horizontal)
 
 
-class ElapsedTimeLabel(BaseLabel):
-    """A label widget for displaying the elapsed time of the current song."""
-    def __init__(self, playback_progress_state: PlaybackProgressState):
-        """
-        Initializes the elapsed time label.
+class ElapsedTimeLabel(QLabel):
+    """
+    A QLabel widget for displaying the elapsed time of the current song.
 
-        Args:
-            playback_progress_state: The music player playback progress state.
-        """
+    The default display is empty ('0:00:00').
+    """
+    def __init__(self):
+        """Initializes ElapsedTimeLabel instance."""
         super().__init__(
-            label_text=f"{playback_progress_state.elapsed_time}"
+            text=DefaultAudioInfo.elapsed_time
         )
 
 
-class TotalDurationLabel(BaseLabel):
-    """A label widget for displaying the total duration of the current song."""
-    def __init__(self, playback_progress_state: PlaybackProgressState):
-        """
-        Initializes the total duration label.
+class TotalDurationLabel(QLabel):
+    """
+    A QLabel widget for displaying the total duration of the current song.
 
-        Args:
-            playback_progress_state: The music player playback progress state.
-        """
+    The default display is empty ('').
+    """
+    def __init__(self):
+        """Initializes TotalDurationLabel instance."""
         super().__init__(
-            label_text=f"{playback_progress_state.total_duration}",
-            alignment=Qt.AlignmentFlag.AlignRight
+            text=DefaultAudioInfo.total_duration
         )

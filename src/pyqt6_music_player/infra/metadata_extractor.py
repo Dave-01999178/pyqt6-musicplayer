@@ -1,17 +1,22 @@
-from mutagen.flac import FLAC
+from typing import TypedDict
+
+from mutagen import FileType
 from mutagen.mp3 import MP3
-from mutagen.oggvorbis import OggVorbis
-from mutagen.wave import WAVE
 
-from pyqt6_music_player.config import FALLBACK_METADATA
+from pyqt6_music_player.constant import AudioMetadataFallback
 
 
-type AudioFile = MP3 | FLAC | OggVorbis | WAVE
-type NonMP3Audio = FLAC | OggVorbis | WAVE
-type MetadataDict = dict[str, str | float]
+class AudioInfoDict(TypedDict):
+    title: str
+    artist: str
+    album: str
+    duration: float
 
 
-def extract_id3_tags(mp3_audio: MP3, defaults=FALLBACK_METADATA) -> MetadataDict:
+def extract_id3_tags(
+        mp3_audio: MP3,
+        defaults: type[AudioMetadataFallback] = AudioMetadataFallback
+) -> AudioInfoDict:
     """
     Extracts ID3 metadata tags from an MP3 audio file.
 
@@ -21,13 +26,13 @@ def extract_id3_tags(mp3_audio: MP3, defaults=FALLBACK_METADATA) -> MetadataDict
 
     Args:
         mp3_audio: A mutagen.mp3.MP3 audio object containing ID3 tags.
-        defaults: A dictionary of fallback metadata values to use when a tag is missing.
+        defaults: A dataclass that contains fallback values for the missing metadata tags.
 
     Returns:
-        MetadataDict: A dictionary that contains metadata tags (title, artist, album and duration)
+        AudioInfoDict: A dictionary that contains metadata tags (title, artist, album and duration)
                       as keys and their corresponding values as values.
     """
-    def _get_text(tag, default):
+    def _get_text(tag: str, default: str):
         """Helper function for safely extracting `text` values from ID3 frames."""
         frame = mp3_audio.get(tag)
 
@@ -36,14 +41,17 @@ def extract_id3_tags(mp3_audio: MP3, defaults=FALLBACK_METADATA) -> MetadataDict
         return default
 
     return {
-        "title": _get_text("TIT2", defaults["title"]),
-        "artist": _get_text("TPE1", defaults["artist"]),
-        "album": _get_text("TALB", defaults["album"]),
-        "duration": getattr(mp3_audio.info, "length", defaults["duration"]),
+        "title": _get_text("TIT2", defaults.title),
+        "artist": _get_text("TPE1", defaults.artist),
+        "album": _get_text("TALB", defaults.album),
+        "duration": mp3_audio.info.length,  # type: ignore  # always present for valid files.
     }
 
 
-def extract_generic_tags(audio: NonMP3Audio, defaults=FALLBACK_METADATA) -> MetadataDict:
+def extract_generic_tags(
+        audio: FileType,
+        defaults: type[AudioMetadataFallback] = AudioMetadataFallback
+) -> AudioInfoDict:
     """
     Extracts standard metadata tags from a non-MP3 audio file.
 
@@ -52,21 +60,29 @@ def extract_generic_tags(audio: NonMP3Audio, defaults=FALLBACK_METADATA) -> Meta
 
     Args:
         audio: A non-mp3 mutagen audio object (e.g. FLAC, OggVorbis, or WAVE).
-        defaults: A dictionary of fallback metadata values to use when a tag is missing.
+        defaults: A dataclass that contains fallback values for the missing metadata tags.
 
     Returns:
-        MetadataDict: A dictionary that contains metadata tags (title, artist, album and duration)
+        AudioInfoDict: A dictionary that contains metadata tags (title, artist, album and duration)
                       as keys and their corresponding values as values.
     """
+    def _get_value(tag: str, default: str):
+        value = audio.get(tag)
+
+        if value is None:
+            return default
+
+        return value[0]
+
     return {
-        "title": audio.get("title", [defaults["title"]])[0],
-        "artist": audio.get("artist", [defaults["artist"]])[0],
-        "album": audio.get("album", [defaults["album"]])[0],
-        "duration": getattr(audio.info, "length", defaults["duration"]),
+        "title": _get_value("title", defaults.title),
+        "artist": _get_value("artist", defaults.artist),
+        "album": _get_value("album", defaults.album),
+        "duration": audio.info.length,  # type: ignore  # always present for valid files.
     }
 
 
-def get_metadata(audio: AudioFile) -> MetadataDict:
+def get_metadata(audio: FileType) -> AudioInfoDict:
     """
     Orchestrates metadata extraction for a given audio file.
 
@@ -76,7 +92,7 @@ def get_metadata(audio: AudioFile) -> MetadataDict:
         audio: An audio object returned by `mutagen.File` (e.g. MP3, FLAC, OggVorbis, or WAVE).
 
     Returns:
-        MetadataDict: A dictionary that contains metadata tags (title, artist, album and duration)
+        AudioInfoDict: A dictionary that contains metadata tags (title, artist, album and duration)
                       as keys and their corresponding values as values.
     """
     if isinstance(audio, MP3):
