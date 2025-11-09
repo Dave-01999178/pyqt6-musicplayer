@@ -101,7 +101,7 @@ QHeaderView::section {
 
 
 /* --- Playlist frame --- */
-#playlistToolbarFrame {
+#playlistManagerFrame {
     background-color: transparent;
 }
 
@@ -141,15 +141,6 @@ QSlider::handle:horizontal:pressed {
     border-radius: 9px;
 }
 
-/* QSlider::handle:horizontal:hover {
-    background: #454545;
-    border: 2px solid #1d1f22;
-    height: 14px;
-    width: 14px;
-    margin: -7px -2px;
-    border-radius: 9px;
-} */
-
 QSlider::sub-page:horizontal {
     background: #1db954;
     border-radius: 2px;
@@ -158,4 +149,13 @@ QSlider::sub-page:horizontal {
 QSlider::add-page:horizontal {
     background: #4a4d50;
     border-radius: 2px;
+}
+
+#audioTitleLabel {
+    font: 16px;
+    font-weight: bold;
+}
+
+#audioArtistLabel {
+    font: 12px;
 }
