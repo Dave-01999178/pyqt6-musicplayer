@@ -7,7 +7,9 @@ import numpy as np
 from numpy.typing import NDArray
 from pydub import AudioSegment
 
-from pyqt6_music_player.config import SUPPORTED_BYTES
+from pyqt6_music_player.constant import SUPPORTED_BYTES
+
+temp_path_to_use = r"C:\Users\dave_\Music\Factory Background.mp3"
 
 
 # ================================================================================
@@ -16,10 +18,10 @@ from pyqt6_music_player.config import SUPPORTED_BYTES
 @dataclass(frozen=True)
 class AudioData:
     segment: AudioSegment
-    samples: NDArray[np.float32]
+    samples: NDArray
 
     @classmethod
-    def from_file(cls, file: Path) -> Self | None:
+    def from_file(cls, file: str | Path) -> Self | None:
         # --- Load and decode file. ---
         try:
             audio_segment = AudioSegment.from_file(file)
@@ -36,7 +38,7 @@ class AudioData:
             logging.error("Invalid/Unsupported sample width: %d", sample_width)
             return None
 
-        orig_dtype = byte_to_dtype_map.get(sample_width)
+        orig_dtype = byte_to_dtype_map[sample_width]
 
         # --- Parse raw data from AudioSegment. ---
         samples = np.frombuffer(

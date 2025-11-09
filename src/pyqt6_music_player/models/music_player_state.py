@@ -1,19 +1,18 @@
 from pathlib import Path
+from typing import Sequence
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.config import (
-    DEFAULT_ELAPSED_TIME,
-    DEFAULT_PLAY_STATE,
-    DEFAULT_SONG_DURATION,
+from pyqt6_music_player.constant import (
     DEFAULT_VOLUME,
     SUPPORTED_AUDIO_FORMAT,
+    DefaultAudioInfo
 )
 from pyqt6_music_player.models import Song, DEFAULT_SONG
 
 
-class PlaylistState(QObject):
-    playlist_changed = pyqtSignal(list)
+class PlaylistModel(QObject):
+    playlist_changed = pyqtSignal()
     """Manages the music player's playlist state."""
     def __init__(self) -> None:
         super().__init__()
@@ -40,7 +39,7 @@ class PlaylistState(QObject):
         return DEFAULT_SONG
 
     @staticmethod
-    def _normalize_to_paths(file_paths: list[str | Path]) -> list[Path]:
+    def _normalize_to_paths(file_paths: Sequence[str | Path]) -> list[Path]:
         """
         Normalize input into a list of Path objects.
 
@@ -69,7 +68,7 @@ class PlaylistState(QObject):
 
         return normalized_paths
 
-    def add_song(self, file_paths: str | Path | list[str | Path]) -> None:
+    def add_song(self, file_paths: str | Path | Sequence[str | Path]) -> None:
         """
         Add one or more audio files to the playlist.
 
@@ -91,7 +90,6 @@ class PlaylistState(QObject):
             file_paths = [file_paths]
 
         paths = self._normalize_to_paths(file_paths)
-
         from_path = Song.from_path  # Cache to avoid repeated lookups.
         for p in paths:
             try:
@@ -111,15 +109,15 @@ class PlaylistState(QObject):
                 self._playlist.append(song)
                 self._playlist_set.add(resolved_path)
 
-                self.playlist_changed.emit(self.playlist)  # type: ignore
+                self.playlist_changed.emit()  # type: ignore
 
 
 class PlaybackProgressState(QObject):
     def __init__(self):
         super().__init__()
-        self._is_playing = DEFAULT_PLAY_STATE
-        self._elapsed_time = DEFAULT_ELAPSED_TIME
-        self._total_duration = DEFAULT_SONG_DURATION
+        self._is_playing = False
+        self._elapsed_time = DefaultAudioInfo.elapsed_time
+        self._total_duration = DefaultAudioInfo.total_duration
 
     @property
     def elapsed_time(self):
@@ -130,7 +128,7 @@ class PlaybackProgressState(QObject):
         return self._total_duration
 
 
-class VolumeState(QObject):
+class VolumeSettings(QObject):
     volume_changed: pyqtSignal = pyqtSignal(int)
     """Manages the music player's volume state."""
     def __init__(self) -> None:
@@ -184,16 +182,3 @@ class VolumeState(QObject):
         self._current_volume = clamped_value
 
         self.volume_changed.emit(self._current_volume)
-
-
-class MusicPlayerState(QObject):
-    def __init__(
-            self,
-            playlist: PlaylistState,
-            playback_progress: PlaybackProgressState,
-            volume: VolumeState
-    ):
-        super().__init__()
-        self.playlist = playlist
-        self.playback_progress = playback_progress
-        self.volume = volume

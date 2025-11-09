@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt, QAbstractTableModel
+from PyQt6.QtCore import QAbstractTableModel, Qt
 from PyQt6.QtGui import QBrush, QColor, QPalette
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -7,28 +7,26 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
-    QTableWidget,
+    QTableWidget
 )
 
-from pyqt6_music_player.models import Song
 from pyqt6_music_player.config import (
     ADD_ICON_PATH,
-    EDIT_BUTTON_DEFAULT_SIZE,
     LOAD_FOLDER_ICON_PATH,
-    REMOVE_ICON_PATH,
+    MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE,
+    REMOVE_ICON_PATH
 )
-from pyqt6_music_player.models import PlaylistState
+from pyqt6_music_player.models import PlaylistModel, Song
 from pyqt6_music_player.views import IconButton
 
 
-class PlayPauseDelegate(QStyledItemDelegate):
-    def __init__(self):
-        super().__init__()
-
-
+# ================================================================================
+# PLAYLIST TABLE CUSTOM STYLE AND EFFECTS
+# ================================================================================
 class HoverRowDelegate(QStyledItemDelegate):
-    def __init__(self, parent=None, hover_color="#3a3f4b"):
+    def __init__(self, parent=None, hover_color: str="#3a3f4b"):
         super().__init__()
+        self._parent = parent
         self._hover_row = -1  # '-1' means no row hovered
         self._hover_brush = QBrush(QColor(hover_color))
 
@@ -43,8 +41,8 @@ class HoverRowDelegate(QStyledItemDelegate):
             #
             # Note: self.parent() is the QTableView that owns this delegate.
             # Its .viewport() is the widget that actually paints all the cells.
-            if self.parent():
-                self.parent().viewport().update()
+            if self._parent:
+                self._parent.viewport().update()
 
     def paint(self, painter, option, index):
         # 'QStyleOptionViewItem(option).state or opt.state' is a set of bit flags that describe how
@@ -72,17 +70,19 @@ class HoverRowDelegate(QStyledItemDelegate):
         super().paint(painter, opt, index)
 
 
-class PlaylistModel(QAbstractTableModel):
-    def __init__(self, playlist_state: PlaylistState):
+# ================================================================================
+# PLAYLIST MODEL AND WIDGET
+# ================================================================================
+class PlaylistTableModel(QAbstractTableModel):
+    def __init__(self, playlist_model: PlaylistModel):
         super().__init__()
-
-        self.playlist_state = playlist_state
+        self.playlist_model = playlist_model
         self.header_label = Song.get_metadata_fields()
 
-        playlist_state.playlist_changed.connect(self._update_playlist_window)
+        playlist_model.playlist_changed.connect(self._update_playlist_table)
 
     def rowCount(self, parent=None):
-        return len(self.playlist_state.playlist)
+        return len(self.playlist_model.playlist)
 
     def columnCount(self, parent=None):
         return len(self.header_label)
@@ -91,7 +91,7 @@ class PlaylistModel(QAbstractTableModel):
         if not index.isValid():
             return
 
-        song = self.playlist_state.playlist[index.row()]
+        song = self.playlist_model.playlist[index.row()]
         col = index.column()
         field_name = self.header_label[col]
 
@@ -117,40 +117,38 @@ class PlaylistModel(QAbstractTableModel):
 
         return None
 
-    def _update_playlist_window(self):
+    def _update_playlist_table(self):
         self.beginResetModel()
         self.endResetModel()
 
 
-class PlaylistWindow(QTableView):
-    def __init__(self, playlist_state: PlaylistState):
+class PlaylistTableWidget(QTableView):
+    def __init__(self, playlist_state: PlaylistModel):
         super().__init__()
-        self.model = PlaylistModel(playlist_state)
-        self.setModel(self.model)
+        self._model = PlaylistTableModel(playlist_state)
+        self.setModel(self._model)
 
         self._configure_properties()
-
-        self.viewport().setMouseTracking(True)
-        self.setMouseTracking(True)
-
-        self._hover_delegate = HoverRowDelegate(self, hover_color="#34495E")
-        self.setItemDelegate(self._hover_delegate)
-
-        self.entered.connect(lambda idx: self._hover_delegate.setHoverRow(idx.row()))
+        self._configure_viewport()
+        self._configure_delegate()
 
     def leaveEvent(self, e):
         self._hover_delegate.setHoverRow(-1)
         super().leaveEvent(e)
 
     def _configure_properties(self):
-        # Make column headers take available space equally
+        # `is not None` check to resolve mypy no attribute [union-attr] errors.
         header = self.horizontalHeader()
+        if header is not None:
+            header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            header.setSectionsClickable(False)
+            header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-        header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        header.setSectionsClickable(False)
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-
-        self.verticalHeader().setDefaultSectionSize(50)
+        # `is not None` check to resolve mypy no attribute [union-attr] errors.
+        rows = self.verticalHeader()
+        if rows is not None:
+            rows.setDefaultSectionSize(50)
+            rows.hide()
 
         self.setAlternatingRowColors(True)  # Alternating row colors
         self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)  # Disable cell edit
@@ -161,18 +159,30 @@ class PlaylistWindow(QTableView):
         # Select the entire row on click
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
 
+        # Disable multi row selection (temporary).
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
-        self.verticalHeader().hide()
+    def _configure_viewport(self):
+        # `is not None` check to resolve mypy no attribute [union-attr] errors.
+        self._viewport = self.viewport()
+        if self._viewport is not None:
+            self._viewport.setMouseTracking(True)
+        self.setMouseTracking(True)
+
+    def _configure_delegate(self):
+        self._hover_delegate = HoverRowDelegate(self, hover_color="#34495E")
+        self.setItemDelegate(self._hover_delegate)
+        self.entered.connect(lambda idx: self._hover_delegate.setHoverRow(idx.row()))
 
 
-# -------------------- Manage playlist buttons --------------------
-
+# ================================================================================
+# PLAYLIST MANAGER BUTTON WIDGETS
+# ================================================================================
 class AddSongButton(IconButton):
     def __init__(self):
         super().__init__(
             icon_path=ADD_ICON_PATH,
-            widget_size=EDIT_BUTTON_DEFAULT_SIZE,
+            widget_size=MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE,
             button_text="Add song(s)",
             object_name="addSongBtn"
         )
@@ -182,8 +192,8 @@ class RemoveSongButton(IconButton):
     def __init__(self):
         super().__init__(
             icon_path=REMOVE_ICON_PATH,
-            widget_size=EDIT_BUTTON_DEFAULT_SIZE,
-            button_text="Remove song",
+            widget_size=MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE,
+            button_text="Remove",
             object_name="removeSongBtn"
         )
 
@@ -192,7 +202,7 @@ class LoadSongFolderButton(IconButton):
     def __init__(self):
         super().__init__(
             icon_path=LOAD_FOLDER_ICON_PATH,
-            widget_size=EDIT_BUTTON_DEFAULT_SIZE,
+            widget_size=MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE,
             button_text="Load folder",
             object_name="loadFolderBtn"
         )

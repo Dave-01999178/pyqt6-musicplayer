@@ -1,15 +1,13 @@
 from .music_player_controller import (
-    NowPlayingMetadataController,
-    PlaybackControlsController,
+    PlaybackControlController,
     PlaybackProgressController,
-    PlaylistController,
-    VolumeController,
+    PlaylistManagerController,
+    VolumeControlController
 )
 
 __all__ = [
-    "NowPlayingMetadataController",
-    "PlaybackControlsController",
+    "PlaybackControlController",
     "PlaybackProgressController",
-    "PlaylistController",
-    "VolumeController",
+    "PlaylistManagerController",
+    "VolumeControlController",
 ]

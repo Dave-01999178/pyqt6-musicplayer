@@ -1,26 +1,28 @@
 """
-Widgets for controlling and displaying the music player's volume.
-
-This module provides UI components for volume control, including a volume button
-that updates its icon based on the volume level, a slider to adjust the volume, and a
-label to display the current volume value.
+This module provides UI components for volume control, including a custom volume icon button
+that updates its icon based on the current volume level and can be toggled to mute and unmute
+the audio, a slider to adjust the volume, and a label to display the current volume value.
 """
+from pathlib import Path
+
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QSizePolicy, QSlider
+from PyQt6.QtWidgets import QLabel, QSizePolicy, QSlider
 
 from pyqt6_music_player.config import (
-    PLAYBACK_BUTTON_SMALL,
-    VOLUME_DEFAULT,
-    VOLUME_HIGH_ICON_PATH,
-    VOLUME_LOW_ICON_PATH,
-    VOLUME_MEDIUM_ICON_PATH,
-    VOLUME_MUTE_ICON_PATH,
-    VOLUME_RANGE,
+    HIGH_VOLUME_ICON_PATH,
+    LOW_VOLUME_ICON_PATH,
+    MEDIUM_VOLUME_ICON_PATH,
+    MUTED_VOLUME_ICON_PATH,
+    VOLUME_BUTTON_ICON_SIZE,
+    VOLUME_BUTTON_SIZE,
+    VOLUME_RANGE
 )
-from pyqt6_music_player.models import VolumeState
-from pyqt6_music_player.views.base_widgets import IconButton, BaseLabel
+from pyqt6_music_player.constant import DEFAULT_VOLUME
+from pyqt6_music_player.views import IconButton
 
 
+# TODO: Check if `volume_icon` and `update_button_icon` implementation could be improved
+#  or simplified.
 class VolumeButton(IconButton):
     """
     A custom button for controlling and displaying the current volume state.
@@ -28,39 +30,57 @@ class VolumeButton(IconButton):
     This button changes its icon based on the volume level and can be toggled
     to mute or unmute the audio.
     """
-    def __init__(self, volume_state: VolumeState):
-        """Initializes the volume button."""
+    def __init__(
+            self,
+            icon: Path = HIGH_VOLUME_ICON_PATH,
+            icon_size: tuple[int, int] = VOLUME_BUTTON_ICON_SIZE,
+            widget_size: tuple[int, int] = VOLUME_BUTTON_SIZE,
+            object_name: str | None = None
+    ):
+        """
+        Initializes VolumeButton instance.
+        
+        Args:
+            icon: Icon image path. Defaults to 'high volume' icon.
+            icon_size: Width and height of the icon.
+                       Defaults to `VOLUME_BUTTON_ICON_SIZE` (15, 15).
+            widget_size: VolumeButton instance width and height.
+                         Defaults to `VOLUME_BUTTON_SIZE` (30, 30).
+            object_name: VolumeButton instance object name, useful for QSS styling.
+                         Defaults to None.
+        """
         super().__init__(
-            icon_path=VOLUME_HIGH_ICON_PATH,
-            widget_size=PLAYBACK_BUTTON_SMALL,
+            icon_path=icon,
+            icon_size=icon_size,
+            widget_size=widget_size,
+            object_name=object_name
         )
-        self.icons = {
-            "mute": self._to_qicon(VOLUME_MUTE_ICON_PATH),
-            "low": self._to_qicon(VOLUME_LOW_ICON_PATH),
-            "medium": self._to_qicon(VOLUME_MEDIUM_ICON_PATH),
-            "high": self._to_qicon(VOLUME_HIGH_ICON_PATH)
+        self._volume_icons = {
+            "mute": self.to_qicon(MUTED_VOLUME_ICON_PATH),
+            "low": self.to_qicon(LOW_VOLUME_ICON_PATH),
+            "medium": self.to_qicon(MEDIUM_VOLUME_ICON_PATH),
+            "high": self.to_qicon(HIGH_VOLUME_ICON_PATH)
         }
 
         self.setCheckable(True)
 
-        # Reflect volume state changes
-        volume_state.volume_changed.connect(self._update_button_icon)
-
-    def _update_button_icon(self, volume: int):
+    def update_button_icon(self, new_volume: int) -> None:
         """
-        Updates the button's icon based on the given volume level.
+        The VolumeButton's public interface for updating its icon.
+
+        This updates the button's icon based on the new volume level.
 
         Args:
-            volume: The current volume level (0-100).
+            new_volume: The current volume level (0-100).
         """
-        if volume == 0:
-            self.setIcon(self.icons["mute"])
-        elif 1 <= volume <= 33:
-            self.setIcon(self.icons["low"])
-        elif 34 <= volume <= 66:
-            self.setIcon(self.icons["medium"])
+        if new_volume == 0:
+            self.setIcon(self._volume_icons["mute"])
+        elif 1 <= new_volume <= 33:
+            self.setIcon(self._volume_icons["low"])
+        elif 34 <= new_volume <= 66:
+            self.setIcon(self._volume_icons["medium"])
         else:
-            self.setIcon(self.icons["high"])
+            self.setIcon(self._volume_icons["high"])
 
 
 class VolumeSlider(QSlider):
@@ -70,48 +90,45 @@ class VolumeSlider(QSlider):
     This slider is configured with a specific range (0-100) and a default value (100) for
     managing audio volume.
     """
-    def __init__(self, volume_state: VolumeState, orientation=Qt.Orientation.Horizontal):
-        """Initializes the volume slider."""
-        super().__init__(orientation)
+    def __init__(self, orientation: Qt.Orientation = Qt.Orientation.Horizontal):
+        """
+        Initializes VolumeSlider instance.
+
+        Args:
+            orientation: VolumeSlider instance orientation.
+                         Defaults to `Qt.Orientation.Horizontal` (horizontal).
+        """
+        super().__init__(orientation=orientation)
 
         self._configure_properties()
 
-        # Reflect volume state changes
-        volume_state.volume_changed.connect(self.setValue)
-
     def _configure_properties(self):
-        """Configures the slider's properties"""
+        """Configures the instance's properties"""
         self.setRange(*VOLUME_RANGE)
-        self.setValue(VOLUME_DEFAULT)
+        self.setValue(DEFAULT_VOLUME)
 
 
-class VolumeLabel(BaseLabel):
+class VolumeLabel(QLabel):
     """
     A label widget for displaying the current volume level.
 
     This label shows the volume as a number (0-100).
     """
-    def __init__(self, volume_state: VolumeState):
+    def __init__(self, display_text: str = str(DEFAULT_VOLUME)):
         """
-        Initializes the volume label.
+        Initializes VolumeLabel instance.
 
         Args:
-            volume_state: The music player state object containing the current volume.
+            display_text: VolumeLabel instance display text. Defaults to `DEFAULT_VOLUME` (100).
         """
-        super().__init__(
-            label_text=str(volume_state.current_volume),
-            alignment=Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter
-        )
-        self.state = volume_state
+        super().__init__(text=display_text)
 
         self._configure_properties()
 
-        # Reflect volume state changes
-        volume_state.volume_changed.connect(lambda new_volume: self.setText(f"{new_volume}"))
-
     def _configure_properties(self):
-        """Configures the label's properties"""
+        """Configures the instance properties"""
         label_width = self.fontMetrics().horizontalAdvance("100") + 4
 
+        self.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
         self.setFixedWidth(label_width)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)

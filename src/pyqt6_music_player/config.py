@@ -3,7 +3,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # PATH CONFIGURATION
 # ---------------------------------------------------------------------------
-
+#
 # Base directories
 BASE_DIR = Path(__file__).resolve().parents[2]
 ASSETS_PATH = BASE_DIR / "assets"
@@ -11,26 +11,26 @@ ASSETS_PATH = BASE_DIR / "assets"
 # ---------------------------------------------------------------------------
 # STYLES
 # ---------------------------------------------------------------------------
-
-# QSS
+#
+# QSS path
 STYLESHEET = BASE_DIR / "styles" / "styles.qss"
 
 # ---------------------------------------------------------------------------
-# ICONS
+# ICONS PATH
 # ---------------------------------------------------------------------------
-
+#
 # Album art
-DEFAULT_ALBUM_ART_PATH = ASSETS_PATH / "default_art.png"
+ALBUM_ART_PLACEHOLDER = ASSETS_PATH / "default_art.png"
 
 # App icon
 MUSIC_PLAYER_ICON_PATH = ASSETS_PATH / "mp_icon.svg"
 
-# Playlist / file management
+# Manage playlist icons
 ADD_ICON_PATH = ASSETS_PATH / "add_icon.svg"
 REMOVE_ICON_PATH = ASSETS_PATH / "remove_icon.svg"
 LOAD_FOLDER_ICON_PATH = ASSETS_PATH / "load_folder_icon.svg"
 
-# Playback controls
+# Playback control icons
 REPLAY_ICON_PATH = ASSETS_PATH / "replay_icon.svg"
 PREV_ICON_PATH = ASSETS_PATH / "prev_icon.svg"
 PREV_ICON_PRESSED_PATH = ASSETS_PATH / "prev_icon_pressed.svg"
@@ -41,11 +41,11 @@ NEXT_ICON_PRESSED_PATH = ASSETS_PATH / "next_icon_pressed.svg"
 REPEAT_ICON_PATH = ASSETS_PATH / "repeat_icon.svg"
 REPEAT_ICON_PRESSED_PATH = ASSETS_PATH / "repeat_icon_pressed.svg"
 
-# Volume icons
-VOLUME_HIGH_ICON_PATH = ASSETS_PATH / "volume_high.svg"
-VOLUME_MEDIUM_ICON_PATH = ASSETS_PATH / "volume_medium.svg"
-VOLUME_LOW_ICON_PATH = ASSETS_PATH / "volume_low.svg"
-VOLUME_MUTE_ICON_PATH = ASSETS_PATH / "volume_muted.svg"
+# Volume control icons
+HIGH_VOLUME_ICON_PATH = ASSETS_PATH / "volume_high.svg"
+MEDIUM_VOLUME_ICON_PATH = ASSETS_PATH / "volume_medium.svg"
+LOW_VOLUME_ICON_PATH = ASSETS_PATH / "volume_low.svg"
+MUTED_VOLUME_ICON_PATH = ASSETS_PATH / "volume_muted.svg"
 
 
 # ---------------------------------------------------------------------------
@@ -59,45 +59,28 @@ APP_DEFAULT_SIZE = (750, 750)
 # ---------------------------------------------------------------------------
 # WIDGET CONFIGURATION
 # ---------------------------------------------------------------------------
-EDIT_BUTTON_DEFAULT_SIZE = (120, 40)
-PLAYBACK_BUTTON_SMALL = (30, 30)
-PLAYBACK_BUTTON_LARGE = (40, 40)
-PLAY_ICON_SIZE = (25, 25)
+#
+# Icon button.
+DEFAULT_ICON_BUTTON_SIZE = (30, 30)
+DEFAULT_ICON_SIZE = (15, 15)
+
+# Playlist navigation button.
+NAVIGATION_BUTTON_SIZE = (30, 30)
+NAVIGATION_BUTTON_ICON_SIZE = (15, 15)
+
+# Volume button.
+VOLUME_BUTTON_SIZE = (30, 30)
+VOLUME_BUTTON_ICON_SIZE = (15, 15)
+
+# Play/pause button size
+PLAY_PAUSE_BUTTON_SIZE = (40, 40)
+PLAY_PAUSE_BUTTON_ICON_SIZE = (25, 25)
+
+# Manage playlist button size
+MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE = (120, 40)
 
 
 # ---------------------------------------------------------------------------
 # SLIDER CONFIGURATION
 # ---------------------------------------------------------------------------
 VOLUME_RANGE = (0, 100)
-VOLUME_DEFAULT = 100
-
-
-# ---------------------------------------------------------------------------
-# STATE DEFAULTS
-# ---------------------------------------------------------------------------
-DEFAULT_SONG_TITLE = "Song Title"
-DEFAULT_SONG_ARTIST = "Song Artist"
-DEFAULT_SONG_ALBUM = "Song Album"
-DEFAULT_PLAY_STATE = False
-DEFAULT_ELAPSED_TIME = 0.0
-DEFAULT_SONG_DURATION = 0.0
-DEFAULT_VOLUME = 100
-
-# ---------------------------------------------------------------------------
-# AUDIO FORMATS & FILE DIALOG
-# ---------------------------------------------------------------------------
-SUPPORTED_BYTES = {1, 2, 4}
-FILE_DIALOG_FILTER = "Audio files (*.mp3 *.wav *.flac *.ogg)"
-SUPPORTED_AUDIO_FORMAT = {".mp3", ".wav", ".flac", ".ogg"}
-
-
-# ---------------------------------------------------------------------------
-# METADATA FALLBACKS
-# ---------------------------------------------------------------------------
-
-FALLBACK_METADATA = {
-    "title": "Unknown Title",
-    "artist": "Unknown Artist",
-    "album": "Unknown Album",
-    "duration": 0.0,
-}
