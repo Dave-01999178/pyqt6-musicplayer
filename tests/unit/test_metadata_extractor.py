@@ -2,10 +2,10 @@ from typing import cast
 
 import pytest
 
-from pyqt6_music_player.config import FALLBACK_METADATA
+from pyqt6_music_player.constant import AudioMetadataFallback
 from pyqt6_music_player.infra.metadata_extractor import (
     extract_id3_tags,
-    extract_generic_tags
+    extract_generic_tags, AudioInfoDict
 )
 from tests.utils import make_fake_audio_object, SupportedFormat, MOCK_AUDIO_DURATION
 
@@ -13,7 +13,6 @@ from tests.utils import make_fake_audio_object, SupportedFormat, MOCK_AUDIO_DURA
 # --------------------------------------------------------------------------------
 # ID3 Tags unit tests.
 # --------------------------------------------------------------------------------
-
 class TestExtractID3TagsHelper:
     # Test case: Assigning fallback values for missing tag.
     @pytest.mark.parametrize("missing_tag", [
@@ -21,7 +20,10 @@ class TestExtractID3TagsHelper:
         "artist",
         "album"
     ], ids=["missing_title_mp3", "missing_artist_mp3", "missing_album_mp3"])
-    def test_extract_id3_tags_helper_assigns_fallback_value_for_missing_tags(self, missing_tag) -> None:
+    def test_extract_id3_tags_helper_assigns_fallback_value_for_missing_tags(
+            self,
+            missing_tag: str
+    ) -> None:
         # --- Arrange: Create fake mp3 audio object with missing descriptive tags. ---
         input_metadata = {
             tag: f"Fake {tag}"
@@ -32,10 +34,13 @@ class TestExtractID3TagsHelper:
         fake_mp3_audio_object = make_fake_audio_object(input_metadata, ".mp3")
 
         # --- Act: Attempt to extract tags from fake mp3 audio object. ---
-        extracted_tags = extract_id3_tags(fake_mp3_audio_object)
+        extracted_tags: AudioInfoDict = extract_id3_tags(fake_mp3_audio_object)
 
         # --- Assert: A fallback value is assigned to the missing tag. ---
-        assert extracted_tags.get(missing_tag) == FALLBACK_METADATA.get(missing_tag)
+        missing_tag_value = extracted_tags.get(missing_tag)  # type: ignore
+        expected_tag_value = getattr(AudioMetadataFallback, f"{missing_tag}")
+
+        assert missing_tag_value == expected_tag_value
 
     # Test case: Assigning fallback values for all missing tags.
     def test_extract_id3_tags_helper_assigns_fallback_value_for_all_missing_tags(self):
@@ -48,9 +53,9 @@ class TestExtractID3TagsHelper:
         extracted_tags = extract_id3_tags(fake_mp3_audio_object)
 
         # --- Assert: Fallback values are assigned to all missing tags. ---
-        assert extracted_tags.get("title") == FALLBACK_METADATA.get("title")
-        assert extracted_tags.get("artist") == FALLBACK_METADATA.get("artist")
-        assert extracted_tags.get("album") == FALLBACK_METADATA.get("album")
+        assert extracted_tags.get("title") == AudioMetadataFallback.title
+        assert extracted_tags.get("artist") == AudioMetadataFallback.artist
+        assert extracted_tags.get("album") == AudioMetadataFallback.album
 
     # Test case: Extract and return values from present tags.
     def test_extract_id3_tags_helper_extracts_and_returns_values_from_present_tags(self):
@@ -118,7 +123,10 @@ class TestExtractGenericTagsHelper:
         extracted_tags = extract_generic_tags(fake_generic_audio_object)
 
         # --- Assert: A fallback value is assigned to the missing tag. ---
-        assert extracted_tags.get(missing_tag) == FALLBACK_METADATA.get(missing_tag)
+        missing_tag_value = extracted_tags.get(missing_tag)  # type: ignore
+        expected_tag_value = getattr(AudioMetadataFallback, f"{missing_tag}")
+
+        assert missing_tag_value == expected_tag_value
 
     # Test case: Assigning fallback values for all missing tags.
     @pytest.mark.parametrize("file_format", [
@@ -142,9 +150,9 @@ class TestExtractGenericTagsHelper:
         extracted_tags = extract_generic_tags(fake_generic_audio_object)
 
         # --- Assert: Fallback values are assigned to all missing tags. ---
-        assert extracted_tags.get("title") == FALLBACK_METADATA.get("title")
-        assert extracted_tags.get("artist") == FALLBACK_METADATA.get("artist")
-        assert extracted_tags.get("album") == FALLBACK_METADATA.get("album")
+        assert extracted_tags.get("title") == AudioMetadataFallback.title
+        assert extracted_tags.get("artist") == AudioMetadataFallback.artist
+        assert extracted_tags.get("album") == AudioMetadataFallback.album
 
     # Test case: Extract and return values from present tags.
     @pytest.mark.parametrize("file_format", [".flac", ".ogg"])

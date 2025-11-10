@@ -6,8 +6,8 @@ from pytest_mock import MockerFixture
 
 from pyqt6_music_player.models import (
     Song,
-    PlaylistState,
-    VolumeState,
+    PlaylistModel,
+    VolumeSettings,
 )
 from tests.utils import make_fake_path_and_song
 
@@ -18,13 +18,13 @@ def song():
 
 
 @pytest.fixture
-def playlist_state():
-    return PlaylistState()
+def playlist_model():
+    return PlaylistModel()
 
 
 @pytest.fixture
 def volume_state():
-    return VolumeState()
+    return VolumeSettings()
 
 
 @pytest.fixture
@@ -42,20 +42,20 @@ def mock_song_from_path(mocker: MockerFixture):
 
 @pytest.fixture
 def mock_mutagen_file(mocker: MockerFixture):
-    target = "pyqt6_music_player.models.song.mutagen.File"
+    target = "pyqt6_music_player.models.song_model.mutagen.File"
 
     return mocker.patch(target)
 
 
 @pytest.fixture
 def mock_get_metadata(mocker: MockerFixture):
-    target = "pyqt6_music_player.models.song.get_metadata"
+    target = "pyqt6_music_player.models.song_model.get_metadata"
 
     return mocker.patch(target)
 
 
 @pytest.fixture
-def populate_playlist(playlist_state, mock_path_resolve, mock_song_from_path):
+def populate_playlist(playlist_model, mock_path_resolve, mock_song_from_path):
     def _populate(file_paths: Sequence[Path]) -> None:
         if isinstance(file_paths, str):
             raise TypeError("file_paths must be a sequence, not a bare string")
@@ -68,7 +68,7 @@ def populate_playlist(playlist_state, mock_path_resolve, mock_song_from_path):
             mock_song_from_path.return_value = initial_song
 
             # Insert the initial song.
-            playlist_state.add_song(initial_song_path)
+            playlist_model.add_song(initial_song_path)
 
         mock_path_resolve.reset_mock()
         mock_song_from_path.reset_mock()
