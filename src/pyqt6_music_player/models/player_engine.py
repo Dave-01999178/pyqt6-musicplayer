@@ -44,14 +44,16 @@ class AudioData:
         samples = np.frombuffer(
             buffer=audio_segment.raw_data,
             dtype=orig_dtype
-        )
+        ).astype(np.float32)
 
         # --- Normalize samples to [-1.0, 1.0]. ---
-        samples.astype(np.float32)
         if sample_width == 1:
-            samples_normalized = (samples - 128) / 128
+            samples_normalized = (samples - 128.0) / 128.0
         else:
-            max_value = np.iinfo(orig_dtype).max if np.issubdtype(orig_dtype, np.integer) else 1.0
+            # For 16-bit (i2) and 32-bit (i4) signed integers.
+            # Use the maximum positive value (M_pos) for division.
+            # max_value = 32767.0 for 16-bit, 2147483647.0 for 32-bit.
+            max_value = float(np.iinfo(orig_dtype).max)
             samples_normalized = samples / max_value
 
         # --- Reshape samples array: (frames, channels). ---
