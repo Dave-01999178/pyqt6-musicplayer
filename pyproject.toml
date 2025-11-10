@@ -18,6 +18,7 @@ dependencies = [
 [tool.mypy]
 explicit_package_bases = true
 mypy_path = ["src"]
+ignore_missing_imports = true
 
 [tool.poetry]
 packages = [{include = "pyqt6_music_player", from = "src"}]
