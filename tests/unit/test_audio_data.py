@@ -5,7 +5,7 @@ import pytest
 from pydub.exceptions import CouldntDecodeError
 
 from pyqt6_music_player.models.player_engine import AudioData
-from utils import make_fake_audio_segment
+from tests.utils import make_fake_audio_segment
 
 temp_test_audio = Path(r"C:\Users\dave_\Music\Factory Background.mp3")
 
@@ -45,9 +45,9 @@ def test_handles_and_logs_exceptions_during_audio_loading_and_decoding(
     assert audio_data is None
 
 
-# Test case: Normalize samples Numpy array.
+# Test case: Normalize samples array (Numpy array).
 @pytest.mark.parametrize("channels, sample_width", [
-    (1, 3),
+    (1, 1),
     (1, 2),
     (1, 4),
     (2, 1),

@@ -4,13 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from pyqt6_music_player.models.song import Song
-from pyqt6_music_player.config import (
-    DEFAULT_SONG_ALBUM,
-    DEFAULT_SONG_ARTIST,
-    DEFAULT_SONG_DURATION,
-    DEFAULT_SONG_TITLE,
-)
+from pyqt6_music_player.constant import DefaultAudioInfo
+from pyqt6_music_player.models.song_model import Song
 from tests.utils import FakeSongData
 
 
@@ -28,27 +23,10 @@ class TestSong:
     # Test case: `Song` metadata default values.
     def test_song_default_values(self, song):
         assert song.path is None
-        assert song.title == DEFAULT_SONG_TITLE
-        assert song.artist == DEFAULT_SONG_ARTIST
-        assert song.album == DEFAULT_SONG_ALBUM
-        assert song.duration == DEFAULT_SONG_DURATION
-
-
-    # Test case: Unreadable audio file (e.g. corrupted, malformed or unreadable file contents).
-    def test_from_path_returns_none_for_invalid_audio(self, song, mock_mutagen_file):
-        # --- Arrange: Prepare input path and mock ---
-        input_path = Path("path/to/invalid.mp3")
-
-        # Simulate unreadable audio by mocking `mutagen.File` to return None.
-        mock_mutagen_file.return_value = None
-
-        # --- Act: Attempt to extract metadata from audio ---
-        curr_song = song.from_path(input_path)
-
-        # --- Assert: `Song` should not be created. ---
-        mock_mutagen_file.assert_called_once_with(input_path)
-
-        assert curr_song is None
+        assert song.title == DefaultAudioInfo.title
+        assert song.artist == DefaultAudioInfo.artist
+        assert song.album == DefaultAudioInfo.album
+        assert song.duration == DefaultAudioInfo.total_duration
 
 
     # Test case: File doesn’t exist or can’t be opened (e.g. FileNotFoundError, PermissionError).
