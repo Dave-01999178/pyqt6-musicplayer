@@ -3,10 +3,11 @@ from typing import Sequence
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.constant import (
-    DEFAULT_VOLUME,
+from pyqt6_music_player.constants import (
+    DefaultAudioInfo,
+    MAX_VOLUME,
+    MIN_VOLUME,
     SUPPORTED_AUDIO_FORMAT,
-    DefaultAudioInfo
 )
 from pyqt6_music_player.models import Song, DEFAULT_SONG
 
@@ -133,7 +134,7 @@ class VolumeSettings(QObject):
     """Manages the music player's volume state."""
     def __init__(self) -> None:
         super().__init__()
-        self._current_volume: int = DEFAULT_VOLUME
+        self._current_volume: int = MAX_VOLUME
         self._previous_volume: int = self._current_volume
 
     @property
@@ -173,7 +174,7 @@ class VolumeSettings(QObject):
             new_value: The volume's new value.
         """
         # Ensure that the new value is within the 0-100 bounds.
-        clamped_value = max(0, min(100, new_value))
+        clamped_value = max(MIN_VOLUME, min(MAX_VOLUME, new_value))
 
         # Only update if the value has changed.
         if clamped_value == self.current_volume:
