@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pyqt6_music_player.constant import DefaultAudioInfo
+from pyqt6_music_player.constants import DefaultAudioInfo
 from pyqt6_music_player.models.song_model import Song
 from tests.utils import FakeSongData
 
