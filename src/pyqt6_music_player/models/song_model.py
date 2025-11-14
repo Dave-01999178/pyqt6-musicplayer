@@ -4,7 +4,7 @@ from pathlib import Path
 
 import mutagen
 
-from pyqt6_music_player.constant import DefaultAudioInfo
+from pyqt6_music_player.constants import DefaultAudioInfo
 from pyqt6_music_player.infra.metadata_extractor import get_metadata
 
 
@@ -14,8 +14,6 @@ class Song:
     title: str = DefaultAudioInfo.title
     artist: str = DefaultAudioInfo.artist
     album: str = DefaultAudioInfo.album
-
-    # TODO: Move duration to `AudioData` dataclass.
     duration: str | float = DefaultAudioInfo.total_duration
     # album_art: QPixmap
 
