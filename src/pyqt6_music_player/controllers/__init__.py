@@ -2,7 +2,7 @@ from .music_player_controller import (
     PlaybackControlController,
     PlaybackProgressController,
     PlaylistManagerController,
-    VolumeControlController
+    VolumeControlController,
 )
 
 __all__ = [
