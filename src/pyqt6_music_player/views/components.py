@@ -1,11 +1,11 @@
 """
 UI sections for the music player.
 
-This module contains QWidget-based section containers for different parts of the music player UI,
+This module contains QWidget containers for different parts of the music player UI,
 such as playlist controls, playback progress, playback controls, volume controls,
 and audio metadata display.
 """
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QModelIndex
 from PyQt6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 
 from pyqt6_music_player.models import PlaylistModel, Song
@@ -27,7 +27,7 @@ from pyqt6_music_player.views import (
     TotalDurationLabel,
     VolumeButton,
     VolumeLabel,
-    VolumeSlider
+    VolumeSlider,
 )
 
 
@@ -39,6 +39,7 @@ class PlaylistManager(QWidget):
     add_song_button_clicked = pyqtSignal()
     remove_song_button_clicked = pyqtSignal()
     load_song_button_clicked = pyqtSignal()
+
     def __init__(self):
         """Initializes PlaylistManager instance."""
         super().__init__()

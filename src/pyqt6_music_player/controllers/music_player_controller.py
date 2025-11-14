@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QFileDialog
 
-from pyqt6_music_player.constant import FILE_DIALOG_FILTER
+from pyqt6_music_player.constants import FILE_DIALOG_FILTER
 from pyqt6_music_player.models import PlaylistModel, VolumeSettings
 from pyqt6_music_player.views import PlayerbarView, PlaylistManagerView
 
@@ -14,7 +14,7 @@ class PlaylistManagerController:
             playlist_model: The app's playlist model.
             playlist_manager_view: The playlist manager subview.
         """
-        self.playlist_state = playlist_model
+        self.playlist_model = playlist_model
         self.playlist_manager_view = playlist_manager_view
 
         self._connect_signals()
@@ -30,7 +30,7 @@ class PlaylistManagerController:
         if not file_paths:
             return
 
-        self.playlist_state.add_song(file_paths)
+        self.playlist_model.add_song(file_paths)
 
 
 class PlaybackProgressController:

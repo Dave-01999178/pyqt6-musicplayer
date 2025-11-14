@@ -3,7 +3,7 @@ from typing import TypedDict
 from mutagen import FileType
 from mutagen.mp3 import MP3
 
-from pyqt6_music_player.constant import AudioMetadataFallback
+from pyqt6_music_player.constants import AudioMetadataFallback
 
 
 class AudioInfoDict(TypedDict):

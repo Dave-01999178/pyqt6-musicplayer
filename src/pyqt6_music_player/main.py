@@ -56,16 +56,15 @@ def main():
     main_view = MusicPlayerView(playlist_model)
 
     # Sub views
-    playlist_sub_view = main_view.playlist_view
-    player_bar_sub_view = main_view.player_bar_view
-    playlist_manager_sub_view = main_view.playlist_manager_view
+    player_bar_view = main_view.player_bar_view
+    playlist_manager_view = main_view.playlist_manager_view
 
     # Controllers
     controllers = [
-        PlaybackProgressController(player_bar_sub_view),
-        PlaybackControlController(player_bar_sub_view),
-        PlaylistManagerController(playlist_model, playlist_manager_sub_view),
-        VolumeControlController(volume_settings, player_bar_sub_view),
+        PlaybackProgressController(player_bar_view),
+        PlaybackControlController(player_bar_view),
+        PlaylistManagerController(playlist_model, playlist_manager_view),
+        VolumeControlController(volume_settings, player_bar_view),
     ]
 
     main_view.show()

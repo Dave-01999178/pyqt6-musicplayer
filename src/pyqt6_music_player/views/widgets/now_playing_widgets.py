@@ -50,6 +50,7 @@ class AlbumArtLabel(QLabel):
         self._set_image(image)
 
 
+# TODO: Consider using factory if QLabels remain static.
 class AudioTitleLabel(QLabel):
     """
     A QLabel widget for displaying the current audio title. The default text is 'Song Title'.
