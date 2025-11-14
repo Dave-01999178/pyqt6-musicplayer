@@ -2,7 +2,7 @@ from typing import cast
 
 import pytest
 
-from pyqt6_music_player.constant import AudioMetadataFallback
+from pyqt6_music_player.constants import AudioMetadataFallback
 from pyqt6_music_player.infra.metadata_extractor import (
     extract_id3_tags,
     extract_generic_tags, AudioInfoDict
