@@ -1,27 +1,26 @@
+# Helpers
+from .helpers import path_to_qicon
+
 # Base widgets
-from .base_widgets import IconButton
+from .widgets.base_widgets import IconButton, IconButtonFactory
 
-# Metadata widgets
-from .now_playing_widgets import AlbumArtLabel, AudioArtistLabel, AudioTitleLabel
+# Now playing display widgets
+from .widgets.now_playing_widgets import AlbumArtLabel, AudioArtistLabel, AudioTitleLabel
 
-# Playback control widgets
-from .playback_control_widgets import (
+# Playback widgets
+from .widgets.playback_widgets import (
+    ElapsedTimeLabel,
     NextButton,
+    PlaybackProgressSlider,
     PlayPauseButton,
     PreviousButton,
     RepeatButton,
-    ReplayButton
-)
-
-# Playback progress widgets
-from .playback_progress_widgets import (
-    ElapsedTimeLabel,
-    PlaybackProgressSlider,
-    TotalDurationLabel
+    ReplayButton,
+    TotalDurationLabel,
 )
 
 # Playlist widgets
-from .playlist_widgets import (
+from .widgets.playlist_widgets import (
     AddSongButton,
     LoadSongFolderButton,
     PlaylistTableWidget,
@@ -29,10 +28,10 @@ from .playlist_widgets import (
 )
 
 # Volume widgets
-from .volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
+from .widgets.volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
 
-# Sections (grouped widgets)
-from .sections import (
+# Components (grouped widgets)
+from .components import (
     NowPlayingDisplay,
     PlaybackControls,
     PlaybackProgress,
@@ -41,28 +40,33 @@ from .sections import (
     VolumeControls
 )
 
-# Music player view (main view)
-from .music_player_view import MusicPlayerView, PlayerbarView, PlaylistView, PlaylistManagerView
+# Subviews
+from .subviews import PlayerbarView, PlaylistView, PlaylistManagerView
+
+# Main view
+from .main_view import MusicPlayerView
 
 __all__ = [
+    # Helpers
+    "path_to_qicon",
+
     # Base widgets
     "IconButton",
+    "IconButtonFactory",
 
     # Metadata widgets
     "AlbumArtLabel",
     "AudioArtistLabel",
     "AudioTitleLabel",
 
-    # Playback control widgets
+    # Playback widgets
+    "ElapsedTimeLabel",
     "NextButton",
+    "PlaybackProgressSlider",
     "PlayPauseButton",
     "PreviousButton",
     "RepeatButton",
     "ReplayButton",
-
-    # Playback progress widgets
-    "ElapsedTimeLabel",
-    "PlaybackProgressSlider",
     "TotalDurationLabel",
 
     # Playlist widgets
@@ -76,7 +80,7 @@ __all__ = [
     "VolumeLabel",
     "VolumeSlider",
 
-    # Sections
+    # Components
     "NowPlayingDisplay",
     "PlaybackControls",
     "PlaybackProgress",
@@ -84,9 +88,11 @@ __all__ = [
     "PlaylistManager",
     "VolumeControls",
 
-    # Music player view
-    "MusicPlayerView",
+    # Subviews
     "PlayerbarView",
     "PlaylistView",
-    "PlaylistManagerView"
+    "PlaylistManagerView",
+
+    # Main view
+    "MusicPlayerView",
 ]

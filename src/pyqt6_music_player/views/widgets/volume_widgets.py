@@ -6,6 +6,7 @@ the audio, a slider to adjust the volume, and a label to display the current vol
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QSlider
 
 from pyqt6_music_player.config import (
@@ -13,16 +14,11 @@ from pyqt6_music_player.config import (
     LOW_VOLUME_ICON_PATH,
     MEDIUM_VOLUME_ICON_PATH,
     MUTED_VOLUME_ICON_PATH,
-    VOLUME_BUTTON_ICON_SIZE,
-    VOLUME_BUTTON_SIZE,
-    VOLUME_RANGE
 )
-from pyqt6_music_player.constant import DEFAULT_VOLUME
-from pyqt6_music_player.views import IconButton
+from pyqt6_music_player.constants import MAX_VOLUME, MIN_VOLUME
+from pyqt6_music_player.views import IconButton, path_to_qicon
 
 
-# TODO: Check if `volume_icon` and `update_button_icon` implementation could be improved
-#  or simplified.
 class VolumeButton(IconButton):
     """
     A custom button for controlling and displaying the current volume state.
@@ -30,37 +26,28 @@ class VolumeButton(IconButton):
     This button changes its icon based on the volume level and can be toggled
     to mute or unmute the audio.
     """
-    def __init__(
-            self,
-            icon: Path = HIGH_VOLUME_ICON_PATH,
-            icon_size: tuple[int, int] = VOLUME_BUTTON_ICON_SIZE,
-            widget_size: tuple[int, int] = VOLUME_BUTTON_SIZE,
-            object_name: str | None = None
-    ):
+    # TODO: Consider moving class constants to a dataclass or similar containers for reusability.
+    _LOW_LOWER_BOUND = 1
+    _MEDIUM_LOWER_BOUND = 34
+    _HIGH_LOWER_BOUND = 67
+
+    # TODO: Consider using Enum + Mapping.
+    _VOLUME_ICONS = {
+        "mute": path_to_qicon(MUTED_VOLUME_ICON_PATH),
+        "low": path_to_qicon(LOW_VOLUME_ICON_PATH),
+        "medium": path_to_qicon(MEDIUM_VOLUME_ICON_PATH),
+        "high": path_to_qicon(HIGH_VOLUME_ICON_PATH)
+    }
+
+    def __init__(self, icon_path: Path = HIGH_VOLUME_ICON_PATH):
         """
         Initializes VolumeButton instance.
-        
+
         Args:
-            icon: Icon image path. Defaults to 'high volume' icon.
-            icon_size: Width and height of the icon.
-                       Defaults to `VOLUME_BUTTON_ICON_SIZE` (15, 15).
-            widget_size: VolumeButton instance width and height.
-                         Defaults to `VOLUME_BUTTON_SIZE` (30, 30).
-            object_name: VolumeButton instance object name, useful for QSS styling.
-                         Defaults to None.
+            icon_path: Path to the icon file. Defaults to 'high-volume' icon.
         """
-        super().__init__(
-            icon_path=icon,
-            icon_size=icon_size,
-            widget_size=widget_size,
-            object_name=object_name
-        )
-        self._volume_icons = {
-            "mute": self.to_qicon(MUTED_VOLUME_ICON_PATH),
-            "low": self.to_qicon(LOW_VOLUME_ICON_PATH),
-            "medium": self.to_qicon(MEDIUM_VOLUME_ICON_PATH),
-            "high": self.to_qicon(HIGH_VOLUME_ICON_PATH)
-        }
+        super().__init__(icon_path=icon_path)
+        self.current_icon: QIcon = self._VOLUME_ICONS["high"]  # Default
 
         self.setCheckable(True)
 
@@ -73,14 +60,25 @@ class VolumeButton(IconButton):
         Args:
             new_volume: The current volume level (0-100).
         """
-        if new_volume == 0:
-            self.setIcon(self._volume_icons["mute"])
-        elif 1 <= new_volume <= 33:
-            self.setIcon(self._volume_icons["low"])
-        elif 34 <= new_volume <= 66:
-            self.setIcon(self._volume_icons["medium"])
+        if not (MIN_VOLUME <= new_volume <= MAX_VOLUME):
+            raise ValueError(f"New volume: {new_volume} is out of range.")
+
+        if new_volume >= self._HIGH_LOWER_BOUND:
+            icon = self._VOLUME_ICONS["high"]
+        elif new_volume >= self._MEDIUM_LOWER_BOUND:
+            icon = self._VOLUME_ICONS["medium"]
+        elif new_volume >= self._LOW_LOWER_BOUND:
+            icon = self._VOLUME_ICONS["low"]
         else:
-            self.setIcon(self._volume_icons["high"])
+            icon = self._VOLUME_ICONS["mute"]
+
+        # Avoid unnecessary UI updates by skipping `setIcon` calls if the new, and current icon
+        # are the same.
+        if icon.cacheKey() == self.current_icon.cacheKey():
+            return None
+
+        self.setIcon(icon)
+        self.current_icon = icon
 
 
 class VolumeSlider(QSlider):
@@ -104,8 +102,8 @@ class VolumeSlider(QSlider):
 
     def _configure_properties(self):
         """Configures the instance's properties"""
-        self.setRange(*VOLUME_RANGE)
-        self.setValue(DEFAULT_VOLUME)
+        self.setRange(MIN_VOLUME, MAX_VOLUME)
+        self.setValue(MAX_VOLUME)
 
 
 class VolumeLabel(QLabel):
@@ -114,12 +112,12 @@ class VolumeLabel(QLabel):
 
     This label shows the volume as a number (0-100).
     """
-    def __init__(self, display_text: str = str(DEFAULT_VOLUME)):
+    def __init__(self, display_text: str = str(MAX_VOLUME)):
         """
         Initializes VolumeLabel instance.
 
         Args:
-            display_text: VolumeLabel instance display text. Defaults to `DEFAULT_VOLUME` (100).
+            display_text: VolumeLabel instance display text. Defaults to `MAX_VOLUME` (100).
         """
         super().__init__(text=display_text)
 

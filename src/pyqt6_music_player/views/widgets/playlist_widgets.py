@@ -13,11 +13,33 @@ from PyQt6.QtWidgets import (
 from pyqt6_music_player.config import (
     ADD_ICON_PATH,
     LOAD_FOLDER_ICON_PATH,
-    MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE,
-    REMOVE_ICON_PATH
+    RECTANGLE_MEDIUM,
+    REMOVE_ICON_PATH,
 )
 from pyqt6_music_player.models import PlaylistModel, Song
-from pyqt6_music_player.views import IconButton
+from pyqt6_music_player.views import IconButtonFactory
+
+# ================================================================================
+# PLAYLIST MANAGER BUTTON WIDGETS
+# ================================================================================
+AddSongButton = IconButtonFactory(
+    ADD_ICON_PATH,
+    widget_size=RECTANGLE_MEDIUM,
+    button_text="Add song(s)",
+    object_name="addSongBtn"
+)
+RemoveSongButton = IconButtonFactory(
+    REMOVE_ICON_PATH,
+    widget_size=RECTANGLE_MEDIUM,
+    button_text="Remove",
+    object_name="removeSongBtn"
+)
+LoadSongFolderButton = IconButtonFactory(
+    LOAD_FOLDER_ICON_PATH,
+    widget_size=RECTANGLE_MEDIUM,
+    button_text="Load folder",
+    object_name="loadFolderBtn"
+)
 
 
 # ================================================================================
@@ -137,14 +159,14 @@ class PlaylistTableWidget(QTableView):
         super().leaveEvent(e)
 
     def _configure_properties(self):
-        # `is not None` check to resolve mypy no attribute [union-attr] errors.
+        # Add`is not None` check to resolve mypy no attribute [union-attr] errors (optional).
         header = self.horizontalHeader()
         if header is not None:
             header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             header.setSectionsClickable(False)
             header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-        # `is not None` check to resolve mypy no attribute [union-attr] errors.
+        # Add `is not None` check to resolve mypy no attribute [union-attr] errors (optional).
         rows = self.verticalHeader()
         if rows is not None:
             rows.setDefaultSectionSize(50)
@@ -173,36 +195,3 @@ class PlaylistTableWidget(QTableView):
         self._hover_delegate = HoverRowDelegate(self, hover_color="#34495E")
         self.setItemDelegate(self._hover_delegate)
         self.entered.connect(lambda idx: self._hover_delegate.setHoverRow(idx.row()))
-
-
-# ================================================================================
-# PLAYLIST MANAGER BUTTON WIDGETS
-# ================================================================================
-class AddSongButton(IconButton):
-    def __init__(self):
-        super().__init__(
-            icon_path=ADD_ICON_PATH,
-            widget_size=MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE,
-            button_text="Add song(s)",
-            object_name="addSongBtn"
-        )
-
-
-class RemoveSongButton(IconButton):
-    def __init__(self):
-        super().__init__(
-            icon_path=REMOVE_ICON_PATH,
-            widget_size=MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE,
-            button_text="Remove",
-            object_name="removeSongBtn"
-        )
-
-
-class LoadSongFolderButton(IconButton):
-    def __init__(self):
-        super().__init__(
-            icon_path=LOAD_FOLDER_ICON_PATH,
-            widget_size=MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE,
-            button_text="Load folder",
-            object_name="loadFolderBtn"
-        )
