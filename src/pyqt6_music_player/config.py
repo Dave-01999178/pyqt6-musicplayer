@@ -59,25 +59,13 @@ APP_DEFAULT_SIZE = (750, 750)
 # ---------------------------------------------------------------------------
 # WIDGET CONFIGURATION
 # ---------------------------------------------------------------------------
-#
-# Icon button.
-DEFAULT_ICON_BUTTON_SIZE = (30, 30)
-DEFAULT_ICON_SIZE = (15, 15)
+SMALL_BUTTON = (30, 30)
+SMALL_ICON = (15, 15)
 
-# Playlist navigation button.
-NAVIGATION_BUTTON_SIZE = (30, 30)
-NAVIGATION_BUTTON_ICON_SIZE = (15, 15)
+MEDIUM_BUTTON = (40, 40)
+MEDIUM_ICON = (20, 20)
 
-# Volume button.
-VOLUME_BUTTON_SIZE = (30, 30)
-VOLUME_BUTTON_ICON_SIZE = (15, 15)
-
-# Play/pause button size
-PLAY_PAUSE_BUTTON_SIZE = (40, 40)
-PLAY_PAUSE_BUTTON_ICON_SIZE = (25, 25)
-
-# Manage playlist button size
-MANAGE_PLAYLIST_BUTTON_DEFAULT_SIZE = (120, 40)
+RECTANGLE_MEDIUM = (120, 40)
 
 
 # ---------------------------------------------------------------------------
