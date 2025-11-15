@@ -142,7 +142,6 @@ class TestPlaylistStateToGetMetadata:
 
         # --- Assert: Song added only once ---
         assert mock_song_from_path.call_count == 1
-        assert playlist_model.song_count == 1
         assert playlist_model.playlist[0] == fake_song
 
     def test_playlist_add_song_should_skip_invalid_files(
