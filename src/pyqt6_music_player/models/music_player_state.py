@@ -9,7 +9,7 @@ from pyqt6_music_player.constants import (
     MIN_VOLUME,
     SUPPORTED_AUDIO_FORMAT,
 )
-from pyqt6_music_player.models import Song, DEFAULT_SONG
+from pyqt6_music_player.models import Song
 
 
 class PlaylistModel(QObject):
@@ -29,15 +29,6 @@ class PlaylistModel(QObject):
     def playlist_set(self) -> set[Path]:
         """Set version of playlist used for fast membership checks."""
         return self._playlist_set
-
-    @property
-    def song_count(self) -> int:
-        """Return the number of songs currently in the playlist."""
-        return len(self._playlist)
-
-    @property
-    def current_song(self):
-        return DEFAULT_SONG
 
     @staticmethod
     def _normalize_to_paths(file_paths: Sequence[str | Path]) -> list[Path]:
