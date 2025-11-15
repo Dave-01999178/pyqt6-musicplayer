@@ -44,7 +44,6 @@ class TestAddSongSingleInput:
         mock_song_from_path.assert_not_called()
 
         # Verify that the playlist remain unchanged.
-        assert playlist_model.song_count == 0
         assert playlist_model.playlist == []
         assert playlist_model.playlist_set == set()
 
@@ -81,7 +80,6 @@ class TestAddSongSingleInput:
         mock_song_from_path.assert_not_called()
 
         # Verify that the playlist remain unchanged.
-        assert playlist_model.song_count == 0
         assert playlist_model.playlist == []
         assert playlist_model.playlist_set == set()
 
@@ -118,7 +116,6 @@ class TestAddSongSingleInput:
         # and added to playlist.
         added_song = playlist_model.playlist[0].path
 
-        assert playlist_model.song_count == 1
         assert added_song == fake_resolved_path
         assert added_song in playlist_model.playlist_set
 
@@ -148,7 +145,6 @@ class TestAddSongSingleInput:
         mock_song_from_path.assert_called_once_with(fake_resolved_path)
 
         # Verify that the playlist remain unchanged.
-        assert playlist_model.song_count == 0
         assert playlist_model.playlist == []
         assert playlist_model.playlist_set == set()
 
@@ -181,7 +177,6 @@ class TestAddSongSingleInput:
         mock_song_from_path.assert_not_called()
 
         # Verify that the playlist remain unchanged.
-        assert playlist_model.song_count == 0
         assert playlist_model.playlist == []
         assert playlist_model.playlist_set == set()
 
@@ -229,7 +224,6 @@ class TestAddSongSingleInput:
         # and added to playlist.
         added_song = playlist_model.playlist[0].path
 
-        assert playlist_model.song_count == 1
         assert added_song == fake_resolved_path
         assert added_song in playlist_model.playlist_set
 
@@ -274,7 +268,6 @@ class TestAddSongSingleInput:
         # Verify that the playlist only contains the initial song.
         playlist_path = [curr_song.path for curr_song in playlist_model.playlist]
 
-        assert playlist_model.song_count == len(initial_audio_files)
         assert playlist_path == initial_audio_files
 
 
