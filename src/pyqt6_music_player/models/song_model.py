@@ -5,7 +5,7 @@ from pathlib import Path
 import mutagen
 
 from pyqt6_music_player.constants import DefaultAudioInfo
-from pyqt6_music_player.infra.metadata_extractor import get_metadata
+from pyqt6_music_player.metadata.metadata_extractor import get_metadata
 
 
 @dataclass(frozen=True, eq=True)

@@ -1,7 +1,10 @@
-from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
 
-from pyqt6_music_player.models import PlaylistModel
+from pyqt6_music_player.view_models import (
+    PlaybackControlViewModel,
+    PlaylistViewModel,
+    VolumeViewModel
+)
 from pyqt6_music_player.views import (
     NowPlayingDisplay,
     PlaybackControls,
@@ -13,14 +16,10 @@ from pyqt6_music_player.views import (
 
 
 class PlaylistManagerView(QFrame):
-    add_song_button_clicked = pyqtSignal()
-    remove_song_button_clicked = pyqtSignal()
-    load_song_button_clicked = pyqtSignal()
-    def __init__(self):
+    def __init__(self, playlist_viewmodel: PlaylistViewModel):
         super().__init__()
-        self._playlist_manager = PlaylistManager()
+        self._playlist_manager = PlaylistManager(playlist_viewmodel)
 
-        self._connect_signals()
         self._init_ui()
 
     def _init_ui(self):
@@ -33,20 +32,15 @@ class PlaylistManagerView(QFrame):
 
         self.setLayout(instance_layout)
 
-    def _connect_signals(self):
-        self._playlist_manager.add_song_button_clicked.connect(self.add_song_button_clicked)
-        self._playlist_manager.remove_song_button_clicked.connect(self.remove_song_button_clicked)
-        self._playlist_manager.load_song_button_clicked.connect(self.load_song_button_clicked)
-
     @property
     def playlist_manager(self):
         return self._playlist_manager
 
 
 class PlaylistView(QFrame):
-    def __init__(self, playlist_state: PlaylistModel):
+    def __init__(self, playlist_viewmodel: PlaylistViewModel):
         super().__init__()
-        self._playlist_display = PlaylistDisplay(playlist_state)
+        self._playlist_display = PlaylistDisplay(playlist_viewmodel)
 
         self._init_ui()
 
@@ -66,29 +60,22 @@ class PlaylistView(QFrame):
 
 
 class PlayerbarView(QFrame):
-    # Playback progress signal
-    playback_slider_moved = pyqtSignal(int)
-
-    # Playback control signals
-    replay_button_clicked = pyqtSignal()
-    previous_button_clicked = pyqtSignal()
-    play_pause_button_clicked = pyqtSignal()
-    next_button_clicked = pyqtSignal()
-    repeat_button_clicked = pyqtSignal()
-
-    # Volume control signals
-    volume_button_toggled = pyqtSignal(bool)
-    volume_slider_moved = pyqtSignal(int)
-
-    def __init__(self):
+    """
+    A customizable QFrame container for grouping player-related view/components,
+    including playback progress, now playing display, playback controls, and volume controls.
+    """
+    def __init__(
+            self,
+            playback_viewmodel: PlaybackControlViewModel,
+            volume_viewmodel: VolumeViewModel
+            ):
         super().__init__()
         self._playback_progress = PlaybackProgress()
         self._now_playing_display = NowPlayingDisplay()
-        self._playback_controls = PlaybackControls()
-        self._volume_controls = VolumeControls()
+        self._playback_controls = PlaybackControls(playback_viewmodel)
+        self._volume_controls = VolumeControls(volume_viewmodel)
 
         self._init_ui()
-        self._connect_signals()
 
     def _init_ui(self):
         instance_layout = QVBoxLayout()
@@ -120,34 +107,3 @@ class PlayerbarView(QFrame):
         self.setObjectName("playerBarFrame")
 
         self.setLayout(instance_layout)
-
-    def _connect_signals(self):
-        # Playback progress signal
-        self._playback_progress.playback_slider_moved.connect(self.playback_slider_moved)
-
-        # Playback control signals
-        self._playback_controls.replay_button_clicked.connect(self.replay_button_clicked)
-        self._playback_controls.previous_button_clicked.connect(self.previous_button_clicked)
-        self._playback_controls.play_pause_button_clicked.connect(self.play_pause_button_clicked)
-        self._playback_controls.next_button_clicked.connect(self.next_button_clicked)
-        self._playback_controls.repeat_button_clicked.connect(self.repeat_button_clicked)
-
-        # Volume control signals
-        self._volume_controls.volume_button_toggled.connect(self.volume_button_toggled)
-        self._volume_controls.volume_slider_moved.connect(self.volume_slider_moved)
-
-    @property
-    def playback_progress(self):
-        return self._playback_progress
-
-    @property
-    def now_playing_display(self):
-        return self._now_playing_display
-
-    @property
-    def playback_controls(self):
-        return self._playback_controls
-
-    @property
-    def volume_controls(self):
-        return self._volume_controls
