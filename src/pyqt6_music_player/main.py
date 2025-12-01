@@ -7,14 +7,11 @@ from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 
 from pyqt6_music_player.config import STYLESHEET
-from pyqt6_music_player.controllers import (
-    PlaybackControlController,
-    PlaybackProgressController,
-    PlaylistManagerController,
-    VolumeControlController
-)
-from pyqt6_music_player.models import PlaylistModel, VolumeSettings
+from pyqt6_music_player.models import PlaylistModel, VolumeModel
+from pyqt6_music_player.models.player_engine import PlayerEngine
+from pyqt6_music_player.view_models import PlaylistViewModel, PlaybackControlViewModel, VolumeViewModel
 from pyqt6_music_player.views import MusicPlayerView
+from pyqt6_music_player.views.main_view import AppContext
 
 
 def exception_hook(exc_type, value, tb):
@@ -40,36 +37,39 @@ def load_stylesheet(path: str| Path) -> str | None:
 
 
 def main():
-    # App
+    # --- App ---
     app = QApplication(sys.argv)
 
-    # Stylesheet
+    # --- Stylesheet ---
     stylesheet = load_stylesheet(STYLESHEET)
     if stylesheet:
         app.setStyleSheet(stylesheet)
 
-    # State, Model and Settings.
+    # --- Player engine ---
+    player_engine = PlayerEngine()
+
+    # --- Models ---
     playlist_model = PlaylistModel()
-    volume_settings = VolumeSettings()
+    volume_model = VolumeModel()
 
-    # Main view
-    main_view = MusicPlayerView(playlist_model)
+    # --- ViewModels ---
+    playback_viewmodel = PlaybackControlViewModel(playlist_model, player_engine)
+    playlist_viewmodel = PlaylistViewModel(playlist_model)
+    volume_viewmodel = VolumeViewModel(volume_model, player_engine)
 
-    # Sub views
-    player_bar_view = main_view.player_bar_view
-    playlist_manager_view = main_view.playlist_manager_view
+    ctx = AppContext(
+        playlist_model=playlist_model,
+        volume_model=volume_model,
+        playback_viewmodel=playback_viewmodel,
+        playlist_viewmodel=playlist_viewmodel,
+        volume_viewmodel=volume_viewmodel
+    )
 
-    # Controllers
-    controllers = [
-        PlaybackProgressController(player_bar_view),
-        PlaybackControlController(player_bar_view),
-        PlaylistManagerController(playlist_model, playlist_manager_view),
-        VolumeControlController(volume_settings, player_bar_view),
-    ]
-
+    # --- View ---
+    main_view = MusicPlayerView(ctx)
     main_view.show()
-    sys.exit(app.exec())
 
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()

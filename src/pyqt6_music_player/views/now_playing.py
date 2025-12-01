@@ -4,12 +4,15 @@ artist, and an album art.
 """
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QWidget, QHBoxLayout, QVBoxLayout
 
 from pyqt6_music_player.config import ALBUM_ART_PLACEHOLDER
-from pyqt6_music_player.models import DEFAULT_SONG
+from pyqt6_music_player.models import DEFAULT_SONG, Song
 
 
+# ================================================================================
+# NOW PLAYING WIDGETS
+# ================================================================================
 class AlbumArtLabel(QLabel):
     """
     A QLabel widget for displaying album art.
@@ -50,7 +53,7 @@ class AlbumArtLabel(QLabel):
         self._set_image(image)
 
 
-# TODO: Consider using factory if QLabels remain static.
+# TODO: Consider using factory if label widgets remained static.
 class AudioTitleLabel(QLabel):
     """
     A QLabel widget for displaying the current audio title. The default text is 'Song Title'.
@@ -75,3 +78,34 @@ class AudioArtistLabel(QLabel):
         )
 
         self.setObjectName("audioArtistLabel")
+
+
+class NowPlayingDisplay(QWidget):
+    """
+    A QWidget container for widgets that displays current song information
+    such as album art, song title, and artist label.
+    """
+    def __init__(self):
+        """Initialize NowPlayingDisplay instance."""
+        super().__init__()
+        self.current_song = Song()  # Placeholder until 'select song' feature is implemented.
+
+        self.album_art = AlbumArtLabel()
+        self.song_title = AudioTitleLabel()
+        self.artist_label = AudioArtistLabel()
+
+        self._init_ui()
+
+    def _init_ui(self):
+        """Initializes the instance's internal widgets and layouts"""
+        layout = QHBoxLayout()
+        layout.addWidget(self.album_art)
+
+        label_layout = QVBoxLayout()
+
+        label_layout.addWidget(self.song_title)
+        label_layout.addWidget(self.artist_label)
+
+        layout.addLayout(label_layout)
+
+        self.setLayout(layout)

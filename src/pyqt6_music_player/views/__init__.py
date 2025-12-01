@@ -2,13 +2,13 @@
 from .helpers import path_to_qicon
 
 # Base widgets
-from .widgets.base_widgets import IconButton, IconButtonFactory
+from pyqt6_music_player.views.base_widgets import IconButton, IconButtonFactory
 
 # Now playing display widgets
-from .widgets.now_playing_widgets import AlbumArtLabel, AudioArtistLabel, AudioTitleLabel
+from .now_playing import AlbumArtLabel, AudioArtistLabel, AudioTitleLabel, NowPlayingDisplay
 
 # Playback widgets
-from .widgets.playback_widgets import (
+from .playback import (
     ElapsedTimeLabel,
     NextButton,
     PlaybackProgressSlider,
@@ -17,28 +17,22 @@ from .widgets.playback_widgets import (
     RepeatButton,
     ReplayButton,
     TotalDurationLabel,
+    PlaybackControls,
+    PlaybackProgress,
 )
 
 # Playlist widgets
-from .widgets.playlist_widgets import (
+from .playlist import (
     AddSongButton,
     LoadSongFolderButton,
+    RemoveSongButton,
     PlaylistTableWidget,
-    RemoveSongButton
+    PlaylistManager,
+    PlaylistDisplay
 )
 
 # Volume widgets
-from .widgets.volume_widgets import VolumeButton, VolumeLabel, VolumeSlider
-
-# Components (grouped widgets)
-from .components import (
-    NowPlayingDisplay,
-    PlaybackControls,
-    PlaybackProgress,
-    PlaylistDisplay,
-    PlaylistManager,
-    VolumeControls
-)
+from .volume import VolumeButton, VolumeLabel, VolumeSlider, VolumeControls
 
 # Subviews
 from .subviews import PlayerbarView, PlaylistView, PlaylistManagerView
@@ -58,6 +52,7 @@ __all__ = [
     "AlbumArtLabel",
     "AudioArtistLabel",
     "AudioTitleLabel",
+    "NowPlayingDisplay",
 
     # Playback widgets
     "ElapsedTimeLabel",
@@ -68,24 +63,21 @@ __all__ = [
     "RepeatButton",
     "ReplayButton",
     "TotalDurationLabel",
+    "PlaybackControls",
+    "PlaybackProgress",
 
     # Playlist widgets
     "AddSongButton",
     "LoadSongFolderButton",
     "PlaylistTableWidget",
     "RemoveSongButton",
+    "PlaylistManager",
+    "PlaylistDisplay",
 
     # Volume widgets
     "VolumeButton",
     "VolumeLabel",
     "VolumeSlider",
-
-    # Components
-    "NowPlayingDisplay",
-    "PlaybackControls",
-    "PlaybackProgress",
-    "PlaylistDisplay",
-    "PlaylistManager",
     "VolumeControls",
 
     # Subviews

@@ -4,6 +4,8 @@ Main application view for the PyQt6 Music Player.
 This module defines the `MusicPlayerView`, the central container widget
 that holds all major UI components (playlist, player bar, controls).
 """
+from dataclasses import dataclass
+
 from PyQt6.QtGui import QColor, QIcon, QPalette
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
@@ -12,22 +14,41 @@ from pyqt6_music_player.config import (
     APP_TITLE,
     MUSIC_PLAYER_ICON_PATH
 )
+from pyqt6_music_player.models import PlaylistModel, VolumeModel
+from pyqt6_music_player.view_models import (
+    PlaybackControlViewModel,
+    PlaylistViewModel,
+    VolumeViewModel
+)
 from pyqt6_music_player.views import PlaylistManagerView, PlaylistView, PlayerbarView
+
+
+# TODO: Single source of truth, created once in main(). Move outside of main view module later.
+@dataclass
+class AppContext:
+    # Models
+    playlist_model: PlaylistModel
+    volume_model: VolumeModel
+
+    # ViewModels
+    playback_viewmodel: PlaybackControlViewModel
+    playlist_viewmodel: PlaylistViewModel
+    volume_viewmodel: VolumeViewModel
 
 
 # ================================================================================
 # MAIN VIEW
 # ================================================================================
 class MusicPlayerView(QWidget):
-    def __init__(self, state):
+    def __init__(self, ctx: AppContext):
         """
         Initialize the main music player view.
         """
         super().__init__()
-        self.state = state
-        self.playlist_manager_view = PlaylistManagerView()
-        self.playlist_view = PlaylistView(state)
-        self.player_bar_view = PlayerbarView()
+        self.ctx = ctx
+        self.playlist_manager_view = PlaylistManagerView(ctx.playlist_viewmodel)
+        self.playlist_view = PlaylistView(ctx.playlist_viewmodel)
+        self.player_bar_view = PlayerbarView(ctx.playback_viewmodel, ctx.volume_viewmodel)
 
         self._configure_properties()
         self._init_ui()

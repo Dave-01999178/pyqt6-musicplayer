@@ -4,7 +4,7 @@ This module provides reusable widgets for creating consistent UI components.
 from pathlib import Path
 
 from PyQt6.QtCore import QSize
-from PyQt6.QtWidgets import QPushButton, QLabel
+from PyQt6.QtWidgets import QPushButton
 
 from pyqt6_music_player.views.helpers import path_to_qicon
 from pyqt6_music_player.config import SMALL_BUTTON, SMALL_ICON

@@ -1,8 +1,7 @@
 from .song_model import Song, DEFAULT_SONG
-from .music_player_state import (
-    PlaybackProgressState,
+from .model import (
     PlaylistModel,
-    VolumeSettings
+    VolumeModel,
 )
 
 __all__ = [
@@ -12,6 +11,5 @@ __all__ = [
 
     # Music player state
     "PlaylistModel",
-    "VolumeSettings",
-    "PlaybackProgressState"
+    "VolumeModel",
 ]
