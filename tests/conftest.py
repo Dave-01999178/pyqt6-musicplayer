@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Sequence
+from unittest.mock import Mock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -7,35 +8,72 @@ from pytest_mock import MockerFixture
 from pyqt6_music_player.models import (
     Song,
     PlaylistModel,
-    VolumeSettings,
+    VolumeModel,
 )
+from pyqt6_music_player.models.player_engine import PlayerEngine
+from pyqt6_music_player.view_models.viewmodel import VolumeViewModel
 from tests.utils import make_fake_path_and_song
 
 
+# ================================================================================
+# SONG MODEL
+# ================================================================================
 @pytest.fixture
 def song():
     return Song()
 
 
+# ================================================================================
+# PLAYLIST MODEL
+# ================================================================================
 @pytest.fixture
 def playlist_model():
     return PlaylistModel()
 
 
+# ================================================================================
+# VOLUME
+# ================================================================================
 @pytest.fixture
-def volume_state():
-    return VolumeSettings()
+def volume_model():
+    return VolumeModel()
 
 
+@pytest.fixture
+def mock_player_engine():
+    return Mock(spec=PlayerEngine)
+
+
+@pytest.fixture
+def volume_viewmodel(volume_model, mock_player_engine):
+    return VolumeViewModel(volume_model, mock_player_engine)
+
+
+@pytest.fixture
+def volume_model_factory():
+    def _create_model(initial_volume: int = 100, initial_mute_state: bool = False):
+        volume_model = VolumeModel()
+        if initial_mute_state:
+            volume_model.set_volume(0)
+        else:
+            volume_model.set_volume(initial_volume)
+        return volume_model
+    return _create_model
+
+
+
+# ================================================================================
+# MOCKS
+# ================================================================================
 @pytest.fixture
 def mock_path_resolve(mocker: MockerFixture):
-    target = "pyqt6_music_player.models.music_player_state.Path.resolve"
+    target = "pyqt6_music_player.models.model.Path.resolve"
 
     return mocker.patch(target)
 
 @pytest.fixture
 def mock_song_from_path(mocker: MockerFixture):
-    target = "pyqt6_music_player.models.music_player_state.Song.from_path"
+    target = "pyqt6_music_player.models.model.Song.from_path"
 
     return mocker.patch(target)
 
@@ -54,6 +92,17 @@ def mock_get_metadata(mocker: MockerFixture):
     return mocker.patch(target)
 
 
+@pytest.fixture
+def mock_audio_segment_from_file(mocker: MockerFixture):
+    mock_target = "pyqt6_music_player.models.player_engine.AudioSegment.from_file"
+
+    return mocker.patch(mock_target)
+
+
+
+# ================================================================================
+# FACTORY
+# ================================================================================
 @pytest.fixture
 def populate_playlist(playlist_model, mock_path_resolve, mock_song_from_path):
     def _populate(file_paths: Sequence[Path]) -> None:
@@ -74,10 +123,3 @@ def populate_playlist(playlist_model, mock_path_resolve, mock_song_from_path):
         mock_song_from_path.reset_mock()
 
     return _populate
-
-
-@pytest.fixture
-def mock_audio_segment_from_file(mocker: MockerFixture):
-    mock_target = "pyqt6_music_player.models.player_engine.AudioSegment.from_file"
-
-    return mocker.patch(mock_target)

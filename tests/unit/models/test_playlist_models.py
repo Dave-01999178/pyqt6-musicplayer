@@ -10,13 +10,12 @@ from tests.utils import (
 )
 
 
-# --------------------------------------------------------------------------------
-# PlaylistState.add_song method unit tests.
-# --------------------------------------------------------------------------------
+# ================================================================================
+# PLAYLIST `ADD_SONG` METHOD UNIT TESTS.
+# ================================================================================
 #
 # --- Single input ---
 class TestAddSongSingleInput:
-
     # Test case: Directory-like input handling.
     @pytest.mark.parametrize("dir_like_input", [
         # Empty inputs -> resolves to CWD (should be skipped).

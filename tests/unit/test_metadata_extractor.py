@@ -3,9 +3,10 @@ from typing import cast
 import pytest
 
 from pyqt6_music_player.constants import AudioMetadataFallback
-from pyqt6_music_player.infra.metadata_extractor import (
+from pyqt6_music_player.metadata.metadata_extractor import (
     extract_id3_tags,
-    extract_generic_tags, AudioInfoDict
+    extract_generic_tags,
+    AudioInfoDict
 )
 from tests.utils import make_fake_audio_object, SupportedFormat, MOCK_AUDIO_DURATION
 
