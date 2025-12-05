@@ -210,10 +210,12 @@ class PlaylistDisplay(QWidget):
         """Initializes PlaylistDisplay instance."""
         super().__init__()
         self._viewmodel = playlist_viewmodel
-        self.playlist_window = PlaylistTableWidget()
-        self.playlist_window.setModel(self._viewmodel)
+        self._playlist_window = PlaylistTableWidget()
+        self._playlist_window.setModel(self._viewmodel)
+        self.selection_model = self.playlist_window.selectionModel()
 
         self._init_ui()
+        self._setup_binding()
 
     def _init_ui(self):
         """Initializes the container's internal widgets and layouts"""
@@ -222,3 +224,18 @@ class PlaylistDisplay(QWidget):
         section_layout.addWidget(self.playlist_window)
 
         self.setLayout(section_layout)
+
+    def _setup_binding(self):
+        self.selection_model.currentRowChanged.connect(self._on_item_select)
+
+    @property
+    def playlist_window(self) -> QTableView:
+        return self._playlist_window
+
+    def _on_item_select(self, current_index: QModelIndex, previous_index: QModelIndex):
+        if not current_index.isValid():
+            return
+
+        row_index = current_index.row()
+
+        self._viewmodel.set_selected_index(row_index)
