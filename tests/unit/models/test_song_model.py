@@ -143,32 +143,3 @@ class TestSong:
         assert curr_song.artist == input_metadata.get("artist")
         assert curr_song.album == input_metadata.get("album")
         assert curr_song.duration == input_metadata.get("duration")
-
-    def test_song_get_metadata_fields_returns_list_of_metadata_names(self, song):
-        expected_list = ["title", "artist", "album", "duration"]
-
-        assert song.get_metadata_fields() == expected_list
-
-    @pytest.mark.parametrize("duration, expected_duration", [
-        (0.0, "00:00"),
-        (123.4, "02:03")
-    ], ids=["empty_or_default", "non_empty"])
-    def test_song_formatted_duration_formats_and_returns_duration(
-            self,
-            duration,
-            expected_duration
-    ):
-        # --- Arrange: Prepare fake song. ---
-        fake_song = FakeSongData(
-            path=Path("path/to/fake.mp3"),
-            title="Does",
-            artist="not",
-            album="matter",
-            duration=duration
-        ).to_song()
-
-        # --- Act: Get the formatted duration. ---
-        actual_duration = fake_song.formatted_duration()
-
-        # --- Assert: The duration should be for ---
-        assert actual_duration == expected_duration

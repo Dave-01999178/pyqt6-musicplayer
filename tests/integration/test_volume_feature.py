@@ -16,14 +16,14 @@ from pyqt6_music_player.views import VolumeControls, VolumeSlider
 #    - Viewmodel notifies when mute state changes. (Done)
 #
 # 2. Viewmodel to Model
-#    -  Viewmodel commands should pass the data from view to corresponding
-#       model setter. (Done)
+#    - Viewmodel commands should pass the data from view to corresponding
+#      model setter. (Done)
 #
-# 3. Viewmodel to UI
+# 3. Viewmodel to View
 #    - View updates when the viewmodel notifies of volume changes. (Done)
 #    - View updates when the ViewModel notifies of mute state changes. (Done)
 #
-# 4. UI to Viewmodel
+# 4. View to Viewmodel
 #    - Volume slider seek event should call its corresponding viewmodel command. (Done)
 #    - Volume button click event should call its corresponding viewmodel command. (Done)
 #

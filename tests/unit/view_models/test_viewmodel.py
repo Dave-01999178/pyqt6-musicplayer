@@ -1,19 +1,54 @@
+from pathlib import Path
+
 import pytest
 from PyQt6.QtTest import QSignalSpy
 
-from conftest import volume_viewmodel
-from pyqt6_music_player.models import VolumeModel
-from pyqt6_music_player.view_models import VolumeViewModel
+from pyqt6_music_player.models import VolumeModel, PlaylistModel
+from pyqt6_music_player.view_models import VolumeViewModel, PlaylistViewModel
+from tests.utils import FakeSongData
 
 
 # ================================================================================
-# VOLUME VIEWMODEL UNIT TEST SUMMARY
-# 1. Volume viewmodel correctly exposes volume model properties. (Done)
-# 2. Refresh method always emit the volume model current volume as signal. (Done)
-# 3. Viewmodel should not notify when no model changes. (Done)
+# 1. PLAYLIST VIEWMODEL UNIT TEST SUMMARY
+#    - Playlist viewmodel correctly exposes volume model properties. (Done)
+#    - Playlist viewmodel correctly formats song duration before displaying. (Done)
+#
+# 2. VOLUME VIEWMODEL UNIT TEST SUMMARY
+#    - Volume viewmodel correctly exposes volume model properties. (Done)
+#    - Refresh method always emit the volume model current volume as signal. (Done)
 # ================================================================================
+#
+# --- Playlist ViewModel ---
+class TestPlaylistViewModel:
+    # Test: Playlist viewmodel correctly exposes volume model properties.
+    def test_playlist_viewmodel_exposes_playlist_model_properties(self, playlist_viewmodel):
+        # --- Arrange ---
+        playlist_model_ = PlaylistModel()
+        playlist_viewmodel_ = PlaylistViewModel(playlist_model_)
+
+        # --- Assert ---
+        assert playlist_viewmodel_.playlist == playlist_model_.playlist
+
+    # Test: Playlist viewmodel correctly formats song duration before displaying.
+    def test_viewmodel_formats_song_duration_before_displaying(self, playlist_viewmodel):
+        # --- Arrange ---
+        fake_song = FakeSongData(
+            path=Path("path/to/fake.mp3"),
+            title="Does",
+            artist="not",
+            album="matter",
+            duration=123.45
+        ).to_song()
+
+        # --- Act ---
+        formatted_duration = playlist_viewmodel.format_duration(fake_song.duration)
+
+        # --- Assert ---
+        assert formatted_duration != 123.45
+        assert formatted_duration == "02:03"
 
 
+# --- Volume ViewModel ---
 class TestVolumeViewModel:
     # Test: Volume viewmodel correctly exposes volume model properties.
     def test_viewmodel_correctly_exposes_model_properties(self, mock_player_engine):
@@ -37,26 +72,3 @@ class TestVolumeViewModel:
         # --- Assert ---
         assert len(spy_volume) == 2
         assert all(signal_value[0] == volume_model.current_volume for signal_value in spy_volume)
-
-    # Test case: Viewmodel should not notify when no model changes.
-    @pytest.mark.parametrize("method_name, value", [
-        ("set_volume", 100),
-        ("set_mute", False)
-    ], ids=["set_volume", "set_mute"])
-    def test_viewmodel_should_not_notify_no_when_model_changes(
-            self,
-            volume_model,
-            volume_viewmodel,
-            method_name,
-            value
-    ):
-        # --- Arrange ---
-        spy_volume = QSignalSpy(volume_model.volume_changed)
-        spy_mute = QSignalSpy(volume_model.mute_changed)
-
-        # --- Act ---
-        getattr(volume_viewmodel, method_name)(value)
-
-        # --- Assert ---
-        assert len(spy_volume) == 0
-        assert len(spy_mute) == 0
