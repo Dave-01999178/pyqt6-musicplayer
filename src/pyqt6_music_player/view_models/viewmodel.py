@@ -1,3 +1,5 @@
+# TODO: Consider splitting this monolithic module into separate individual modules when it grows,
+#  or became complex for easy navigation.
 from typing import Sequence
 
 from PyQt6.QtCore import pyqtSignal, QObject, QAbstractTableModel, Qt, QModelIndex
@@ -40,31 +42,37 @@ class PlaybackControlViewModel(QObject):
 # PLAYLIST VIEWMODEL
 # ================================================================================
 class PlaylistViewModel(QAbstractTableModel):
+    DEFAULT_COLUMNS = [
+        ("title", "Title"),
+        ("artist", "Artist"),
+        ("album", "Album"),
+        ("duration", "Duration")
+    ]
     def __init__(self, playlist_model: PlaylistModel):
         super().__init__()
         self._model = playlist_model
-        self.header_label = Song.get_metadata_fields()
 
-        self._model.playlist_changed.connect(self.on_song_insert)
+        self._model.playlist_changed.connect(self._on_model_song_insert)
 
     # --- QAbstractTableModel interface - Required methods (overridden) ---
     def rowCount(self, parent=None):
         return len(self._model.playlist)
 
     def columnCount(self, parent=None):
-        return len(self.header_label)
+        return len(self.DEFAULT_COLUMNS)
 
     def data(self, index, role=...):
         if not index.isValid():
             return
 
-        song = self._model.playlist[index.row()]
+        row = index.row()
         col = index.column()
-        field_name = self.header_label[col]
+        song = self._model.playlist[row]
+        field_name = self.DEFAULT_COLUMNS[col][0]
 
         if role == Qt.ItemDataRole.DisplayRole:
             if field_name == "duration":
-                return song.formatted_duration()
+                return self.format_duration(song.duration)
             return getattr(song, field_name)
 
         if role == Qt.ItemDataRole.TextAlignmentRole:
@@ -74,35 +82,58 @@ class PlaylistViewModel(QAbstractTableModel):
         return None
 
     def headerData(self, section, orientation, role=...):
-        field_name = self.header_label[section]
+        field_title = self.DEFAULT_COLUMNS[section][1]
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+            return field_title
 
-        if  role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
-            return field_name.title()
-
-        elif role == Qt.ItemDataRole.TextAlignmentRole and field_name == "duration":
+        elif role == Qt.ItemDataRole.TextAlignmentRole and field_title == "Duration":
             return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
 
         return None
 
+    @staticmethod
+    def format_duration(seconds: int | float):
+        """
+        Returns audio duration in format (mm:ss) if it's less than hour else (hh:mm:ss).
+        """
+        int_total_duration = int(seconds)
+        secs_in_hr = 3600
+        secs_in_min = 60
+
+        hours, remainder = divmod(int_total_duration, secs_in_hr)
+        minutes, seconds = divmod(remainder, secs_in_min)
+
+        if hours > 0:
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+        return f"{minutes:02d}:{seconds:02d}"
+
     # TODO: Temporary logic, replace later.
     # Notify views if new song(s) are added.
     # Initial implementation (insertion order).
-    def on_song_insert(self, song_count: int) -> None:
-        if song_count != 0:
-            prev_playlist_len = self._model.song_count - song_count
+    def _on_model_song_insert(self, new_song_count: int) -> None:
+        if new_song_count != 0:
+            prev_playlist_len = self._model.song_count - new_song_count
             self.beginInsertRows(QModelIndex(), prev_playlist_len, self._model.song_count - 1)
             self.endInsertRows()
 
         return None
 
-    # --- Commands - Methods that VIEWS call to modify data ---
+    # --- Commands ---
     def add_song(self, files: Sequence[str]) -> None:
         self._model.add_song(files)
 
-    # --- Properties - Expose model properties if needed by views ---
+    def set_selected_index(self, index: int):
+        self._model.set_selected_index(index)
+
+    # --- Properties ---
     @property
     def playlist(self) -> list[Song]:
         return self._model.playlist
+
+    @property
+    def selected_song(self):
+        return self._model.selected_song
 
 
 # ================================================================================
@@ -130,14 +161,14 @@ class VolumeViewModel(QObject):
     def refresh(self):
         self.volume_changed.emit(self._model.current_volume)  # type: ignore
 
-    # --- Commands - Methods that VIEWS call to modify data ---
+    # --- Commands ---
     def set_volume(self, new_volume):
         self._model.set_volume(new_volume)
 
     def set_mute(self, mute: bool):
         self._model.set_mute(mute)
 
-    # --- Properties - Expose model properties if needed by views ---
+    # --- Properties ---
     @property
     def current_volume(self) -> int:
         return self._model.current_volume

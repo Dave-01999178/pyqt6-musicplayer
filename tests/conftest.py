@@ -11,12 +11,13 @@ from pyqt6_music_player.models import (
     VolumeModel,
 )
 from pyqt6_music_player.models.player_engine import PlayerEngine
+from pyqt6_music_player.view_models import PlaylistViewModel
 from pyqt6_music_player.view_models.viewmodel import VolumeViewModel
 from tests.utils import make_fake_path_and_song
 
 
 # ================================================================================
-# SONG MODEL
+# SONG
 # ================================================================================
 @pytest.fixture
 def song():
@@ -24,11 +25,15 @@ def song():
 
 
 # ================================================================================
-# PLAYLIST MODEL
+# PLAYLIST
 # ================================================================================
 @pytest.fixture
 def playlist_model():
     return PlaylistModel()
+
+@pytest.fixture
+def playlist_viewmodel(playlist_model):
+    return PlaylistViewModel(playlist_model)
 
 
 # ================================================================================

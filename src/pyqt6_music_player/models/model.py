@@ -20,19 +20,43 @@ class PlaylistModel(QObject):
         self._playlist: list[Song] = []
         self._playlist_set: set[Path] = set()
 
+        self._current_index: int | None = None
+
     @property
     def playlist(self) -> list[Song]:
-        """Return the current playlist."""
+        """
+        Returns:
+             The current playlist.
+        """
         return self._playlist.copy()
 
     @property
     def playlist_set(self) -> set[Path]:
-        """Set version of playlist used for fast membership checks."""
+        """
+        Returns:
+            The set version of playlist used for fast membership checks.
+        """
         return self._playlist_set
 
     @property
     def song_count(self) -> int:
+        """
+        Returns:
+            The number of songs in playlist.
+        """
         return len(self._playlist)
+
+    @property
+    def selected_song(self) -> Song | None:
+        """
+        Returns:
+            The current song selected in playlist as *Song* object,
+            or *None* if the playlist is empty or there's no song selected.
+        """
+        if self._current_index is not None:
+            return self._playlist[self._current_index]
+
+        return None
 
     @staticmethod
     def _normalize_to_paths(files: Sequence[str | Path]) -> list[Path]:
@@ -43,7 +67,7 @@ class PlaylistModel(QObject):
             files: A sequence of path-like objects.
 
         Returns:
-            List of Path objects.
+            The normalized input as Path objects stored in a list.
 
         Raises:
             TypeError: If the list contains unsupported types or if the argument type is not
@@ -75,7 +99,7 @@ class PlaylistModel(QObject):
         Supported extensions: .mp3, .wav, .flac, .ogg
         """
         if not files:
-            return None
+            return
 
         # Allow single str/Path input by wrapping into a list.
         if isinstance(files, (str, Path)):
@@ -83,29 +107,35 @@ class PlaylistModel(QObject):
 
         paths = self._normalize_to_paths(files)
 
+        from_path = Song.from_path  # Store locally to avoid repeated attribute lookups.
         add_count = 0
-        from_path = Song.from_path  # Cache to avoid repeated lookups.
         for p in paths:
             try:
                 resolved_path = p.resolve(strict=True)
             except FileNotFoundError:
                 continue
 
-            if resolved_path.suffix.lower() not in SUPPORTED_AUDIO_FORMAT:
-                continue
-
-            if resolved_path not in self._playlist_set:
+            is_new = resolved_path not in self._playlist_set
+            is_supported = resolved_path.suffix.lower() in SUPPORTED_AUDIO_FORMAT
+            if is_new and is_supported:
                 song = from_path(resolved_path)
 
-                if not song:
-                    continue
-
-                self._playlist.append(song)
-                self._playlist_set.add(resolved_path)
-                add_count += 1
+                if song is not None:
+                    self._playlist.append(song)
+                    self._playlist_set.add(resolved_path)
+                    add_count += 1
 
         if add_count != 0:
             self.playlist_changed.emit(add_count)  # type: ignore
+
+        return None
+
+    def set_selected_index(self, index: int) -> None:
+        if not isinstance(index, int) or isinstance(index, bool):
+            raise TypeError("Index must be an integer.")
+
+        if 0 <= index < len(self._playlist):
+            self._current_index = index
 
         return None
 

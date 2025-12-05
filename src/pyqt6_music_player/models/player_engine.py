@@ -38,8 +38,8 @@ class AudioData:
             logging.error("Invalid/Unsupported sample width: %d", sample_width)
             return None
 
-        # Omitted 24-bit audio (sample_width == 3) as pydub converts 24-bit to 32-bit
-        # automatically.
+        # Omitted 24-bit audio (sample_width == 3) because pydub automatically converts
+        # 24-bit to 32-bit.
         byte_to_dtype_map: dict[int, type[np.integer[Any]]] = {
             1: np.uint8,
             2: np.int16,
@@ -81,9 +81,9 @@ class AudioData:
 # TODO: Initial implementation (play only), refactor and extend later to include pause, repeat,
 #  seeking, and volume.
 class PlayerEngine(QObject):
-    def __init__(self, audio_data: AudioData):
+    """def __init__(self):
         super().__init__()
-        self.audio_data = audio_data
+        self.audio_data: AudioData | None = None
         self.chunk_ms = 50
         self.chunk_frames = int(self.audio_data.frame_rate * self.chunk_ms / 1000)
         self.frame_index = 0
@@ -126,4 +126,5 @@ class PlayerEngine(QObject):
         else:
             raise ValueError("Unsupported sample width")
 
-        return chunk_int.tobytes()  # Already interleaved
+        return chunk_int.tobytes()  # Already interleaved"""
+    pass
