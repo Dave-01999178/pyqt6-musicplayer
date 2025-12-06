@@ -70,6 +70,7 @@ class IconButton(QPushButton):
 #
 # Factory for creating static/stateless buttons.
 class IconButtonFactory:
+    """Reusable factory class for creating static IconButtons."""
     def __init__(
             self,
             icon_path: Path,

@@ -42,6 +42,16 @@ class PlaybackControlViewModel(QObject):
 # PLAYLIST VIEWMODEL
 # ================================================================================
 class PlaylistViewModel(QAbstractTableModel):
+    """
+    Viewmodel responsible for exposing playlist-related data and commands
+    to the View layer in an MVVM architecture.
+
+    This class acts as an intermediary between the PlaylistModel and any
+    UI components that display or modify the application's playlist state.
+
+    It forwards model updates to the view via Qt signals and provides
+    commands for modifying playlist model.
+    """
     DEFAULT_COLUMNS = [
         ("title", "Title"),
         ("artist", "Artist"),
@@ -112,6 +122,7 @@ class PlaylistViewModel(QAbstractTableModel):
     # Notify views if new song(s) are added.
     # Initial implementation (insertion order).
     def _on_model_song_insert(self, new_song_count: int) -> None:
+
         if new_song_count != 0:
             prev_playlist_len = self._model.song_count - new_song_count
             self.beginInsertRows(QModelIndex(), prev_playlist_len, self._model.song_count - 1)
@@ -121,18 +132,43 @@ class PlaylistViewModel(QAbstractTableModel):
 
     # --- Commands ---
     def add_song(self, files: Sequence[str]) -> None:
+        """
+        Command for adding new songs to the playlist.
+
+        Args:
+            files: A sequence of path-like objects.
+        """
         self._model.add_song(files)
 
     def set_selected_index(self, index: int):
+        """
+        Command for setting currently selected playlist index.
+
+        Args:
+            index: The index of the selected item in the playlist widget.
+        """
         self._model.set_selected_index(index)
 
     # --- Properties ---
     @property
     def playlist(self) -> list[Song]:
+        """
+        Exposes the model's current playlist.
+
+        Returns:
+            list[Song]: The current playlist.
+        """
         return self._model.playlist
 
     @property
     def selected_song(self):
+        """
+        Exposes the model's currently selected song.
+
+        Returns:
+            Song | None: The selected song from the model,
+                         or ``None`` if the playlist is empty, or nothing is selected.
+        """
         return self._model.selected_song
 
 
@@ -140,6 +176,16 @@ class PlaylistViewModel(QAbstractTableModel):
 # VOLUME VIEWMODEL
 # ================================================================================
 class VolumeViewModel(QObject):
+    """
+    Viewmodel responsible for exposing volume-related data and commands
+    to the View layer in an MVVM architecture.
+
+    This class acts as an intermediary between the VolumeModel and any
+    UI components that display or modify the application's volume state.
+
+    It forwards model updates to the view via Qt signals and provides
+    commands for modifying volume model.
+    """
     volume_changed = pyqtSignal(int)
     mute_changed = pyqtSignal(bool)
 
@@ -152,27 +198,68 @@ class VolumeViewModel(QObject):
         self._model.volume_changed.connect(self._on_model_volume_changed)
         self._model.mute_changed.connect(self._on_model_mute_changed)
 
-    def _on_model_volume_changed(self, new_volume: int):
+    def _on_model_volume_changed(self, new_volume: int) -> None:
+        """
+        Forward volume changes from the model to the view layer.
+
+        Args:
+            new_volume: The updated volume from the model.
+        """
         self.volume_changed.emit(new_volume)  # type: ignore
 
-    def _on_model_mute_changed(self, muted: bool):
+    def _on_model_mute_changed(self, muted: bool) -> None:
+        """
+        Forward mute state changes from the model to the view layer.
+
+        Args:
+            muted: Updated mute state from the model.
+        """
         self.mute_changed.emit(muted)  # type: ignore
 
-    def refresh(self):
+    def refresh(self) -> None:
+        """
+        Re-emit the current volume to refresh any subscribed views.
+
+        Useful when view needs initial state sync.
+        """
         self.volume_changed.emit(self._model.current_volume)  # type: ignore
 
     # --- Commands ---
-    def set_volume(self, new_volume):
+    def set_volume(self, new_volume) -> None:
+        """
+        Command for updating volume.
+
+        Args:
+            new_volume: The new volume value to set.
+        """
         self._model.set_volume(new_volume)
 
-    def set_mute(self, mute: bool):
+    def set_mute(self, mute: bool) -> None:
+        """
+        Command for toggling mute state.
+
+        Args:
+              mute: The new mute state to set.
+        """
         self._model.set_mute(mute)
 
     # --- Properties ---
     @property
     def current_volume(self) -> int:
+        """
+        Exposes the model's current volume.
+
+        Returns:
+            int: The model's current volume.
+        """
         return self._model.current_volume
 
     @property
     def is_muted(self) -> bool:
+        """
+        Exposes the model's current mute state.
+
+        Returns:
+            bool: The model's current mute state.
+        """
         return self._model.is_muted
