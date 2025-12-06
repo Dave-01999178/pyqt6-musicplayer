@@ -154,7 +154,6 @@ class VolumeControls(QWidget):
         self._init_ui()
         self._setup_binding()
 
-        self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
     def _init_ui(self):
         """Initializes the instance's internal widgets and layouts"""
         layout = QHBoxLayout()
@@ -177,7 +176,7 @@ class VolumeControls(QWidget):
         self._viewmodel.mute_changed.connect(self._volume_button.setChecked)
         self._viewmodel.volume_changed.connect(self._on_volume_changed)
 
-        # Set UI initial state on startup.
+        # Refresh/re-emit to set UI initial state on startup.
         self._viewmodel.refresh()
 
     def _on_volume_changed(self, new_volume: int) -> None:

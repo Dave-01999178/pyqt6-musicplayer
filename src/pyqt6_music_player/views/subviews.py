@@ -23,6 +23,7 @@ class PlaylistManagerView(QFrame):
         self._init_ui()
 
     def _init_ui(self):
+        """Initializes the instance's internal widgets and layouts"""
         instance_layout = QHBoxLayout()
 
         instance_layout.addWidget(self._playlist_manager)
@@ -45,6 +46,7 @@ class PlaylistView(QFrame):
         self._init_ui()
 
     def _init_ui(self):
+        """Initializes the instance's internal widgets and layouts"""
         instance_layout = QVBoxLayout()
 
         instance_layout.addWidget(self._playlist_display)
@@ -78,6 +80,7 @@ class PlayerbarView(QFrame):
         self._init_ui()
 
     def _init_ui(self):
+        """Initializes the instance's internal widgets and layouts"""
         instance_layout = QVBoxLayout()
 
         # --- Top section ---

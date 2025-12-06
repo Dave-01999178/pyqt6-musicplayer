@@ -14,7 +14,10 @@ from pyqt6_music_player.models import Song
 # TODO: Consider replacing list.
 class PlaylistModel(QObject):
     playlist_changed = pyqtSignal(int)
-    """Manages the music player's playlist state."""
+    """
+    The app's playlist model that is responsible for managing playlist,
+    and providing playlist related data.
+    """
     def __init__(self) -> None:
         super().__init__()
         self._playlist: list[Song] = []
@@ -24,34 +27,31 @@ class PlaylistModel(QObject):
 
     @property
     def playlist(self) -> list[Song]:
-        """
-        Returns:
-             The current playlist.
-        """
+        """Returns the current playlist"""
         return self._playlist.copy()
 
     @property
     def playlist_set(self) -> set[Path]:
-        """
-        Returns:
-            The set version of playlist used for fast membership checks.
-        """
+        """Returns the set version of playlist, used for fast membership checks."""
         return self._playlist_set
 
     @property
     def song_count(self) -> int:
-        """
-        Returns:
-            The number of songs in playlist.
-        """
+        """Returns the current number of songs in playlist."""
         return len(self._playlist)
 
     @property
     def selected_song(self) -> Song | None:
         """
+        Returns the currently selected song based on the active playlist index.
+
+        If no song is selected or the playlist is empty, this property returns
+        ``None``. A valid selection occurs only when the internal index is set
+        and falls within the bounds of the playlist.
+
         Returns:
-            The current song selected in playlist as *Song* object,
-            or *None* if the playlist is empty or there's no song selected.
+            Song | None: The selected song from the model,
+                         or ``None`` if the playlist is empty, or nothing is selected.
         """
         if self._current_index is not None:
             return self._playlist[self._current_index]
@@ -67,7 +67,7 @@ class PlaylistModel(QObject):
             files: A sequence of path-like objects.
 
         Returns:
-            The normalized input as Path objects stored in a list.
+            list[Path]: The normalized input as Path objects stored in a list.
 
         Raises:
             TypeError: If the list contains unsupported types or if the argument type is not
@@ -93,10 +93,10 @@ class PlaylistModel(QObject):
         """
         Adds one or more audio files to the playlist.
 
+        Supported extensions: .mp3, .wav, .flac, .ogg
+
         Args:
             files: A sequence of path-like objects.
-
-        Supported extensions: .mp3, .wav, .flac, .ogg
         """
         if not files:
             return
@@ -131,6 +131,19 @@ class PlaylistModel(QObject):
         return None
 
     def set_selected_index(self, index: int) -> None:
+        """
+        Sets the currently selected playlist index.
+
+        This updates the internal pointer based on the index of the selected item in playlist
+        widget. The internal pointer is used for retrieving ``Song`` objects from the internal
+        playlist.
+
+        Args:
+            index: The index of the selected item in the playlist widget.
+
+        Raises:
+            TypeError: If the given index is not an integer.
+        """
         if not isinstance(index, int) or isinstance(index, bool):
             raise TypeError("Index must be an integer.")
 
@@ -141,6 +154,10 @@ class PlaylistModel(QObject):
 
 
 class VolumeModel(QObject):
+    """
+    The app's volume model that is responsible for managing volume,
+    and providing volume related data.
+    """
     volume_changed = pyqtSignal(int)
     mute_changed = pyqtSignal(bool)
 
@@ -152,17 +169,29 @@ class VolumeModel(QObject):
 
     @property
     def current_volume(self) -> int:
+        """Returns the current volume."""
         return self._current_volume
 
     @property
     def previous_volume(self) -> int:
+        """Returns the previous volume."""
         return self._previous_volume
 
     @property
     def is_muted(self) -> bool:
+        """Returns the current mute state."""
         return self._is_muted
 
     def set_volume(self, new_volume: int) -> None:
+        """
+        Sets the current volume to a new one based on the given value.
+
+        Args:
+            new_volume: The new volume after a volume button or slider event (toggle/seek).
+
+        Raises:
+            ValueError: If the new volume is out of range.
+        """
         if not (MIN_VOLUME <= new_volume <= MAX_VOLUME):
             raise ValueError(f"Volume {new_volume} is out of range [{MIN_VOLUME}-{MAX_VOLUME}].")
 
@@ -181,6 +210,12 @@ class VolumeModel(QObject):
         return None
 
     def set_mute(self, mute: bool) -> None:
+        """
+        Sets the current mute state based on the given new state.
+
+        Args:
+            mute: The new mute state after a volume button toggle (mute/unmute).
+        """
         if not isinstance(mute, bool):
             raise TypeError(f"Invalid argument: {mute}, The argument must be a boolean")
 

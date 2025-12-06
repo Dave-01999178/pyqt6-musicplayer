@@ -6,6 +6,9 @@ from mutagen.mp3 import MP3
 from pyqt6_music_player.constants import AudioMetadataFallback
 
 
+# ================================================================================
+# TYPED DICT
+# ================================================================================
 class AudioInfoDict(TypedDict):
     title: str
     artist: str
@@ -13,6 +16,9 @@ class AudioInfoDict(TypedDict):
     duration: float
 
 
+# ================================================================================
+# METADATA EXTRACTOR FUNCTIONS
+# ================================================================================
 def extract_id3_tags(
         mp3_audio: MP3,
         defaults: type[AudioMetadataFallback] = AudioMetadataFallback
@@ -30,7 +36,7 @@ def extract_id3_tags(
 
     Returns:
         AudioInfoDict: A dictionary that contains metadata tags (title, artist, album and duration)
-                      as keys and their corresponding values as values.
+                       as keys and their corresponding values as values.
     """
     def _get_text(tag: str, default: str):
         """Helper function for safely extracting `text` values from ID3 frames."""
@@ -64,7 +70,7 @@ def extract_generic_tags(
 
     Returns:
         AudioInfoDict: A dictionary that contains metadata tags (title, artist, album and duration)
-                      as keys and their corresponding values as values.
+                       as keys and their corresponding values as values.
     """
     def _get_value(tag: str, default: str):
         value = audio.get(tag)
@@ -93,7 +99,7 @@ def get_metadata(audio: FileType) -> AudioInfoDict:
 
     Returns:
         AudioInfoDict: A dictionary that contains metadata tags (title, artist, album and duration)
-                      as keys and their corresponding values as values.
+                       as keys and their corresponding values as values.
     """
     if isinstance(audio, MP3):
         return extract_id3_tags(audio)

@@ -5,6 +5,15 @@ from PyQt6.QtGui import QIcon
 
 
 def path_to_qicon(icon_path: Path) -> QIcon:
+    """
+    Converts an icon image into QIcon instance.
+
+    Args:
+        icon_path: Icon image's file path.
+
+    Returns:
+        QIcon: A QIcon instance.
+    """
     try:
         return QIcon(str(icon_path))
     except Exception as e:

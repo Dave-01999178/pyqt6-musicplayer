@@ -7,11 +7,8 @@ from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 
 from pyqt6_music_player.config import STYLESHEET
-from pyqt6_music_player.models import PlaylistModel, VolumeModel
-from pyqt6_music_player.models.player_engine import PlayerEngine
-from pyqt6_music_player.view_models import PlaylistViewModel, PlaybackControlViewModel, VolumeViewModel
+from pyqt6_music_player.context import build_context
 from pyqt6_music_player.views import MusicPlayerView
-from pyqt6_music_player.views.main_view import AppContext
 
 
 def exception_hook(exc_type, value, tb):
@@ -45,25 +42,8 @@ def main():
     if stylesheet:
         app.setStyleSheet(stylesheet)
 
-    # --- Player engine ---
-    player_engine = PlayerEngine()
-
-    # --- Models ---
-    playlist_model = PlaylistModel()
-    volume_model = VolumeModel()
-
-    # --- ViewModels ---
-    playback_viewmodel = PlaybackControlViewModel(playlist_model, player_engine)
-    playlist_viewmodel = PlaylistViewModel(playlist_model)
-    volume_viewmodel = VolumeViewModel(volume_model, player_engine)
-
-    ctx = AppContext(
-        playlist_model=playlist_model,
-        volume_model=volume_model,
-        playback_viewmodel=playback_viewmodel,
-        playlist_viewmodel=playlist_viewmodel,
-        volume_viewmodel=volume_viewmodel
-    )
+    # --- App context ---
+    ctx = build_context()
 
     # --- View ---
     main_view = MusicPlayerView(ctx)
