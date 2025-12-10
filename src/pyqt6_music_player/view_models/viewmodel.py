@@ -5,7 +5,7 @@ from typing import Sequence
 from PyQt6.QtCore import pyqtSignal, QObject, QAbstractTableModel, Qt, QModelIndex
 
 from pyqt6_music_player.models import PlaylistModel, Song, VolumeModel
-from pyqt6_music_player.models.player_engine import PlayerEngine
+from pyqt6_music_player.models.player_engine import PlayerEngine, AudioData
 
 
 # ================================================================================
@@ -15,10 +15,23 @@ class PlaybackControlViewModel(QObject):
     def __init__(self, playlist_model: PlaylistModel, player_engine: PlayerEngine):
         super().__init__()
         self._player_engine = player_engine
-        self._model = playlist_model
+        self._playlist = playlist_model
 
-    def play_selected(self):
-        print("Play button has been clicked.")
+    def _load_song(self):
+        selected_song = self._playlist.selected_song
+
+        if selected_song is None:
+            print("No song selected.")
+            return
+
+        file_path = selected_song.path
+        audio_data = AudioData.from_file(file_path)
+
+        self._player_engine.load(audio_data)
+
+    def play_pause(self):
+        self._load_song()
+        self._player_engine.play()
 
     def next_track(self):
         print("Next button has been clicked.")
@@ -35,7 +48,7 @@ class PlaybackControlViewModel(QObject):
     # Properties
     @property
     def playlist(self):
-        return self._model.playlist
+        return self._playlist.playlist
 
 
 # ================================================================================
@@ -122,13 +135,10 @@ class PlaylistViewModel(QAbstractTableModel):
     # Notify views if new song(s) are added.
     # Initial implementation (insertion order).
     def _on_model_song_insert(self, new_song_count: int) -> None:
+        prev_playlist_len = self._model.song_count - new_song_count
 
-        if new_song_count != 0:
-            prev_playlist_len = self._model.song_count - new_song_count
-            self.beginInsertRows(QModelIndex(), prev_playlist_len, self._model.song_count - 1)
-            self.endInsertRows()
-
-        return None
+        self.beginInsertRows(QModelIndex(), prev_playlist_len, self._model.song_count - 1)
+        self.endInsertRows()
 
     # --- Commands ---
     def add_song(self, files: Sequence[str]) -> None:

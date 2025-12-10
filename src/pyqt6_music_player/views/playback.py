@@ -179,7 +179,7 @@ class PlaybackControls(QWidget):
         self._repeat_button.clicked.connect(self._on_repeat_button_clicked)
 
     def _on_play_pause_button_clicked(self):
-        self._viewmodel.play_selected()
+        self._viewmodel.play_pause()
 
     def _on_next_button_clicked(self):
         self._viewmodel.next_track()

@@ -107,6 +107,7 @@ class PlayerWorker(QObject):
                 self._frame_position = end
 
             if end == samples_len:
+                print("Finished playing.")
                 self._is_playing = False
                 self.playback_finished.emit(True)
 
@@ -212,4 +213,4 @@ class PlayerEngine(QObject):
             self.worker.deleteLater()
             self.worker_thread = None
 
-        print("Finished playing.")
+        print("Finished cleaning up resources.")
