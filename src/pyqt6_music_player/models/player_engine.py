@@ -4,14 +4,12 @@ from pathlib import Path
 from typing import Self, Any
 
 import numpy as np
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QObject, pyqtSignal, QThread, pyqtSlot
 from numpy.typing import NDArray
 from pyaudio import PyAudio
 from pydub import AudioSegment
 
 from pyqt6_music_player.constants import SUPPORTED_BYTES
-
-temp_file_to_use = r"C:\Users\dave_\Music\Factory Background.mp3"
 
 
 # ================================================================================
@@ -80,51 +78,138 @@ class AudioData:
 # ================================================================================
 # TODO: Initial implementation (play only), refactor and extend later to include pause, repeat,
 #  seeking, and volume.
-class PlayerEngine(QObject):
-    """def __init__(self):
+class PlayerWorker(QObject):
+    playback_finished = pyqtSignal(bool)
+    playback_error = pyqtSignal()
+    def __init__(self, audio_data: AudioData):
         super().__init__()
-        self.audio_data: AudioData | None = None
-        self.chunk_ms = 50
-        self.chunk_frames = int(self.audio_data.frame_rate * self.chunk_ms / 1000)
-        self.frame_index = 0
+        self._audio_data = audio_data
+        self._chunk_ms = 50
+        self._chunk_frames = int(self._audio_data.frame_rate * self._chunk_ms / 1000)
 
-        self.pa = PyAudio()
-        self.stream = self.pa.open(
-            rate=self.audio_data.frame_rate,
-            channels=self.audio_data.channels,
-            format=self.pa.get_format_from_width(self.audio_data.sample_width, True),
-            output=True,
-            frames_per_buffer=self.chunk_frames
-        )
+        self._is_playing = False
+        self._frame_position = 0
 
-    def playback_loop(self):
-        samples_len = len(self.audio_data.normalized_samples)
+        self._pa: PyAudio | None = None
+        self._stream: PyAudio.Stream | None = None
 
-        while self.frame_index < samples_len:
-            end = min(self.frame_index + self.chunk_frames, samples_len)
-            chunk = self.audio_data.normalized_samples[self.frame_index:end]
+    def _playback_loop(self):
+        self._is_playing = True
 
+        samples_len = len(self._audio_data.normalized_samples)
+        while self._is_playing and self._frame_position < samples_len:
+            end = min(self._frame_position + self._chunk_frames, samples_len)
+            chunk = self._audio_data.normalized_samples[self._frame_position:end]
             data = self._float_to_bytes(chunk)
 
-            self.stream.write(data)
-            self.frame_index = end
+            if data:
+                self._stream.write(data)
+                self._frame_position = end
 
-        self.stream.stop_stream()
-        self.stream.close()
-        self.pa.terminate()
+            if end == samples_len:
+                self._is_playing = False
+                self.playback_finished.emit(True)
 
-    def _float_to_bytes(self, chunk_float):
+
+    def _float_to_bytes(self, chunk_float: NDArray[np.float32]):
         chunk_float = np.clip(chunk_float, -1.0, 1.0)
-        sample_width = self.audio_data.sample_width
+        samples_width = self._audio_data.sample_width
 
-        if sample_width == 1:
-            chunk_int = (chunk_float * 127 + 128).astype(np.uint8)
-        elif sample_width == 2:
-            chunk_int = (chunk_float * 32767).astype(np.int16)
-        elif sample_width == 4:
-            chunk_int = (chunk_float * 2147483647).astype(np.int32)
+        if samples_width == 1:
+            uint8_max = (1 << 8 - 1) - 1
+            chunk_int = ((chunk_float * uint8_max) + uint8_max).astype(np.uint8)
+        elif samples_width == 2:
+            int16_max = (1 << 16 - 1) - 1
+            chunk_int = (chunk_float * int16_max).astype(np.int16)
+        elif samples_width == 4:
+            int32_max = (1 << 32 - 1) - 1
+            chunk_int = (chunk_float * int32_max).astype(np.int32)
         else:
-            raise ValueError("Unsupported sample width")
+            raise ValueError(f"Unsupported sample width: {samples_width}")
 
-        return chunk_int.tobytes()  # Already interleaved"""
-    pass
+        return chunk_int.tobytes()
+
+    @pyqtSlot()
+    def start_playback(self):
+        self._pa = PyAudio()
+        self._stream = self._pa.open(
+            rate=self._audio_data.frame_rate,
+            channels=self._audio_data.channels,
+            format=self._pa.get_format_from_width(self._audio_data.sample_width),
+            output=True,
+            frames_per_buffer=self._chunk_ms,
+        )
+
+        try:
+            self._playback_loop()
+        except Exception as e:
+            self.playback_error.emit()
+            print(e)  # TODO: Replace with logging
+
+    def cleanup(self):
+        if self._is_playing:
+            self._is_playing = False
+
+        if self._stream is not None:
+            try:
+                self._stream.stop_stream()
+                self._stream.close()
+            except Exception as e:
+                logging.warning(f"Error closing stream: {e}")
+            finally:
+                self._stream = None
+
+        if self._pa is not None:
+            try:
+                self._pa.terminate()
+            except Exception as e:
+                logging.warning(f"Error terminating PyAudio: {e}")
+            finally:
+                self._pa = None
+
+        self.playback_finished.emit(True)
+
+
+class PlayerEngine(QObject):
+    def __init__(self):
+        super().__init__()
+        self._audio_data: AudioData | None = None
+        self.worker_thread: QThread | None = None
+        self.worker: PlayerWorker | None = None
+
+    def load(self, audio_data: AudioData):
+        self._audio_data = audio_data
+
+    def play(self):
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            return
+
+        # Create worker and thread.
+        self.worker_thread = QThread()
+        self.worker = PlayerWorker(self._audio_data)
+
+        # Move worker to thread.
+        self.worker.moveToThread(self.worker_thread)
+
+        # Connect signals.
+        self.worker_thread.started.connect(self.worker.start_playback)
+        self.worker.playback_error.connect(self.worker_thread.quit)
+        self.worker.playback_finished.connect(self.worker_thread.quit)
+
+        # Cleanup when finished.
+        self.worker_thread.finished.connect(self.worker.cleanup)
+        self.worker_thread.finished.connect(self.cleanup_resources)
+
+        # Start the thread
+        self.worker_thread.start()
+
+    def cleanup_resources(self):
+        if self.worker_thread is not None:
+            self.worker_thread.deleteLater()
+            self.worker_thread = None
+
+        if self.worker is not None:
+            self.worker.deleteLater()
+            self.worker_thread = None
+
+        print("Finished playing.")
