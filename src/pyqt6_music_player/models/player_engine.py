@@ -15,12 +15,15 @@ from pyqt6_music_player.constants import SUPPORTED_BYTES
 # ================================================================================
 # AUDIO DECODING AND DATA PREPARATION
 # ================================================================================
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=True)
 class AudioData:
     channels: int
     frame_rate: int
     sample_width: int
     normalized_samples: NDArray[np.float32]
+
+    def __post_init__(self) -> None:
+        self.normalized_samples.flags.writeable = False
 
     @classmethod
     def from_file(cls, file: str | Path) -> Self | None:
@@ -78,41 +81,51 @@ class AudioData:
 # ================================================================================
 # TODO: Initial implementation (play only), refactor and extend later to include pause, repeat,
 #  seeking, and volume.
-class PlayerWorker(QObject):
+class AudioOutputWorker(QObject):
     playback_finished = pyqtSignal(bool)
     playback_error = pyqtSignal()
+
     def __init__(self, audio_data: AudioData):
         super().__init__()
-        self._audio_data = audio_data
-        self._chunk_ms = 50
-        self._chunk_frames = int(self._audio_data.frame_rate * self._chunk_ms / 1000)
+        # Audio data
+        self._audio_data: AudioData = audio_data
+        self._chunk_ms: int = 50
+        self._chunk_frames: int = int(self._audio_data.frame_rate * self._chunk_ms / 1000)
 
-        self._is_playing = False
-        self._frame_position = 0
+        # Playback info
+        self._is_playing: bool = False
+        self._frame_position: int = 0
 
+        # PyAudio objects
         self._pa: PyAudio | None = None
         self._stream: PyAudio.Stream | None = None
 
-    def _playback_loop(self):
+    # --- Internal methods ---
+    def _playback_loop(self) -> None:
         self._is_playing = True
 
         samples_len = len(self._audio_data.normalized_samples)
-        while self._is_playing and self._frame_position < samples_len:
+        while self._frame_position < samples_len:
             end = min(self._frame_position + self._chunk_frames, samples_len)
             chunk = self._audio_data.normalized_samples[self._frame_position:end]
             data = self._float_to_bytes(chunk)
+            is_finished = (end == samples_len)
 
-            if data:
+            if not self._is_playing:
+                QThread.sleep(1)
+                continue
+
+            if self._stream and data:
                 self._stream.write(data)
                 self._frame_position = end
 
-            if end == samples_len:
-                print("Finished playing.")
+            if is_finished:
                 self._is_playing = False
                 self.playback_finished.emit(True)
 
+                print("Finished playing.")
 
-    def _float_to_bytes(self, chunk_float: NDArray[np.float32]):
+    def _float_to_bytes(self, chunk_float: NDArray[np.float32]) -> bytes | None:
         chunk_float = np.clip(chunk_float, -1.0, 1.0)
         samples_width = self._audio_data.sample_width
 
@@ -130,6 +143,7 @@ class PlayerWorker(QObject):
 
         return chunk_int.tobytes()
 
+    # --- Slots (methods that responds to signals) ---
     @pyqtSlot()
     def start_playback(self):
         self._pa = PyAudio()
@@ -147,6 +161,7 @@ class PlayerWorker(QObject):
             self.playback_error.emit()
             print(e)  # TODO: Replace with logging
 
+    @pyqtSlot()
     def cleanup(self):
         if self._is_playing:
             self._is_playing = False
@@ -170,24 +185,41 @@ class PlayerWorker(QObject):
 
         self.playback_finished.emit(True)
 
+    # --- Public methods ---
+    def pause(self):
+        self._is_playing = False
 
-class PlayerEngine(QObject):
+    def resume(self):
+        self._is_playing = True
+
+    # --- Properties ---
+    @property
+    def frame_position(self) -> int:
+        return self._frame_position
+
+    @property
+    def frame_length(self) -> int:
+        return len(self._audio_data.normalized_samples)
+
+
+class AudioPlayerController(QObject):
     def __init__(self):
         super().__init__()
         self._audio_data: AudioData | None = None
         self.worker_thread: QThread | None = None
-        self.worker: PlayerWorker | None = None
+        self.worker: AudioOutputWorker | None = None
 
-    def load(self, audio_data: AudioData):
+    # --- Public methods ---
+    def load(self, audio_data: AudioData) -> None:
         self._audio_data = audio_data
 
-    def play(self):
+    def play(self) -> None:
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return
 
         # Create worker and thread.
         self.worker_thread = QThread()
-        self.worker = PlayerWorker(self._audio_data)
+        self.worker = AudioOutputWorker(self._audio_data)
 
         # Move worker to thread.
         self.worker.moveToThread(self.worker_thread)
@@ -204,7 +236,16 @@ class PlayerEngine(QObject):
         # Start the thread
         self.worker_thread.start()
 
-    def cleanup_resources(self):
+    # --- Public methods ---
+    def pause(self) -> None:
+        self.worker.pause()
+
+    def resume(self) -> None:
+        self.worker.resume()
+
+    # --- Slots (methods that responds to signals) ---
+    @pyqtSlot()
+    def cleanup_resources(self) -> None:
         if self.worker_thread is not None:
             self.worker_thread.deleteLater()
             self.worker_thread = None
@@ -214,3 +255,22 @@ class PlayerEngine(QObject):
             self.worker_thread = None
 
         print("Finished cleaning up resources.")
+
+    # --- Properties ---
+    @property
+    def audio_data(self) -> AudioData:
+        return self._audio_data
+
+    @property
+    def frame_position(self) -> int | None:
+        if self.worker is not None:
+            return self.worker.frame_position
+
+        return None
+
+    @property
+    def frame_length(self) -> int | None:
+        if self.worker is not None:
+            return self.worker.frame_length
+
+        return None
