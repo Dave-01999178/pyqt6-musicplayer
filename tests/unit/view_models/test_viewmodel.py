@@ -1,23 +1,102 @@
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from PyQt6.QtTest import QSignalSpy
+from pytest_mock import MockerFixture
 
 from pyqt6_music_player.models import VolumeModel, PlaylistModel
-from pyqt6_music_player.view_models import VolumeViewModel, PlaylistViewModel
+from pyqt6_music_player.view_models import VolumeViewModel, PlaylistViewModel, PlaybackControlViewModel
 from tests.utils import FakeSongData
 
 
 # ================================================================================
-# 1. PLAYLIST VIEWMODEL UNIT TEST SUMMARY
+# VIEWMODEL UNIT TEST SUMMARY
+#
+# 1. PLAYBACK
+#    - Playback viewmodel `play_pause` method.
+#      - Start playback logic branch. (Done)
+#      - Pause playback logic branch. (Done)
+#      - Resume playback logic branch. (Done)
+#
+# 2. PLAYLIST
 #    - Playlist viewmodel correctly exposes volume model properties. (Done)
 #    - Playlist viewmodel correctly formats song duration before displaying. (Done)
 #
-# 2. VOLUME VIEWMODEL UNIT TEST SUMMARY
+# 2. VOLUME
 #    - Volume viewmodel correctly exposes volume model properties. (Done)
 #    - Refresh method always emit the volume model current volume as signal. (Done)
 # ================================================================================
 #
+# --- Playback Viewmodel ---
+class TestPlaybackViewModel:
+    def test_playback_viewmodel_evaluates_start_playback_logic_branch_on_first_play(
+            self,
+            mocker:MockerFixture,
+            playback_viewmodel,
+            mock_player_engine
+    ):
+        # --- Arrange: Prepare viewmodel, and mock dependencies. ---
+        playlist_model_ = PlaylistModel()
+        playback_viewmodel_ = PlaybackControlViewModel(playlist_model_, mock_player_engine)
+
+        mock_player_engine.worker = Mock()
+        mock_player_engine.worker_thread = Mock()
+        mock_player_engine.frame_position = 0  # Frame position at 0 means we're just starting.
+        mock_player_engine.frame_length = 100
+        mock_qtimer = mocker.patch("pyqt6_music_player.view_models.viewmodel.QTimer.singleShot")
+
+        # --- Act: Pass argument `True` to simulate play signal. ---
+        playback_viewmodel_.play_pause(True)
+
+        # --- Assert: Verify that `play` method was queued. ---
+        mock_qtimer.assert_called_once_with(0, mock_player_engine.play)
+
+    def test_playback_viewmodel_evaluates_pause_logic_branch_on_pause(
+            self,
+            mocker:MockerFixture,
+            playback_viewmodel,
+            mock_player_engine
+    ):
+        # --- Arrange: Prepare viewmodel, and mock dependencies. ---
+        playlist_model_ = PlaylistModel()
+        playback_viewmodel_ = PlaybackControlViewModel(playlist_model_, mock_player_engine)
+
+        mock_player_engine.worker = Mock()
+        mock_player_engine.worker_thread = Mock()
+        mock_player_engine.frame_position = 50  # Frame position != 0 before pausing means playing.
+        mock_player_engine.frame_length = 100
+        mock_qtimer = mocker.patch("pyqt6_music_player.view_models.viewmodel.QTimer.singleShot")
+
+        # --- Act: Pass argument `False` to simulate pause signal. ---
+        playback_viewmodel_.play_pause(False)
+
+        # --- Assert: Verify that `pause` method was queued. ---
+        mock_qtimer.assert_called_once_with(0, mock_player_engine.pause)
+
+    def test_playback_viewmodel_evaluates_resume_logic_branch_on_resume(
+            self,
+            mocker:MockerFixture,
+            playback_viewmodel,
+            mock_player_engine
+    ):
+        # --- Arrange: Prepare viewmodel, and mock dependencies. ---
+        playlist_model_ = PlaylistModel()
+        playback_viewmodel_ = PlaybackControlViewModel(playlist_model_, mock_player_engine)
+
+        mock_player_engine.worker = Mock()
+        mock_player_engine.worker_thread = Mock()
+        mock_player_engine.frame_position = 50  # Frame position != 0 before playing means paused.
+        mock_player_engine.frame_length = 100
+        mock_qtimer = mocker.patch("pyqt6_music_player.view_models.viewmodel.QTimer.singleShot")
+
+        # --- Act: Pass argument `True` to simulate play signal. ---
+        playback_viewmodel_.play_pause(True)
+
+        # --- Assert: Verify that `resume` method was queued. ---
+        mock_qtimer.assert_called_once_with(0, mock_player_engine.resume)
+
+
 # --- Playlist ViewModel ---
 class TestPlaylistViewModel:
     # Test: Playlist viewmodel correctly exposes volume model properties.
