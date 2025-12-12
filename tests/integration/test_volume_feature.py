@@ -3,9 +3,8 @@ from PyQt6.QtTest import QSignalSpy
 from pytest_mock import MockerFixture
 from pytestqt.qtbot import QtBot
 
-from pyqt6_music_player.models.player_engine import PlayerEngine
 from pyqt6_music_player.view_models import VolumeViewModel
-from pyqt6_music_player.views import VolumeControls, VolumeSlider
+from pyqt6_music_player.views import VolumeControls
 
 
 # ================================================================================
