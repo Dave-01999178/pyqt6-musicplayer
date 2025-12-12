@@ -90,6 +90,7 @@ class PlayPauseButton(IconButton):
             widget_size=widget_size,
             object_name=object_name
         )
+        self.setCheckable(True)
 
 
 ReplayButton = IconButtonFactory(REPLAY_ICON_PATH)
@@ -143,16 +144,16 @@ class PlaybackControls(QWidget):
     such as replay, next, previous, repeat, and play/pause button.
     """
 
-    def __init__(self, playlist_viewmodel: PlaybackControlViewModel) -> None:
+    def __init__(self, playback_viewmodel: PlaybackControlViewModel) -> None:
         """Initialize PlaybackControls instance."""
         super().__init__()
-        self._viewmodel = playlist_viewmodel
+        self._viewmodel = playback_viewmodel
 
-        self._replay_button = ReplayButton()
-        self._previous_button = PreviousButton()
-        self._play_pause_button = PlayPauseButton()
-        self._next_button = NextButton()
-        self._repeat_button = RepeatButton()
+        self.replay_button = ReplayButton()
+        self.previous_button = PreviousButton()
+        self.play_pause_button = PlayPauseButton()
+        self.next_button = NextButton()
+        self.repeat_button = RepeatButton()
 
         self._init_ui()
         self._bind_viewmodel()
@@ -161,25 +162,25 @@ class PlaybackControls(QWidget):
         """Initializes the instance's internal widgets and layouts"""
         layout = QHBoxLayout()
 
-        layout.addWidget(self._replay_button)
-        layout.addWidget(self._previous_button)
-        layout.addWidget(self._play_pause_button)
-        layout.addWidget(self._next_button)
-        layout.addWidget(self._repeat_button)
+        layout.addWidget(self.replay_button)
+        layout.addWidget(self.previous_button)
+        layout.addWidget(self.play_pause_button)
+        layout.addWidget(self.next_button)
+        layout.addWidget(self.repeat_button)
 
         layout.setSpacing(10)
 
         self.setLayout(layout)
 
     def _bind_viewmodel(self):
-        self._play_pause_button.clicked.connect(self._on_play_pause_button_clicked)
-        self._next_button.clicked.connect(self._on_next_button_clicked)
-        self._previous_button.clicked.connect(self._on_previous_button_clicked)
-        self._replay_button.clicked.connect(self._on_replay_button_clicked)
-        self._repeat_button.clicked.connect(self._on_repeat_button_clicked)
+        self.play_pause_button.toggled.connect(self._on_play_pause_button_clicked)
+        self.next_button.clicked.connect(self._on_next_button_clicked)
+        self.previous_button.clicked.connect(self._on_previous_button_clicked)
+        self.replay_button.clicked.connect(self._on_replay_button_clicked)
+        self.repeat_button.clicked.connect(self._on_repeat_button_clicked)
 
-    def _on_play_pause_button_clicked(self):
-        self._viewmodel.play_pause()
+    def _on_play_pause_button_clicked(self, play: bool):
+        self._viewmodel.play_pause(play)
 
     def _on_next_button_clicked(self):
         self._viewmodel.next_track()

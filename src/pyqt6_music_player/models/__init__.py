@@ -1,4 +1,4 @@
-from .player_engine import PlayerEngine
+from .player_engine import AudioData, AudioPlayerController
 from .song_model import Song, DEFAULT_SONG
 from .model import (
     PlaylistModel,
@@ -6,7 +6,8 @@ from .model import (
 )
 
 __all__ = [
-    "PlayerEngine",
+    "AudioData",
+    "AudioPlayerController",
     "Song",
     "DEFAULT_SONG",
     "PlaylistModel",

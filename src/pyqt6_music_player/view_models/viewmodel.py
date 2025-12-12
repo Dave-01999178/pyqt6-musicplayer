@@ -2,17 +2,16 @@
 #  or became complex for easy navigation.
 from typing import Sequence
 
-from PyQt6.QtCore import pyqtSignal, QObject, QAbstractTableModel, Qt, QModelIndex
+from PyQt6.QtCore import pyqtSignal, QObject, QAbstractTableModel, Qt, QModelIndex, QTimer
 
-from pyqt6_music_player.models import PlaylistModel, Song, VolumeModel
-from pyqt6_music_player.models.player_engine import PlayerEngine, AudioData
+from pyqt6_music_player.models import PlaylistModel, Song, VolumeModel, AudioPlayerController, AudioData
 
 
 # ================================================================================
 # PLAYBACK CONTROL VIEWMODEL
 # ================================================================================
 class PlaybackControlViewModel(QObject):
-    def __init__(self, playlist_model: PlaylistModel, player_engine: PlayerEngine):
+    def __init__(self, playlist_model: PlaylistModel, player_engine: AudioPlayerController):
         super().__init__()
         self._player_engine = player_engine
         self._playlist = playlist_model
@@ -29,9 +28,24 @@ class PlaybackControlViewModel(QObject):
 
         self._player_engine.load(audio_data)
 
-    def play_pause(self):
-        self._load_song()
-        self._player_engine.play()
+    # TODO: Initial and temporary solution for the play/pause feature, improve later (KISS).
+    def play_pause(self, play: bool):
+
+        if self._player_engine.worker is None or self._player_engine.worker_thread is None:
+            return
+
+        if self._player_engine.audio_data is None:
+            self._load_song()
+
+        frame_position = self._player_engine.frame_position
+        is_paused = frame_position and 0 < frame_position < self._player_engine.frame_length
+
+        if play and is_paused:
+            QTimer.singleShot(0, self._player_engine.resume)
+        elif not play:
+            QTimer.singleShot(0, self._player_engine.pause)
+        else:
+            QTimer.singleShot(0, self._player_engine.play)
 
     def next_track(self):
         print("Next button has been clicked.")
@@ -44,11 +58,6 @@ class PlaybackControlViewModel(QObject):
 
     def repeat(self):
         print("Repeat button has been clicked.")
-
-    # Properties
-    @property
-    def playlist(self):
-        return self._playlist.playlist
 
 
 # ================================================================================
