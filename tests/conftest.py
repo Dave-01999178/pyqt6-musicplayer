@@ -10,71 +10,25 @@ from pyqt6_music_player.models import (
     PlaylistModel,
     VolumeModel,
 )
-from pyqt6_music_player.models.player_engine import PlayerEngine
-from pyqt6_music_player.view_models import PlaylistViewModel
+from pyqt6_music_player.models.player_engine import AudioPlayerController
+from pyqt6_music_player.view_models import PlaylistViewModel, PlaybackControlViewModel
 from pyqt6_music_player.view_models.viewmodel import VolumeViewModel
 from tests.utils import make_fake_path_and_song
 
-
 # ================================================================================
-# SONG
+# DEPENDENCY MOCKS
 # ================================================================================
-@pytest.fixture
-def song():
-    return Song()
-
-
-# ================================================================================
-# PLAYLIST
-# ================================================================================
-@pytest.fixture
-def playlist_model():
-    return PlaylistModel()
-
-@pytest.fixture
-def playlist_viewmodel(playlist_model):
-    return PlaylistViewModel(playlist_model)
-
-
-# ================================================================================
-# VOLUME
-# ================================================================================
-@pytest.fixture
-def volume_model():
-    return VolumeModel()
-
-
 @pytest.fixture
 def mock_player_engine():
-    return Mock(spec=PlayerEngine)
+    return Mock(spec=AudioPlayerController)
 
 
-@pytest.fixture
-def volume_viewmodel(volume_model, mock_player_engine):
-    return VolumeViewModel(volume_model, mock_player_engine)
-
-
-@pytest.fixture
-def volume_model_factory():
-    def _create_model(initial_volume: int = 100, initial_mute_state: bool = False):
-        volume_model = VolumeModel()
-        if initial_mute_state:
-            volume_model.set_volume(0)
-        else:
-            volume_model.set_volume(initial_volume)
-        return volume_model
-    return _create_model
-
-
-
-# ================================================================================
-# MOCKS
-# ================================================================================
 @pytest.fixture
 def mock_path_resolve(mocker: MockerFixture):
     target = "pyqt6_music_player.models.model.Path.resolve"
 
     return mocker.patch(target)
+
 
 @pytest.fixture
 def mock_song_from_path(mocker: MockerFixture):
@@ -104,6 +58,60 @@ def mock_audio_segment_from_file(mocker: MockerFixture):
     return mocker.patch(mock_target)
 
 
+# ================================================================================
+# SONG
+# ================================================================================
+@pytest.fixture
+def song():
+    return Song()
+
+
+# ================================================================================
+# PLAYBACK
+# ================================================================================
+@pytest.fixture
+def playback_viewmodel(playlist_model, mock_player_engine):
+    playback_viewmodel = PlaybackControlViewModel(playlist_model, mock_player_engine)
+
+    return playback_viewmodel
+
+
+# ================================================================================
+# PLAYLIST
+# ================================================================================
+@pytest.fixture
+def playlist_model():
+    return PlaylistModel()
+
+@pytest.fixture
+def playlist_viewmodel(playlist_model):
+    return PlaylistViewModel(playlist_model)
+
+
+# ================================================================================
+# VOLUME
+# ================================================================================
+@pytest.fixture
+def volume_model():
+    return VolumeModel()
+
+
+@pytest.fixture
+def volume_viewmodel(volume_model, mock_player_engine):
+    return VolumeViewModel(volume_model, mock_player_engine)
+
+
+@pytest.fixture
+def volume_model_factory():
+    def _create_model(initial_volume: int = 100, initial_mute_state: bool = False):
+        volume_model = VolumeModel()
+        if initial_mute_state:
+            volume_model.set_volume(0)
+        else:
+            volume_model.set_volume(initial_volume)
+        return volume_model
+    return _create_model
+
 
 # ================================================================================
 # FACTORY
@@ -122,7 +130,7 @@ def populate_playlist(playlist_model, mock_path_resolve, mock_song_from_path):
             mock_song_from_path.return_value = initial_song
 
             # Insert the initial song.
-            playlist_model.add_song(initial_song_path)
+            playlist_model.add_song([initial_song_path])
 
         mock_path_resolve.reset_mock()
         mock_song_from_path.reset_mock()
