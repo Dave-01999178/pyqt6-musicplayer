@@ -1,8 +1,9 @@
 # TODO: Consider splitting this monolithic module into separate individual modules when it grows,
 #  or became complex for easy navigation.
+import logging
 from typing import Sequence
 
-from PyQt6.QtCore import pyqtSignal, QObject, QAbstractTableModel, Qt, QModelIndex, QTimer
+from PyQt6.QtCore import pyqtSignal, QObject, QAbstractTableModel, Qt, QModelIndex
 
 from pyqt6_music_player.models import PlaylistModel, Song, VolumeModel, AudioPlayerController, AudioData
 
@@ -16,36 +17,43 @@ class PlaybackControlViewModel(QObject):
         self._player_engine = player_engine
         self._playlist = playlist_model
 
-    def _load_song(self):
-        selected_song = self._playlist.selected_song
+        self._current_song = None
 
-        if selected_song is None:
-            print("No song selected.")
+    # TODO: Separate loading from play/pause later for Separation of Concerns (SoC).
+    def _load_song(self, song: Song):
+        if song == self._current_song:
             return
 
-        file_path = selected_song.path
+        file_path = song.path
         audio_data = AudioData.from_file(file_path)
 
-        self._player_engine.load(audio_data)
+        if audio_data is not None:
+            logging.info("New song: %s successfully loaded", file_path)
+            self._current_song = song
 
-    # TODO: Initial and temporary solution for the play/pause feature, improve later (KISS).
+            return audio_data
+
+        return None
+
     def play_pause(self, play: bool):
-
-        if self._player_engine.worker is None or self._player_engine.worker_thread is None:
+        if self._playlist.selected_song is None:
             return
 
-        if self._player_engine.audio_data is None:
-            self._load_song()
-
-        frame_position = self._player_engine.frame_position
-        is_paused = frame_position and 0 < frame_position < self._player_engine.frame_length
-
-        if play and is_paused:
-            QTimer.singleShot(0, self._player_engine.resume)
+        # Resume
+        if play and self._player_engine.is_paused:
+            self._player_engine.resume_playback()
+        # Pause
         elif not play:
-            QTimer.singleShot(0, self._player_engine.pause)
+            self._player_engine.pause_playback()
+        # Start playback
         else:
-            QTimer.singleShot(0, self._player_engine.play)
+            selected_song = self._playlist.selected_song
+            audio_data = self._load_song(selected_song)
+
+            if audio_data is None:
+                return
+
+            self._player_engine.start_playback(audio_data)
 
     def next_track(self):
         print("Next button has been clicked.")
@@ -58,6 +66,9 @@ class PlaybackControlViewModel(QObject):
 
     def repeat(self):
         print("Repeat button has been clicked.")
+
+    def seek(self):
+        pass
 
 
 # ================================================================================
