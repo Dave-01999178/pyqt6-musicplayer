@@ -2,7 +2,7 @@
 from .helpers import path_to_qicon
 
 # Base widgets
-from pyqt6_music_player.views.base_widgets import IconButton, IconButtonFactory
+from pyqt6_music_player.views.base_widgets import IconButton, MarqueeLabel, IconButtonFactory
 
 # Now playing display widgets
 from .now_playing import AlbumArtLabel, AudioArtistLabel, AudioTitleLabel, NowPlayingDisplay
@@ -46,6 +46,7 @@ __all__ = [
 
     # Base widgets
     "IconButton",
+    "MarqueeLabel",
     "IconButtonFactory",
 
     # Metadata widgets

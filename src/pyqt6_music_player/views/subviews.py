@@ -70,10 +70,10 @@ class PlayerbarView(QFrame):
             self,
             playback_viewmodel: PlaybackControlViewModel,
             volume_viewmodel: VolumeViewModel
-            ):
+    ):
         super().__init__()
         self._playback_progress = PlaybackProgress()
-        self._now_playing_display = NowPlayingDisplay()
+        self._now_playing_display = NowPlayingDisplay(playback_viewmodel)
         self._playback_controls = PlaybackControls(playback_viewmodel)
         self._volume_controls = VolumeControls(volume_viewmodel)
 
@@ -102,6 +102,8 @@ class PlayerbarView(QFrame):
 
         # Bottom right (Volume control widgets): Volume button, slider and label.
         bottom_layout.addWidget(self._volume_controls, 0)
+
+        bottom_layout.setContentsMargins(10, 0, 10, 0)
 
         instance_layout.addLayout(top_layout)
         instance_layout.addLayout(bottom_layout)
