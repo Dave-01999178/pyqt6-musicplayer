@@ -3,15 +3,23 @@
 import logging
 from typing import Sequence
 
-from PyQt6.QtCore import pyqtSignal, QObject, QAbstractTableModel, Qt, QModelIndex
+from PyQt6.QtCore import (QAbstractTableModel, QModelIndex, QObject, Qt, pyqtSignal, pyqtSlot)
 
-from pyqt6_music_player.models import PlaylistModel, Song, VolumeModel, AudioPlayerController, AudioData
+from pyqt6_music_player.models import (
+    AudioData,
+    AudioPlayerController,
+    PlaylistModel,
+    Song,
+    VolumeModel
+)
 
 
 # ================================================================================
 # PLAYBACK CONTROL VIEWMODEL
 # ================================================================================
 class PlaybackControlViewModel(QObject):
+    playback_started = pyqtSignal(str, str)
+
     def __init__(self, playlist_model: PlaylistModel, player_engine: AudioPlayerController):
         super().__init__()
         self._player_engine = player_engine
@@ -19,7 +27,16 @@ class PlaybackControlViewModel(QObject):
 
         self._current_song = None
 
-    # TODO: Separate loading from play/pause later for Separation of Concerns (SoC).
+        self._player_engine.playback_started.connect(self._on_playback_start)
+
+    @pyqtSlot()
+    def _on_playback_start(self):
+        song_title = self._current_song.title
+        song_album = self._current_song.album
+
+        self.playback_started.emit(song_title, song_album)  # type: ignore
+
+    # TODO: Separate loading from play/pause later for better Separation of Concerns (SoC).
     def _load_song(self, song: Song):
         if song == self._current_song:
             return
@@ -35,6 +52,7 @@ class PlaybackControlViewModel(QObject):
 
         return None
 
+    # --- Commands ---
     def play_pause(self, play: bool):
         if self._playlist.selected_song is None:
             return
@@ -54,6 +72,7 @@ class PlaybackControlViewModel(QObject):
                 return
 
             self._player_engine.start_playback(audio_data)
+            self._on_playback_start()
 
     def next_track(self):
         print("Next button has been clicked.")

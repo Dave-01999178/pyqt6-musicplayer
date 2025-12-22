@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Self
 
 import numpy as np
-from PyQt6.QtCore import QObject, pyqtSignal, QThread, pyqtSlot, QTimer
 from numpy.typing import NDArray
 from pyaudio import PyAudio, paComplete, paContinue
 from pydub import AudioSegment
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal, pyqtSlot
 
 from pyqt6_music_player.constants import SUPPORTED_BYTES
 
@@ -93,13 +93,16 @@ class AudioData:
 # ================================================================================
 #
 # ---------- Audio player worker ----------
+# noinspection PyUnresolvedReferences
 class AudioPlayerWorker(QObject):
+    playback_started = pyqtSignal()
+    position_updated = pyqtSignal()
     playback_finished = pyqtSignal()
     playback_error = pyqtSignal()
 
     def __init__(self, audio_data: AudioData):
         super().__init__()
-        # Audio data
+        # Playback data
         self._audio_data = audio_data
         self._chunk_size = 1024
 
@@ -177,13 +180,13 @@ class AudioPlayerWorker(QObject):
             is_running = self._running
 
         if not is_running:
-            self.playback_finished.emit()  # type: ignore
+            self.playback_finished.emit()
 
     # --- Slots ---
     @pyqtSlot()
     def start_playback(self):
         self._timer = QTimer()
-        self._timer.timeout.connect(self._check_status)  # type: ignore
+        self._timer.timeout.connect(self._check_status)
 
         self._pa = PyAudio()
         self._stream = self._pa.open(
@@ -198,11 +201,13 @@ class AudioPlayerWorker(QObject):
         try:
             print("Starting playback...")
             self._running = True
+
             self._stream.start_stream()
+            self.playback_started.emit()
         except Exception as e:
             logging.error("Failed to start playback, error: %s.\n", e)
             self._running = False
-            self.playback_error.emit()  # type: ignore
+            self.playback_error.emit()
 
         print("Playback started.\n")
 
@@ -224,7 +229,7 @@ class AudioPlayerWorker(QObject):
 
     @pyqtSlot()
     def cleanup(self):
-        print("Cleaning up worker resources...")
+        print("Cleaning up worker resources...\n")
 
         # Cleanup timer.
         if self._timer is not None:
@@ -255,7 +260,7 @@ class AudioPlayerWorker(QObject):
             finally:
                 self._pa = None
 
-        print("Worker resources released.\n")
+        print("Worker resources released.")
 
     # --- Properties ---
     @property
@@ -272,6 +277,8 @@ class AudioPlayerController(QObject):
     start_playback_requested = pyqtSignal(AudioData)
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
+
+    playback_started = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -306,6 +313,7 @@ class AudioPlayerController(QObject):
         # Connect signals.
         self._worker_thread.started.connect(self._worker.start_playback)
 
+        self._worker.playback_started.connect(self._on_playback_start)
         self.pause_playback_requested.connect(self._worker.pause)
         self.resume_playback_requested.connect(self._worker.resume)
 
@@ -321,6 +329,10 @@ class AudioPlayerController(QObject):
 
         # Start thread.
         self._worker_thread.start()
+
+    @pyqtSlot()
+    def _on_playback_start(self):
+        self.playback_started.emit()
 
     @pyqtSlot()
     def _cleanup_thread(self):

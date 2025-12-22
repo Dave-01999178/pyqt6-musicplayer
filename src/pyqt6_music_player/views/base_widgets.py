@@ -3,8 +3,9 @@ This module provides reusable widgets for creating consistent UI components.
 """
 from pathlib import Path
 
-from PyQt6.QtCore import QSize
-from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtCore import QSize, QTimer
+from PyQt6.QtGui import QPaintEvent, QPainter
+from PyQt6.QtWidgets import QPushButton, QLabel
 
 from pyqt6_music_player.views.helpers import path_to_qicon
 from pyqt6_music_player.config import SMALL_BUTTON, SMALL_ICON
@@ -13,8 +14,8 @@ from pyqt6_music_player.config import SMALL_BUTTON, SMALL_ICON
 # ================================================================================
 # BASE ICON BUTTON
 # ================================================================================
-# TODO: Consider using dataclass or other containers if `__init__` arguments exceed 5
-#  e.g. the class became complex or when extending class to include custom behaviour/logic etc.
+#
+# --- Icon button ---
 class IconButton(QPushButton):
     """
     A customizable QPushButton with fixed size and icon, and a configurable properties
@@ -62,6 +63,75 @@ class IconButton(QPushButton):
 
         if self.object_name:
             self.setObjectName(self.object_name)
+
+
+# --- Marquee Label ---
+class MarqueeLabel(QLabel):
+    def __init__(self, text: str | None = None):
+        super().__init__(text=text)
+        # Marquee settings.
+        self._offset = 0  # Current horizontal offset.
+        self._speed = 1  # Pixels per timer tick.
+        self._gap = 20  # Space between repeated text instances.
+
+        # Timer
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._update_offset)  # type: ignore
+
+        self._timer.start(20)
+
+    def _update_offset(self):
+        # Compute the horizontal pixel width of the current text.
+        text_width = self.fontMetrics().horizontalAdvance(self.text())
+
+        # If the current text fits, do nothing.
+        if text_width <= self.width():
+            return
+
+        cycle_width = (text_width + self._gap)
+        self._offset = (self._offset + self._speed) % cycle_width
+
+        # Reset offset after one full marquee cycle (text + gap) has scrolled past
+        # for seamless animation.
+        if self._offset > text_width + self._gap:
+            self._offset = 0
+
+        self.update()
+
+    def paintEvent(self, event: QPaintEvent):
+        # Get the font metrics for the widget's current font and style.
+        font_metrics = self.fontMetrics()
+
+        # Compute the horizontal pixel width of the current text.
+        text_width = font_metrics.horizontalAdvance(self.text())
+
+        # If the current text fits, use default QLabel painting.
+        if text_width <= self.width():
+            super().paintEvent(event)  # Let QLabel paint itself to preserve default behaviour.
+            return
+
+        # Else, draw scrolling text.
+        painter = QPainter(self)
+        painter.setPen(self.palette().windowText().color())
+
+        current_text = self.text()
+        x = -self._offset  # Shift the text leftward.
+        y = (self.height() + font_metrics.ascent()) // 2  # Vertically centers the text.
+
+        # To create a seamless marquee effect when the text is wider than the widget:
+        # - The first `drawText` renders the "leaving" instance (shifted left from the visible
+        #   area).
+        # - The second `drawText` renders the "entering" instance (positioned after the text, and
+        #   gap).
+        # Together, they produce a continuous looping scroll.
+        painter.drawText(x, y, current_text)
+        painter.drawText(x + text_width + self._gap, y, current_text)
+
+    # Note: Override to reset animation when text changes.
+    # This prevents mid-word jumps or weird starting positions.
+    def setText(self, text: str):
+        super().setText(text)
+        self._offset = 0
 
 
 # ================================================================================
