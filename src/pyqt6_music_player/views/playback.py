@@ -17,8 +17,8 @@ from pyqt6_music_player.config import (
     REPLAY_ICON_PATH,
 )
 from pyqt6_music_player.constants import DefaultAudioInfo
-from pyqt6_music_player.views import IconButton, IconButtonFactory
 from pyqt6_music_player.view_models import PlaybackControlViewModel
+from pyqt6_music_player.views import IconButton, IconButtonFactory
 
 
 # ================================================================================

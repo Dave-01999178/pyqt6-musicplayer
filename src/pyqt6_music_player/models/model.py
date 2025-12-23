@@ -8,7 +8,7 @@ from pyqt6_music_player.constants import (
     MAX_VOLUME,
     SUPPORTED_AUDIO_FORMAT
 )
-from pyqt6_music_player.models import Song
+from pyqt6_music_player.models import AudioTrack
 
 
 # TODO: Consider replacing list.
@@ -20,13 +20,13 @@ class PlaylistModel(QObject):
     """
     def __init__(self) -> None:
         super().__init__()
-        self._playlist: list[Song] = []
+        self._playlist: list[AudioTrack] = []
         self._playlist_set: set[Path] = set()
 
         self._current_index: int | None = None
 
     @property
-    def playlist(self) -> list[Song]:
+    def playlist(self) -> list[AudioTrack]:
         """Returns the current playlist"""
         return self._playlist.copy()
 
@@ -41,7 +41,7 @@ class PlaylistModel(QObject):
         return len(self._playlist)
 
     @property
-    def selected_song(self) -> Song | None:
+    def selected_song(self) -> AudioTrack | None:
         """
         Returns the currently selected song based on the active playlist index.
 
@@ -50,7 +50,7 @@ class PlaylistModel(QObject):
         and falls within the bounds of the playlist.
 
         Returns:
-            Song | None: The selected song from the model,
+            AudioTrack | None: The selected song from the model,
                          or ``None`` if the playlist is empty, or nothing is selected.
         """
         if self._current_index is not None:
@@ -107,7 +107,7 @@ class PlaylistModel(QObject):
 
         paths = self._normalize_to_paths(files)
 
-        from_path = Song.from_path  # Store locally to avoid repeated attribute lookups.
+        from_path = AudioTrack.from_path  # Store locally to avoid repeated attribute lookups.
         add_count = 0
         for p in paths:
             try:

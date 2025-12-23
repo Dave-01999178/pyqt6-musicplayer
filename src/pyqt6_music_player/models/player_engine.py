@@ -1,91 +1,11 @@
 import logging
 import threading
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Self
 
 import numpy as np
-from numpy.typing import NDArray
 from pyaudio import PyAudio, paComplete, paContinue
-from pydub import AudioSegment
 from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal, pyqtSlot
 
-from pyqt6_music_player.constants import SUPPORTED_BYTES
-
-
-# ================================================================================
-# AUDIO DECODING AND DATA PREPARATION
-# ================================================================================
-@dataclass(frozen=True, eq=True)
-class AudioData:
-    channels: int
-    frame_rate: int
-    sample_width: int
-    orig_dtype: type[np.integer]  # Samples dtype before converting to np.float32.
-    dtype_max_val: int
-    normalized_samples: NDArray[np.float32]
-
-    def __post_init__(self) -> None:
-        arr = self.normalized_samples
-
-        if not arr.flags.writeable:
-            return
-
-        arr.setflags(write=False)
-
-    @classmethod
-    def from_file(cls, file: str | Path) -> Self | None:
-        # --- Load and decode file. ---
-        try:
-            audio_segment = AudioSegment.from_file(file)
-        except Exception as e:
-            logging.error("Failed to decode file: %s, %s.", file, e)
-            return None
-
-        # --- Parse raw data from AudioSegment. ---
-        #
-        # Omitted 24-bit audio (sample_width == 3) because pydub automatically converts
-        # 24-bit to 32-bit.
-        sample_width = audio_segment.sample_width
-        if sample_width not in SUPPORTED_BYTES:
-            logging.error("Invalid/Unsupported sample width: %d", sample_width)
-            return None
-
-        if sample_width == 1:
-            orig_dtype = np.uint8
-        elif sample_width == 2:
-            orig_dtype = np.int16
-        else:
-            orig_dtype = np.int32
-
-        samples = np.frombuffer(
-            buffer=audio_segment.raw_data,
-            dtype=orig_dtype
-        ).astype(np.float32)
-
-        # --- Normalize samples to [-1.0, 1.0]. ---
-        if sample_width == 1:
-            max_value = np.iinfo(orig_dtype).max
-            samples_normalized = (samples - 128.0) / 128.0
-        else:
-            # For 16-bit (i2) and 32-bit (i4) signed integers.
-            # Use the maximum positive value (M_pos) for division.
-            # max_value = 32767 for 16-bit, 2147483647 for 32-bit.
-            max_value = np.iinfo(orig_dtype).max
-            samples_normalized = samples / float(max_value)
-
-        # --- Reshape samples array: (frames, channels). ---
-        # '-1' is a numpy trick to automatically calculate that dimension size (rows in this case).
-        samples_normalized = samples_normalized.reshape(-1, audio_segment.channels)
-
-        return cls(
-            channels=audio_segment.channels,
-            frame_rate=audio_segment.frame_rate,
-            sample_width=audio_segment.sample_width,
-            orig_dtype=orig_dtype,
-            dtype_max_val=max_value,
-            normalized_samples=samples_normalized
-        )
+from pyqt6_music_player.models import AudioSamples
 
 
 # ================================================================================
@@ -100,7 +20,7 @@ class AudioPlayerWorker(QObject):
     playback_finished = pyqtSignal()
     playback_error = pyqtSignal()
 
-    def __init__(self, audio_data: AudioData):
+    def __init__(self, audio_data: AudioSamples):
         super().__init__()
         # Playback data
         self._audio_data = audio_data
@@ -274,7 +194,7 @@ class AudioPlayerWorker(QObject):
 # ---------- Audio player controller ----------
 # noinspection PyUnresolvedReferences
 class AudioPlayerController(QObject):
-    start_playback_requested = pyqtSignal(AudioData)
+    start_playback_requested = pyqtSignal(AudioSamples)
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
 
@@ -288,7 +208,7 @@ class AudioPlayerController(QObject):
         self.start_playback_requested.connect(self.start)
 
     # --- Public methods ---
-    def start_playback(self, audio_data: AudioData):
+    def start_playback(self, audio_data: AudioSamples):
         self.start_playback_requested.emit(audio_data)
 
     def resume_playback(self):
@@ -298,8 +218,8 @@ class AudioPlayerController(QObject):
         self.pause_playback_requested.emit()
 
     # --- Slots ---
-    @pyqtSlot(AudioData)
-    def start(self, audio_data: AudioData):
+    @pyqtSlot(AudioSamples)
+    def start(self, audio_data: AudioSamples):
         if self._worker_thread is not None and self._worker_thread.isRunning():
             return
 
