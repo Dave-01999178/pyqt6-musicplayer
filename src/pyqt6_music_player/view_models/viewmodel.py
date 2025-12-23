@@ -3,13 +3,14 @@
 import logging
 from typing import Sequence
 
-from PyQt6.QtCore import (QAbstractTableModel, QModelIndex, QObject, Qt, pyqtSignal, pyqtSlot)
+from PyQt6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt, pyqtSignal, pyqtSlot
 
+from pyqt6_music_player.helpers import format_duration
 from pyqt6_music_player.models import (
-    AudioData,
+    AudioSamples,
     AudioPlayerController,
     PlaylistModel,
-    Song,
+    AudioTrack,
     VolumeModel
 )
 
@@ -37,12 +38,12 @@ class PlaybackControlViewModel(QObject):
         self.playback_started.emit(song_title, song_album)  # type: ignore
 
     # TODO: Separate loading from play/pause later for better Separation of Concerns (SoC).
-    def _load_song(self, song: Song):
+    def _load_song(self, song: AudioTrack):
         if song == self._current_song:
             return
 
         file_path = song.path
-        audio_data = AudioData.from_file(file_path)
+        audio_data = AudioSamples.from_file(file_path)
 
         if audio_data is not None:
             logging.info("New song: %s successfully loaded", file_path)
@@ -134,7 +135,7 @@ class PlaylistViewModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DisplayRole:
             if field_name == "duration":
-                return self.format_duration(song.duration)
+                return format_duration(song.duration)
             return getattr(song, field_name)
 
         if role == Qt.ItemDataRole.TextAlignmentRole:
@@ -152,23 +153,6 @@ class PlaylistViewModel(QAbstractTableModel):
             return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
 
         return None
-
-    @staticmethod
-    def format_duration(seconds: int | float):
-        """
-        Returns audio duration in format (mm:ss) if it's less than hour else (hh:mm:ss).
-        """
-        int_total_duration = int(seconds)
-        secs_in_hr = 3600
-        secs_in_min = 60
-
-        hours, remainder = divmod(int_total_duration, secs_in_hr)
-        minutes, seconds = divmod(remainder, secs_in_min)
-
-        if hours > 0:
-            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-        return f"{minutes:02d}:{seconds:02d}"
 
     # TODO: Temporary logic, replace later.
     # Notify views if new song(s) are added.
@@ -200,12 +184,12 @@ class PlaylistViewModel(QAbstractTableModel):
 
     # --- Properties ---
     @property
-    def playlist(self) -> list[Song]:
+    def playlist(self) -> list[AudioTrack]:
         """
         Exposes the model's current playlist.
 
         Returns:
-            list[Song]: The current playlist.
+            list[AudioTrack]: The current playlist.
         """
         return self._model.playlist
 
@@ -215,7 +199,7 @@ class PlaylistViewModel(QAbstractTableModel):
         Exposes the model's currently selected song.
 
         Returns:
-            Song | None: The selected song from the model,
+            AudioTrack | None: The selected song from the model,
                          or ``None`` if the playlist is empty, or nothing is selected.
         """
         return self._model.selected_song

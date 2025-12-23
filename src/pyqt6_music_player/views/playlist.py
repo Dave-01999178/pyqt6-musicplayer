@@ -17,7 +17,7 @@ from pyqt6_music_player.config import (
     REMOVE_ICON_PATH,
 )
 from pyqt6_music_player.constants import FILE_DIALOG_FILTER
-from pyqt6_music_player.view_models.viewmodel import PlaylistViewModel
+from pyqt6_music_player.view_models import PlaylistViewModel
 from pyqt6_music_player.views import IconButtonFactory
 
 

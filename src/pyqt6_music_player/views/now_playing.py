@@ -4,7 +4,7 @@ artist, and an album art.
 """
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import (QHBoxLayout, QLabel, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from pyqt6_music_player.config import ALBUM_ART_PLACEHOLDER
 from pyqt6_music_player.models import DEFAULT_SONG

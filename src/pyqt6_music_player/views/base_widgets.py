@@ -1,13 +1,13 @@
 """
 This module provides reusable widgets for creating consistent UI components.
 """
+import logging
 from pathlib import Path
 
 from PyQt6.QtCore import QSize, QTimer
-from PyQt6.QtGui import QPaintEvent, QPainter
+from PyQt6.QtGui import QPaintEvent, QPainter, QIcon
 from PyQt6.QtWidgets import QPushButton, QLabel
 
-from pyqt6_music_player.views.helpers import path_to_qicon
 from pyqt6_music_player.config import SMALL_BUTTON, SMALL_ICON
 
 
@@ -54,15 +54,33 @@ class IconButton(QPushButton):
 
     def _configure_properties(self):
         """Configures the instance properties."""
-        icon = path_to_qicon(self.icon_path)
-        if icon is not None:
-            self.setIcon(icon)
-            self.setIconSize(QSize(*self.icon_size))
+        icon = self.path_to_qicon(self.icon_path)
+
+        self.setIcon(icon)
+        self.setIconSize(QSize(*self.icon_size))
 
         self.setFixedSize(*self.widget_size)
 
         if self.object_name:
             self.setObjectName(self.object_name)
+
+    @staticmethod
+    def path_to_qicon(icon_path: str | Path) -> QIcon:
+        """
+        Converts an icon image into QIcon instance.
+
+        Args:
+            icon_path: Icon image's file path.
+
+        Returns:
+            QIcon: A QIcon instance.
+        """
+        try:
+            return QIcon(str(icon_path))
+        except Exception as e:
+            logging.error("Icon path: %s not found, %s", icon_path, e)
+            # Empty QIcon() fallback instead of None to avoid mypy incompatible type error.
+            return QIcon()
 
 
 # --- Marquee Label ---

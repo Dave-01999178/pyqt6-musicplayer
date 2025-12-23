@@ -1,8 +1,15 @@
-# Helpers
-from .helpers import path_to_qicon
-
 # Base widgets
-from pyqt6_music_player.views.base_widgets import IconButton, MarqueeLabel, IconButtonFactory
+from .base_widgets import IconButton, MarqueeLabel, IconButtonFactory
+
+# Playlist widgets
+from .playlist import (
+    AddSongButton,
+    LoadSongFolderButton,
+    RemoveSongButton,
+    PlaylistTableWidget,
+    PlaylistManager,
+    PlaylistDisplay
+)
 
 # Now playing display widgets
 from .now_playing import AlbumArtLabel, AudioArtistLabel, AudioTitleLabel, NowPlayingDisplay
@@ -21,16 +28,6 @@ from .playback import (
     PlaybackProgress,
 )
 
-# Playlist widgets
-from .playlist import (
-    AddSongButton,
-    LoadSongFolderButton,
-    RemoveSongButton,
-    PlaylistTableWidget,
-    PlaylistManager,
-    PlaylistDisplay
-)
-
 # Volume widgets
 from .volume import VolumeButton, VolumeLabel, VolumeSlider, VolumeControls
 
@@ -41,9 +38,6 @@ from .subviews import PlayerbarView, PlaylistView, PlaylistManagerView
 from .main_view import MusicPlayerView
 
 __all__ = [
-    # Helpers
-    "path_to_qicon",
-
     # Base widgets
     "IconButton",
     "MarqueeLabel",

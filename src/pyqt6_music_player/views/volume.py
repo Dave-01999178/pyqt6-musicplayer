@@ -3,9 +3,11 @@ This module provides UI components for volume control, including a custom volume
 that updates its icon based on the current volume level and can be toggled to mute and unmute
 the audio, a slider to adjust the volume, and a label to display the current volume value.
 """
+import enum
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QSlider, QWidget, QHBoxLayout
 
 from pyqt6_music_player.config import (
@@ -16,7 +18,14 @@ from pyqt6_music_player.config import (
 )
 from pyqt6_music_player.constants import MIN_VOLUME, MAX_VOLUME
 from pyqt6_music_player.view_models import VolumeViewModel
-from pyqt6_music_player.views import IconButton, path_to_qicon
+from pyqt6_music_player.views import IconButton
+
+
+class VolumeLevel(enum.Enum):
+    HIGH = 3
+    MEDIUM = 2
+    LOW = 1
+    MUTE = 0
 
 
 # ================================================================================
@@ -29,17 +38,9 @@ class VolumeButton(IconButton):
     This button changes its icon based on the volume level and can be toggled
     to mute or unmute the audio.
     """
-    _LOW_LOWER_BOUND = 1
-    _MEDIUM_LOWER_BOUND = 34
-    _HIGH_LOWER_BOUND = 67
-
-    # TODO: Consider using Enum + Mapping.
-    _VOLUME_ICONS = {
-        "mute": path_to_qicon(MUTED_VOLUME_ICON_PATH),
-        "low": path_to_qicon(LOW_VOLUME_ICON_PATH),
-        "medium": path_to_qicon(MEDIUM_VOLUME_ICON_PATH),
-        "high": path_to_qicon(HIGH_VOLUME_ICON_PATH)
-    }
+    HIGH_LOWER_BOUND = 67
+    MEDIUM_LOWER_BOUND = 34
+    LOW_LOWER_BOUND = 1
 
     def __init__(self, icon_path: Path = HIGH_VOLUME_ICON_PATH):
         """
@@ -49,7 +50,19 @@ class VolumeButton(IconButton):
             icon_path: Path to the icon file. Defaults to 'high-volume' icon.
         """
         super().__init__(icon_path=icon_path)
+        self.volume_icons:dict[VolumeLevel, QIcon] = {}
+
+        self._init_icons()
+
         self.setCheckable(True)
+
+    def _init_icons(self):
+        self.volume_icons = {
+            VolumeLevel.HIGH: self.path_to_qicon(HIGH_VOLUME_ICON_PATH),
+            VolumeLevel.MEDIUM: self.path_to_qicon(MEDIUM_VOLUME_ICON_PATH),
+            VolumeLevel.LOW: self.path_to_qicon(LOW_VOLUME_ICON_PATH),
+            VolumeLevel.MUTE: self.path_to_qicon(MUTED_VOLUME_ICON_PATH),
+        }
 
     def update_button_icon(self, new_volume: int) -> None:
         """
@@ -61,14 +74,14 @@ class VolumeButton(IconButton):
         if not (MIN_VOLUME <= new_volume <= MAX_VOLUME):
             raise ValueError(f"New volume: {new_volume} is out of range.")
 
-        if new_volume >= self._HIGH_LOWER_BOUND:
-            icon = self._VOLUME_ICONS["high"]
-        elif new_volume >= self._MEDIUM_LOWER_BOUND:
-            icon = self._VOLUME_ICONS["medium"]
-        elif new_volume >= self._LOW_LOWER_BOUND:
-            icon = self._VOLUME_ICONS["low"]
+        if new_volume >= self.HIGH_LOWER_BOUND:
+            icon = self.volume_icons[VolumeLevel.HIGH]
+        elif new_volume >= self.MEDIUM_LOWER_BOUND:
+            icon = self.volume_icons[VolumeLevel.MEDIUM]
+        elif new_volume >= self.LOW_LOWER_BOUND:
+            icon = self.volume_icons[VolumeLevel.LOW]
         else:
-            icon = self._VOLUME_ICONS["mute"]
+            icon = self.volume_icons[VolumeLevel.MUTE]
 
         # Avoid unnecessary UI updates by skipping `setIcon` calls if the new, and current icon
         # are the same.
