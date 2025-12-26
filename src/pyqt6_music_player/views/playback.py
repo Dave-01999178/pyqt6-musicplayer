@@ -17,6 +17,7 @@ from pyqt6_music_player.config import (
     REPLAY_ICON_PATH,
 )
 from pyqt6_music_player.constants import DefaultAudioInfo
+from pyqt6_music_player.helpers import format_duration
 from pyqt6_music_player.view_models import PlaybackControlViewModel
 from pyqt6_music_player.views import IconButton, IconButtonFactory
 
@@ -42,11 +43,9 @@ class ElapsedTimeLabel(QLabel):
 
     The default display is empty ('0:00:00').
     """
-    def __init__(self):
+    def __init__(self, text=DefaultAudioInfo.elapsed_time):
         """Initializes ElapsedTimeLabel instance."""
-        super().__init__(
-            text=DefaultAudioInfo.elapsed_time
-        )
+        super().__init__(text=text)
 
 
 class TotalDurationLabel(QLabel):
@@ -55,11 +54,9 @@ class TotalDurationLabel(QLabel):
 
     The default display is empty ('').
     """
-    def __init__(self):
+    def __init__(self, text=DefaultAudioInfo.elapsed_time):
         """Initializes TotalDurationLabel instance."""
-        super().__init__(
-            text=DefaultAudioInfo.total_duration
-        )
+        super().__init__(text=text)
 
 
 # ================================================================================
@@ -108,9 +105,10 @@ class PlaybackProgress(QWidget):
     such as progress bar, and time labels.
     """
 
-    def __init__(self):
+    def __init__(self, playback_viewmodel: PlaybackControlViewModel):
         """Initializes PlaybackProgress instance."""
         super().__init__()
+        self._viewmodel = playback_viewmodel
         self.progress_bar = PlaybackProgressSlider()
         self.elapsed_time = ElapsedTimeLabel()
         self.total_duration = TotalDurationLabel()
@@ -131,8 +129,16 @@ class PlaybackProgress(QWidget):
         self.setLayout(layout)
 
     def _connect_signals(self):
-        """Connects the progress bar to the section-level signal."""
-        pass
+        self._viewmodel.playback_started.connect(self._on_playback_start)
+        self._viewmodel.position_changed.connect(self._on_playback_position_change)
+
+    def _on_playback_start(self, song_title, song_artist, duration):
+        self.progress_bar.setRange(0, duration * 1000)
+
+    def _on_playback_position_change(self, elapsed_time: int, time_remaining: int):
+        self.progress_bar.setValue(elapsed_time)
+        self.elapsed_time.setText(format_duration(elapsed_time // 1000))
+        self.total_duration.setText(format_duration(time_remaining // 1000))
 
 
 # ================================================================================

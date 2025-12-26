@@ -140,8 +140,8 @@ class AudioSamples:
 
         return cls(
             channels=audio_segment.channels,
-            sample_rate=audio_segment.sample_rate,
-            sample_width=audio_segment.sample_width,
+            sample_rate=audio_segment.frame_rate,
+            sample_width=sample_width,
             orig_dtype=orig_dtype,
             dtype_max_val=max_value,
             samples=samples_normalized

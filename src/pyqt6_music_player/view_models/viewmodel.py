@@ -19,7 +19,8 @@ from pyqt6_music_player.models import (
 # PLAYBACK CONTROL VIEWMODEL
 # ================================================================================
 class PlaybackControlViewModel(QObject):
-    playback_started = pyqtSignal(str, str)
+    playback_started = pyqtSignal(str, str, int)
+    position_changed = pyqtSignal(int, int)
 
     def __init__(self, playlist_model: PlaylistModel, player_engine: AudioPlayerController):
         super().__init__()
@@ -27,17 +28,29 @@ class PlaybackControlViewModel(QObject):
         self._playlist = playlist_model
 
         self._current_song = None
+        self._last_emitted_second = 0
 
-        self._player_engine.playback_started.connect(self._on_playback_start)
+        self._player_engine.playback_started.connect(self._on_audio_player_playback_start)
+        self._player_engine.position_changed.connect(self._on_audio_player_position_change)
 
+    # --- Slots ---
     @pyqtSlot()
-    def _on_playback_start(self):
+    def _on_audio_player_playback_start(self):
         song_title = self._current_song.title
         song_album = self._current_song.album
+        song_duration = int(self._current_song.duration)
 
-        self.playback_started.emit(song_title, song_album)  # type: ignore
+        self.playback_started.emit(song_title, song_album, song_duration)  # type: ignore
 
-    # TODO: Separate loading from play/pause later for better Separation of Concerns (SoC).
+    @pyqtSlot(float, float)
+    def _on_audio_player_position_change(self, elapsed_time: float, time_remaining: float):
+        elapsed_time = int(elapsed_time * 1000)
+        time_remaining = int(time_remaining * 1000)
+
+        self.position_changed.emit(elapsed_time, time_remaining)
+
+    # --- Internal/Helper method ---
+    # TODO: Separate loading later for better Separation of Concerns (SoC).
     def _load_song(self, song: AudioTrack):
         if song == self._current_song:
             return
@@ -73,7 +86,7 @@ class PlaybackControlViewModel(QObject):
                 return
 
             self._player_engine.start_playback(audio_data)
-            self._on_playback_start()
+            self._on_audio_player_playback_start()
 
     def next_track(self):
         print("Next button has been clicked.")

@@ -11,7 +11,11 @@ from pyqt6_music_player.constants import (
 from pyqt6_music_player.models import AudioTrack
 
 
-# TODO: Consider replacing list.
+# ================================================================================
+# APP MODELS
+# ================================================================================
+#
+# ---------- Playlist model ----------
 class PlaylistModel(QObject):
     playlist_changed = pyqtSignal(int)
     """
@@ -20,7 +24,7 @@ class PlaylistModel(QObject):
     """
     def __init__(self) -> None:
         super().__init__()
-        self._playlist: list[AudioTrack] = []
+        self._playlist: list[AudioTrack] = []  # TODO: Consider replacing list.
         self._playlist_set: set[Path] = set()
 
         self._current_index: int | None = None
@@ -153,6 +157,7 @@ class PlaylistModel(QObject):
         return None
 
 
+# ---------- Volume model ----------
 class VolumeModel(QObject):
     """
     The app's volume model that is responsible for managing volume,
