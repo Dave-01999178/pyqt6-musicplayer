@@ -16,7 +16,7 @@ from pyqt6_music_player.models import AudioSamples
 # noinspection PyUnresolvedReferences
 class AudioPlayerWorker(QObject):
     playback_started = pyqtSignal()
-    position_updated = pyqtSignal()
+    position_changed = pyqtSignal(float, float)
     playback_finished = pyqtSignal()
     playback_error = pyqtSignal()
 
@@ -70,7 +70,7 @@ class AudioPlayerWorker(QObject):
 
                 return self._float_to_bytes(silence), paContinue
 
-        total_frames = len(self._audio_data.normalized_samples)
+        total_frames = len(self._audio_data.samples)
 
         # When all frames are played, end PyAudio callback.
         if self._frame_position >= total_frames:
@@ -80,7 +80,7 @@ class AudioPlayerWorker(QObject):
             return None, paComplete
 
         end = min(self._frame_position + frame_count, total_frames)
-        frame_chunk = self._audio_data.normalized_samples[self._frame_position:end]
+        frame_chunk = self._audio_data.samples[self._frame_position:end]
         current_chunk_size = len(frame_chunk)
 
         # If the current chunk is leftover (frames at the end), pad with silence
@@ -92,6 +92,11 @@ class AudioPlayerWorker(QObject):
             frame_chunk = np.concatenate((frame_chunk, silence_padding))
 
         self._frame_position = end  # Update frame index/position.
+
+        new_position = self._frame_position / self._audio_data.sample_rate
+        remaining = (total_frames - self._frame_position) / self._audio_data.sample_rate
+
+        self.position_changed.emit(new_position, remaining)
 
         return self._float_to_bytes(frame_chunk), paContinue
 
@@ -110,7 +115,7 @@ class AudioPlayerWorker(QObject):
 
         self._pa = PyAudio()
         self._stream = self._pa.open(
-            rate=self._audio_data.frame_rate,
+            rate=self._audio_data.sample_rate,
             channels=self._audio_data.channels,
             format=self._pa.get_format_from_width(self._audio_data.sample_width),
             output=True,
@@ -194,11 +199,11 @@ class AudioPlayerWorker(QObject):
 # ---------- Audio player controller ----------
 # noinspection PyUnresolvedReferences
 class AudioPlayerController(QObject):
+    playback_started = pyqtSignal()
+    position_changed = pyqtSignal(float, float)
     start_playback_requested = pyqtSignal(AudioSamples)
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
-
-    playback_started = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -234,6 +239,8 @@ class AudioPlayerController(QObject):
         self._worker_thread.started.connect(self._worker.start_playback)
 
         self._worker.playback_started.connect(self._on_playback_start)
+        self._worker.position_changed.connect(self._on_position_change)
+
         self.pause_playback_requested.connect(self._worker.pause)
         self.resume_playback_requested.connect(self._worker.resume)
 
@@ -253,6 +260,10 @@ class AudioPlayerController(QObject):
     @pyqtSlot()
     def _on_playback_start(self):
         self.playback_started.emit()
+
+    @pyqtSlot(float, float)
+    def _on_position_change(self, new_position: float, remainder: float):
+        self.position_changed.emit(new_position, remainder)
 
     @pyqtSlot()
     def _cleanup_thread(self):
