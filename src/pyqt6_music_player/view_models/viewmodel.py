@@ -112,7 +112,17 @@ class PlaybackControlViewModel(QObject):
         self._play(next_song)
 
     def previous_track(self):
-        print("Previous button has been clicked.")
+        current_index = self._playlist.current_index
+
+        # Can't move on to the previous track if there's no song selected or playing.
+        if current_index is None and self._current_song is None:
+            return
+
+        self._playlist.set_selected_index(current_index - 1)
+
+        prev_song = self._playlist.selected_song
+
+        self._play(prev_song)
 
     def replay(self):
         print("Replay button has been clicked.")
