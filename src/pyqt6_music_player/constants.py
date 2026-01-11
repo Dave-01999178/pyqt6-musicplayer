@@ -4,12 +4,15 @@ from dataclasses import dataclass
 # CONSTANTS
 # ================================================================================
 #
-# AUDIO SAMPLE WIDTH
+# SUPPORTED AUDIO SAMPLE WIDTH
 SUPPORTED_BYTES = {1, 2, 4}
 
 # AUDIO FORMATS
 FILE_DIALOG_FILTER = "Audio files (*.mp3 *.wav *.flac *.ogg)"
 SUPPORTED_AUDIO_FORMAT = {".mp3", ".wav", ".flac", ".ogg"}
+
+# AUDIO PLAYER
+CHUNK_SIZE = 1024
 
 # VOLUME
 MIN_VOLUME = 0

@@ -28,10 +28,10 @@ class PlaybackControlViewModel(QObject):
         self._playlist = playlist_model
 
         self._current_song = None
-        self._last_emitted_second = 0
 
         self._player_engine.playback_started.connect(self._on_audio_player_playback_start)
         self._player_engine.position_changed.connect(self._on_audio_player_position_change)
+        self._player_engine.playback_finished.connect(self.next_track)
 
     # --- Slots ---
     @pyqtSlot()
@@ -39,6 +39,8 @@ class PlaybackControlViewModel(QObject):
         song_title = self._current_song.title
         song_album = self._current_song.album
         song_duration = int(self._current_song.duration)
+
+        print(f"Now playing: {song_title}")
 
         self.playback_started.emit(song_title, song_album, song_duration)  # type: ignore
 
@@ -49,25 +51,37 @@ class PlaybackControlViewModel(QObject):
 
         self.position_changed.emit(elapsed_time, time_remaining)
 
-    # --- Internal/Helper method ---
+    # --- Private methods ---
     # TODO: Separate loading later for better Separation of Concerns (SoC).
-    def _load_song(self, song: AudioTrack):
+    def _load_song(self, song: AudioTrack) -> AudioSamples | None:
         if song == self._current_song:
-            return
+            return None
 
         file_path = song.path
         audio_data = AudioSamples.from_file(file_path)
 
-        if audio_data is not None:
-            logging.info("New song: %s successfully loaded", file_path)
-            self._current_song = song
+        if audio_data is None:
+            logging.info("Failed to load song: %s.", file_path)
 
-            return audio_data
+            return None
 
-        return None
+        self._current_song = song
+
+        return audio_data
+
+    def _play(self, song):
+        """Private method for starting a new playback. Used by public methods."""
+        audio_data = self._load_song(song)
+
+        if audio_data is None:
+            return
+
+        self._player_engine.start_playback(audio_data)
 
     # --- Commands ---
     def play_pause(self, play: bool):
+        """Public method for starting, pausing and resuming playback."""
+        # Do nothing if there's no selected song.
         if self._playlist.selected_song is None:
             return
 
@@ -75,21 +89,27 @@ class PlaybackControlViewModel(QObject):
         if play and self._player_engine.is_paused:
             self._player_engine.resume_playback()
         # Pause
-        elif not play:
+        elif not play and self._player_engine.is_playing:
             self._player_engine.pause_playback()
         # Start playback
         else:
             selected_song = self._playlist.selected_song
-            audio_data = self._load_song(selected_song)
 
-            if audio_data is None:
-                return
+            self._play(selected_song)
 
-            self._player_engine.start_playback(audio_data)
-            self._on_audio_player_playback_start()
-
+    @pyqtSlot()
     def next_track(self):
-        print("Next button has been clicked.")
+        current_index = self._playlist.current_index
+
+        # Can't move on to the next track if there's no song selected or playing.
+        if current_index is None and self._current_song is None:
+            return
+
+        self._playlist.set_selected_index(current_index + 1)
+
+        next_song = self._playlist.selected_song
+
+        self._play(next_song)
 
     def previous_track(self):
         print("Previous button has been clicked.")
@@ -102,6 +122,9 @@ class PlaybackControlViewModel(QObject):
 
     def seek(self):
         pass
+
+    def shutdown(self):
+        self._player_engine.shutdown()
 
 
 # ================================================================================

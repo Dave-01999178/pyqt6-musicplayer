@@ -40,9 +40,11 @@ class PlaylistModel(QObject):
         return self._playlist_set
 
     @property
-    def song_count(self) -> int:
-        """Returns the current number of songs in playlist."""
-        return len(self._playlist)
+    def current_index(self) -> int | None:
+        if not self._playlist:
+            return None
+
+        return self._current_index
 
     @property
     def selected_song(self) -> AudioTrack | None:
@@ -61,6 +63,11 @@ class PlaylistModel(QObject):
             return self._playlist[self._current_index]
 
         return None
+
+    @property
+    def song_count(self) -> int:
+        """Returns the current number of songs in playlist."""
+        return len(self._playlist)
 
     @staticmethod
     def _normalize_to_paths(files: Sequence[str | Path]) -> list[Path]:
