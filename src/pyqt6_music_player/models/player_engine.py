@@ -183,17 +183,15 @@ class AudioPlayerWorker(QObject):
 
     @pyqtSlot()
     def pause(self):
-        print("Pausing...")
         with self._lock:
             self._state = PlaybackState.PAUSED
-        print("Paused.\n")
+        print("Playback paused.\n")
 
     @pyqtSlot()
     def resume(self):
-        print("Unpausing...")
         with self._lock:
             self._state = PlaybackState.PLAYING
-        print("Unpaused.\n")
+        print("Playback unpaused.\n")
 
     @pyqtSlot()
     def cleanup(self):
@@ -271,7 +269,7 @@ class AudioPlayerController(QObject):
         self._worker.playback_started.connect(self._on_playback_start)
         self._worker.position_changed.connect(self._on_position_change)
 
-        self._worker.playback_finished.connect(self._worker.cleanup)
+        self._worker.playback_finished.connect(self._on_playback_finished)
         # self.shutdown_request.connect(self._worker_thread.quit)
 
         # Start thread.
