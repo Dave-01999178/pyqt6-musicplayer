@@ -4,6 +4,7 @@ Main application view for the PyQt6 Music Player.
 This module defines the `MusicPlayerView`, the central container widget
 that holds all major UI components (playlist, player bar, controls).
 """
+from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtGui import QColor, QIcon, QPalette
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
@@ -27,6 +28,8 @@ class MusicPlayerView(QWidget):
         self.playlist_manager_view = PlaylistManagerView(ctx.playlist_viewmodel)
         self.playlist_view = PlaylistView(ctx.playlist_viewmodel)
         self.player_bar_view = PlayerbarView(ctx.playback_viewmodel, ctx.volume_viewmodel)
+
+        self._closing = False
 
         self._configure_properties()
         self._init_ui()
