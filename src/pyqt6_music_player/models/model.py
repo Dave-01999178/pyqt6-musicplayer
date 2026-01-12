@@ -18,6 +18,7 @@ from pyqt6_music_player.models import AudioTrack
 # ---------- Playlist model ----------
 class PlaylistModel(QObject):
     playlist_changed = pyqtSignal(int)
+    index_updated = pyqtSignal(int)  # TODO: Sync next/prev to playlist window.
     """
     The app's playlist model that is responsible for managing playlist,
     and providing playlist related data.
@@ -137,6 +138,7 @@ class PlaylistModel(QObject):
                     add_count += 1
 
         if add_count != 0:
+            # TODO: Rename to song_added.
             self.playlist_changed.emit(add_count)  # type: ignore
 
         return None
@@ -160,6 +162,7 @@ class PlaylistModel(QObject):
 
         if 0 <= index < len(self._playlist):
             self._current_index = index
+            self.index_updated.emit(self._current_index)
 
         return None
 
