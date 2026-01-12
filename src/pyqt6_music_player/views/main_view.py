@@ -29,7 +29,7 @@ class MusicPlayerView(QWidget):
         self.playlist_view = PlaylistView(ctx.playlist_viewmodel)
         self.player_bar_view = PlayerbarView(ctx.playback_viewmodel, ctx.volume_viewmodel)
 
-        self._closing = False
+        self._should_close = False
 
         self._configure_properties()
         self._init_ui()
@@ -63,3 +63,20 @@ class MusicPlayerView(QWidget):
         main_layout.setSpacing(10)
 
         self.setLayout(main_layout)
+
+    def closeEvent(self, a0):
+        if self._should_close:
+            a0.accept()
+            return
+
+        a0.ignore()
+
+        self.ctx.playback_viewmodel.shutdown()
+        self.ctx.playback_viewmodel.shutdown_finished.connect(self._on_shutdown_finished)
+
+
+    @pyqtSlot()
+    def _on_shutdown_finished(self):
+        self._should_close = True
+
+        self.close()
