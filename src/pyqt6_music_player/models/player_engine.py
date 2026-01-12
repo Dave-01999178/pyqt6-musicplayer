@@ -26,8 +26,8 @@ class AudioPlayerWorker(QObject):
     playback_started = pyqtSignal()
     position_changed = pyqtSignal(float, float)
     playback_finished = pyqtSignal()
-    playback_stopped = pyqtSignal()
     playback_error = pyqtSignal()
+    cleanup_finished = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -209,6 +209,7 @@ class AudioPlayerWorker(QObject):
             finally:
                 self._pa = None
 
+        self.cleanup_finished.emit()
         print("Worker resources released.")
 
     @pyqtSlot()
@@ -241,7 +242,7 @@ class AudioPlayerController(QObject):
     start_playback_requested = pyqtSignal()
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
-    shutdown_request = pyqtSignal()
+    shutdown_requested = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -264,13 +265,15 @@ class AudioPlayerController(QObject):
         self.start_playback_requested.connect(self._worker.start_playback)
         self.pause_playback_requested.connect(self._worker.pause)
         self.resume_playback_requested.connect(self._worker.resume)
+        self.shutdown_requested.connect(self._worker.cleanup)
 
         # Establish Worker -> Controller connection.
         self._worker.playback_started.connect(self._on_playback_start)
         self._worker.position_changed.connect(self._on_position_change)
-
         self._worker.playback_finished.connect(self._on_playback_finished)
-        # self.shutdown_request.connect(self._worker_thread.quit)
+        self._worker.cleanup_finished.connect(self._worker_thread.quit)
+
+        self._worker_thread.finished.connect(self._on_thread_finished)
 
         # Start thread.
         self._worker_thread.start()
@@ -292,7 +295,9 @@ class AudioPlayerController(QObject):
             self.shutdown_finished.emit()
             return
 
-        self.shutdown_request.emit()
+        self._worker_thread.requestInterruption()
+
+        self.shutdown_requested.emit()
 
         # self._worker_thread.wait()
 
@@ -311,6 +316,7 @@ class AudioPlayerController(QObject):
     def _on_playback_finished(self):
         self.playback_finished.emit()
 
+    @pyqtSlot()
     def _on_thread_finished(self):
         self._worker.deleteLater()
         self._worker = None

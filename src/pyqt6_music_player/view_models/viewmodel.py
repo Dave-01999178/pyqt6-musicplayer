@@ -21,6 +21,7 @@ from pyqt6_music_player.models import (
 class PlaybackControlViewModel(QObject):
     playback_started = pyqtSignal(str, str, int)
     position_changed = pyqtSignal(int, int)
+    shutdown_finished = pyqtSignal()
 
     def __init__(self, playlist_model: PlaylistModel, player_engine: AudioPlayerController):
         super().__init__()
@@ -32,6 +33,7 @@ class PlaybackControlViewModel(QObject):
         self._player_engine.playback_started.connect(self._on_audio_player_playback_start)
         self._player_engine.position_changed.connect(self._on_audio_player_position_change)
         self._player_engine.playback_finished.connect(self.next_track)
+        self._player_engine.shutdown_finished.connect(self.shutdown_finished)
 
     # --- Slots ---
     @pyqtSlot()
