@@ -227,6 +227,8 @@ class PlaylistDisplay(QWidget):
 
     def _setup_binding(self):
         self.selection_model.currentRowChanged.connect(self._on_item_select)
+        self._viewmodel.index_updated.connect(self._)
+
 
     @property
     def playlist_window(self) -> QTableView:
@@ -239,3 +241,6 @@ class PlaylistDisplay(QWidget):
         row_index = current_index.row()
 
         self._viewmodel.set_selected_index(row_index)
+
+    def _(self, new_index):
+        self._playlist_window.selectRow(new_index)

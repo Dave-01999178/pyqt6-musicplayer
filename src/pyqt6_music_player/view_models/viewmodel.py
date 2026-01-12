@@ -143,6 +143,7 @@ class PlaybackControlViewModel(QObject):
 # PLAYLIST VIEWMODEL
 # ================================================================================
 class PlaylistViewModel(QAbstractTableModel):
+    index_updated = pyqtSignal(int)
     """
     Viewmodel responsible for exposing playlist-related data and commands
     to the View layer in an MVVM architecture.
@@ -164,6 +165,7 @@ class PlaylistViewModel(QAbstractTableModel):
         self._model = playlist_model
 
         self._model.playlist_changed.connect(self._on_model_song_insert)
+        self._model.index_updated.connect(self._on_index_update)
 
     # --- QAbstractTableModel interface - Required methods (overridden) ---
     def rowCount(self, parent=None):
@@ -210,6 +212,9 @@ class PlaylistViewModel(QAbstractTableModel):
 
         self.beginInsertRows(QModelIndex(), prev_playlist_len, self._model.song_count - 1)
         self.endInsertRows()
+
+    def _on_index_update(self, new_index):
+        self.index_updated.emit(new_index)
 
     # --- Commands ---
     def add_song(self, files: Sequence[str]) -> None:
