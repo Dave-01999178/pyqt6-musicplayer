@@ -8,11 +8,16 @@ from .playlist import (
     RemoveSongButton,
     PlaylistTableWidget,
     PlaylistManager,
-    PlaylistDisplay
+    PlaylistDisplay,
 )
 
 # Now playing display widgets
-from .now_playing import AlbumArtLabel, AudioArtistLabel, AudioTitleLabel, NowPlayingDisplay
+from .now_playing import (
+    AlbumArtLabel,
+    AudioArtistLabel,
+    AudioTitleLabel,
+    NowPlayingDisplay,
+)
 
 # Playback widgets
 from .playback import (

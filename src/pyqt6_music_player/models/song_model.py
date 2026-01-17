@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 from pydub import AudioSegment
 
 from pyqt6_music_player.constants import DefaultAudioInfo, SUPPORTED_BYTES
-from pyqt6_music_player.metadata.metadata_extractor import get_metadata
+from pyqt6_music_player.metadata import get_metadata
 
 
 # ================================================================================
@@ -67,9 +67,9 @@ class AudioTrack:
         )
 
 
-# ---------- Audio samples (PCM and format parameters) ----------
+# ---------- Audio data (PCM and format parameters) ----------
 @dataclass(frozen=True, eq=True)
-class AudioSamples:
+class AudioData:
     """
     Represents PCM audio samples normalized to [-1.0, 1.0].
 
@@ -78,14 +78,14 @@ class AudioSamples:
         sample_rate: Samples per second (Hz).
         sample_width: Bytes per sample.
         orig_dtype: Original PCM numpy dtype.
-        dtype_max_val: Maximum representable value of original dtype.
+        orig_dtype_max: Maximum representable value of original dtype.
         samples: Normalized audio samples as float32.
     """
     channels: int
     sample_rate: int
     sample_width: int
     orig_dtype: type[np.uint8] | type[np.int16] | type[np.int32]
-    dtype_max_val: int
+    orig_dtype_max: int
     samples: NDArray[np.float32]
 
     def __post_init__(self) -> None:
@@ -143,7 +143,7 @@ class AudioSamples:
             sample_rate=audio_segment.frame_rate,
             sample_width=sample_width,
             orig_dtype=orig_dtype,
-            dtype_max_val=max_value,
+            orig_dtype_max=max_value,
             samples=samples_normalized
         )
 

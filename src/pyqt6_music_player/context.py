@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from pyqt6_music_player.models import AudioPlayerController, PlaylistModel, VolumeModel
+from pyqt6_music_player.models import AudioPlayerService, PlaylistModel, VolumeModel
 from pyqt6_music_player.view_models import (
     PlaybackControlViewModel,
     PlaylistViewModel,
@@ -11,7 +11,7 @@ from pyqt6_music_player.view_models import (
 @dataclass
 class AppContext:
     # --- Player engine ---
-    player_engine: AudioPlayerController
+    player_engine: AudioPlayerService
 
     # --- Models ---
     playlist_model: PlaylistModel
@@ -25,7 +25,7 @@ class AppContext:
 
 def build_context():
     # --- Player engine ---
-    player_engine = AudioPlayerController()
+    player_engine = AudioPlayerService()
 
     # --- Models ---
     playlist_model = PlaylistModel()

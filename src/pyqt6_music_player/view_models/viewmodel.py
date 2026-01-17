@@ -1,35 +1,56 @@
-# TODO: Consider splitting this monolithic module into separate individual modules when it grows,
-#  or became complex for easy navigation.
+# TODO: Consider splitting this monolithic module into separate individual module
+#  when it grows, or became complex for easy navigation.
 import logging
-from typing import Sequence
+from collections.abc import Sequence
+from typing import ClassVar
 
-from PyQt6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import (
+    QAbstractTableModel,
+    QModelIndex,
+    QObject,
+    Qt,
+    pyqtSignal,
+    pyqtSlot,
+)
 
+from pyqt6_music_player.constants import PlaybackState
 from pyqt6_music_player.helpers import format_duration
 from pyqt6_music_player.models import (
-    AudioSamples,
-    AudioPlayerController,
-    PlaylistModel,
+    AudioData,
+    AudioPlayerService,
     AudioTrack,
-    VolumeModel
+    PlaylistModel,
+    VolumeModel,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ================================================================================
 # PLAYBACK CONTROL VIEWMODEL
 # ================================================================================
+# noinspection PyUnresolvedReferences
 class PlaybackControlViewModel(QObject):
-    playback_started = pyqtSignal(str, str, int)
+    track_info = pyqtSignal(str, str)
+    track_duration = pyqtSignal(int)
     position_changed = pyqtSignal(int, int)
     shutdown_finished = pyqtSignal()
 
-    def __init__(self, playlist_model: PlaylistModel, player_engine: AudioPlayerController):
+    def __init__(
+            self,
+            playlist_model: PlaylistModel,
+            player_engine: AudioPlayerService,
+    ):
         super().__init__()
         self._player_engine = player_engine
         self._playlist = playlist_model
 
         self._current_song = None
 
+        self._connect_signals()
+
+    def _connect_signals(self):
+        self._player_engine.audio_data_loaded.connect(self._play)
         self._player_engine.playback_started.connect(self._on_audio_player_playback_start)
         self._player_engine.position_changed.connect(self._on_audio_player_position_change)
         self._player_engine.playback_finished.connect(self.next_track)
@@ -42,12 +63,17 @@ class PlaybackControlViewModel(QObject):
         song_album = self._current_song.album
         song_duration = int(self._current_song.duration)
 
-        print(f"Now playing: {song_title}")
+        self.track_info.emit(song_title, song_album)
+        self.track_duration.emit(song_duration)
 
-        self.playback_started.emit(song_title, song_album, song_duration)  # type: ignore
+        logger.info("Now playing: %s.\n", song_title)
 
     @pyqtSlot(float, float)
-    def _on_audio_player_position_change(self, elapsed_time: float, time_remaining: float):
+    def _on_audio_player_position_change(
+            self,
+            elapsed_time: float,
+            time_remaining: float,
+    ):
         elapsed_time = int(elapsed_time * 1000)
         time_remaining = int(time_remaining * 1000)
 
@@ -55,49 +81,46 @@ class PlaybackControlViewModel(QObject):
 
     # --- Private methods ---
     # TODO: Separate loading later for better Separation of Concerns (SoC).
-    def _load_song(self, song: AudioTrack) -> AudioSamples | None:
+    def _load_song(self, song: AudioTrack) -> None:
         if song == self._current_song:
-            return None
-
-        file_path = song.path
-        audio_data = AudioSamples.from_file(file_path)
-
-        if audio_data is None:
-            logging.info("Failed to load song: %s.", file_path)
-
-            return None
-
-        self._current_song = song
-
-        return audio_data
-
-    def _play(self, song):
-        """Private method for starting a new playback. Used by public methods."""
-        audio_data = self._load_song(song)
-
-        if audio_data is None:
             return
 
-        self._player_engine.start_playback(audio_data)
+        file_path = song.path
+        audio_data = AudioData.from_file(file_path)
+
+        if audio_data is not None:
+            self._player_engine.load_audio(audio_data)
+
+            self._current_song = song
+
+            return
+
+        logging.info("Failed to load song: %s.", file_path)
+
+    def _play(self):
+        self._player_engine.start_playback()
 
     # --- Commands ---
-    def play_pause(self, play: bool):
-        """Public method for starting, pausing and resuming playback."""
-        # Do nothing if there's no selected song.
+    def play_pause(self):
+        """Start, pause and resume playback based on the current playback state."""
+        # Do nothing if there's no song playing or selected.
         if self._playlist.selected_song is None:
             return
 
         # Resume
-        if play and self._player_engine.is_paused:
+        if self._player_engine.playback_state is PlaybackState.PAUSED:
             self._player_engine.resume_playback()
+
         # Pause
-        elif not play and self._player_engine.is_playing:
+        elif self._player_engine.playback_state is PlaybackState.PLAYING:
             self._player_engine.pause_playback()
+
         # Start playback
         else:
             selected_song = self._playlist.selected_song
 
-            self._play(selected_song)
+            self._load_song(selected_song)
+
 
     @pyqtSlot()
     def next_track(self):
@@ -111,7 +134,7 @@ class PlaybackControlViewModel(QObject):
 
         next_song = self._playlist.selected_song
 
-        self._play(next_song)
+        self._load_song(next_song)
 
     def previous_track(self):
         current_index = self._playlist.current_index
@@ -124,13 +147,13 @@ class PlaybackControlViewModel(QObject):
 
         prev_song = self._playlist.selected_song
 
-        self._play(prev_song)
+        self._load_song(prev_song)
 
     def replay(self):
-        print("Replay button has been clicked.")
+        pass
 
     def repeat(self):
-        print("Repeat button has been clicked.")
+        pass
 
     def seek(self):
         pass
@@ -154,12 +177,12 @@ class PlaylistViewModel(QAbstractTableModel):
     It forwards model updates to the view via Qt signals and provides
     commands for modifying playlist model.
     """
-    DEFAULT_COLUMNS = [
+    DEFAULT_COLUMNS: ClassVar[tuple[tuple[str, str]]] = (
         ("title", "Title"),
         ("artist", "Artist"),
         ("album", "Album"),
-        ("duration", "Duration")
-    ]
+        ("duration", "Duration"),
+    )
     def __init__(self, playlist_model: PlaylistModel):
         super().__init__()
         self._model = playlist_model
@@ -176,7 +199,7 @@ class PlaylistViewModel(QAbstractTableModel):
 
     def data(self, index, role=...):
         if not index.isValid():
-            return
+            return None
 
         row = index.row()
         col = index.column()
@@ -188,18 +211,26 @@ class PlaylistViewModel(QAbstractTableModel):
                 return format_duration(song.duration)
             return getattr(song, field_name)
 
-        if role == Qt.ItemDataRole.TextAlignmentRole:
-            if field_name == "duration":
-                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
+        if role == Qt.ItemDataRole.TextAlignmentRole and field_name == "duration":
+            return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
 
         return None
 
     def headerData(self, section, orientation, role=...):
         field_title = self.DEFAULT_COLUMNS[section][1]
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+        is_header_field = (
+                role == Qt.ItemDataRole.DisplayRole
+                and orientation == Qt.Orientation.Horizontal
+        )
+        is_duration_field = (
+                role == Qt.ItemDataRole.TextAlignmentRole
+                and field_title == "Duration"
+        )
+
+        if is_header_field:
             return field_title
 
-        elif role == Qt.ItemDataRole.TextAlignmentRole and field_title == "Duration":
+        if is_duration_field:
             return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
 
         return None
@@ -210,7 +241,11 @@ class PlaylistViewModel(QAbstractTableModel):
     def _on_model_song_insert(self, new_song_count: int) -> None:
         prev_playlist_len = self._model.song_count - new_song_count
 
-        self.beginInsertRows(QModelIndex(), prev_playlist_len, self._model.song_count - 1)
+        self.beginInsertRows(
+            QModelIndex(),
+            prev_playlist_len,
+            self._model.song_count - 1,
+        )
         self.endInsertRows()
 
     def _on_index_update(self, new_index):
@@ -218,42 +253,42 @@ class PlaylistViewModel(QAbstractTableModel):
 
     # --- Commands ---
     def add_song(self, files: Sequence[str]) -> None:
-        """
-        Command for adding new songs to the playlist.
+        """Command for adding new songs to the playlist.
 
         Args:
             files: A sequence of path-like objects.
+
         """
         self._model.add_song(files)
 
     def set_selected_index(self, index: int):
-        """
-        Command for setting currently selected playlist index.
+        """Command for setting currently selected playlist index.
 
         Args:
             index: The index of the selected item in the playlist widget.
+
         """
         self._model.set_selected_index(index)
 
     # --- Properties ---
     @property
     def playlist(self) -> list[AudioTrack]:
-        """
-        Exposes the model's current playlist.
+        """Expose the model's current playlist.
 
         Returns:
             list[AudioTrack]: The current playlist.
+
         """
         return self._model.playlist
 
     @property
     def selected_song(self):
-        """
-        Exposes the model's currently selected song.
+        """Expose the model's currently selected song.
 
         Returns:
             AudioTrack | None: The selected song from the model,
                          or ``None`` if the playlist is empty, or nothing is selected.
+
         """
         return self._model.selected_song
 
@@ -262,16 +297,15 @@ class PlaylistViewModel(QAbstractTableModel):
 # VOLUME VIEWMODEL
 # ================================================================================
 class VolumeViewModel(QObject):
-    """
-    Viewmodel responsible for exposing volume-related data and commands
-    to the View layer in an MVVM architecture.
+    """Volume viewmodel.
 
-    This class acts as an intermediary between the VolumeModel and any
-    UI components that display or modify the application's volume state.
+    This class acts as a middleman between the VolumeModel and VolumeControls
+    that display or modify the application's volume state.
 
     It forwards model updates to the view via Qt signals and provides
-    commands for modifying volume model.
+    commands for view to modify the volume model.
     """
+
     volume_changed = pyqtSignal(int)
     mute_changed = pyqtSignal(bool)
 
@@ -285,26 +319,25 @@ class VolumeViewModel(QObject):
         self._model.mute_changed.connect(self._on_model_mute_changed)
 
     def _on_model_volume_changed(self, new_volume: int) -> None:
-        """
-        Forward volume changes from the model to the view layer.
+        """Forward volume changes from the model to the view layer.
 
         Args:
             new_volume: The updated volume from the model.
+
         """
         self.volume_changed.emit(new_volume)  # type: ignore
 
     def _on_model_mute_changed(self, muted: bool) -> None:
-        """
-        Forward mute state changes from the model to the view layer.
+        """Forward mute state changes from the model to the view layer.
 
         Args:
             muted: Updated mute state from the model.
+
         """
         self.mute_changed.emit(muted)  # type: ignore
 
     def refresh(self) -> None:
-        """
-        Re-emit the current volume to refresh any subscribed views.
+        """Re-emit the current volume to refresh any subscribed views.
 
         Useful when view needs initial state sync.
         """
@@ -312,40 +345,40 @@ class VolumeViewModel(QObject):
 
     # --- Commands ---
     def set_volume(self, new_volume) -> None:
-        """
-        Command for updating volume.
+        """Command for updating volume.
 
         Args:
             new_volume: The new volume value to set.
+
         """
         self._model.set_volume(new_volume)
 
     def set_mute(self, mute: bool) -> None:
-        """
-        Command for toggling mute state.
+        """Command for toggling mute state.
 
         Args:
               mute: The new mute state to set.
+
         """
         self._model.set_mute(mute)
 
     # --- Properties ---
     @property
     def current_volume(self) -> int:
-        """
-        Exposes the model's current volume.
+        """Expose the model's current volume.
 
         Returns:
             int: The model's current volume.
+
         """
         return self._model.current_volume
 
     @property
     def is_muted(self) -> bool:
-        """
-        Exposes the model's current mute state.
+        """Expose the model's current mute state.
 
         Returns:
             bool: The model's current mute state.
+
         """
         return self._model.is_muted
