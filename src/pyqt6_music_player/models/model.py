@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Sequence
 
@@ -10,6 +11,7 @@ from pyqt6_music_player.constants import (
 )
 from pyqt6_music_player.models import AudioTrack
 
+logger = logging.getLogger(__name__)
 
 # ================================================================================
 # APP MODELS
@@ -17,8 +19,8 @@ from pyqt6_music_player.models import AudioTrack
 #
 # ---------- Playlist model ----------
 class PlaylistModel(QObject):
-    playlist_changed = pyqtSignal(int)
-    index_updated = pyqtSignal(int)  # TODO: Sync next/prev to playlist window.
+    playlist_changed = pyqtSignal(int)  # TODO: Rename to song_added.
+    index_updated = pyqtSignal(int)
     """
     The app's playlist model that is responsible for managing playlist,
     and providing playlist related data.
@@ -138,8 +140,9 @@ class PlaylistModel(QObject):
                     add_count += 1
 
         if add_count != 0:
-            # TODO: Rename to song_added.
-            self.playlist_changed.emit(add_count)  # type: ignore
+            self.playlist_changed.emit(add_count)
+
+            logger.info("%s song(s) was added to the playlist.", add_count)
 
         return None
 

@@ -1,7 +1,3 @@
-"""
-This module provides UI components for displaying the current audio/song information such as title,
-artist, and an album art.
-"""
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
@@ -18,26 +14,26 @@ from pyqt6_music_player.views import MarqueeLabel
 #
 # --- Album art ---
 class AlbumArtLabel(QLabel):
-    """
-    A QLabel widget for displaying album art.
+    """A QLabel widget for displaying album art.
 
     This label is configured with a fixed size and displays a scaled QPixmap
     of the album art, with a default image.
     """
+
     def __init__(self):
-        """Initializes AlbumArtLabel instance."""
+        """Initialize AlbumArtLabel instance."""
         super().__init__()
 
         self._configure_properties()
         self._init_ui()
 
     def _configure_properties(self):
-        """Configures the instance's properties"""
+        """Configure the instance's properties."""
         self.setFixedSize(75, 75)
         self.setScaledContents(False)
 
     def _init_ui(self):
-        """Initializes album art pixmap and scales it to fit."""
+        """Initialize album art pixmap and scales it to fit."""
         self._set_image(ALBUM_ART_PLACEHOLDER)
 
     def _set_image(self, image):
@@ -45,25 +41,27 @@ class AlbumArtLabel(QLabel):
         scaled = pixmap.scaled(
             self.size(),
             Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
+            Qt.TransformationMode.SmoothTransformation,
         )
 
         self.setPixmap(scaled)
 
-    def update_image(self, image):
+    def update_image(self, image) -> None:
         if image is None:
-            return None
+            return
 
         self._set_image(image)
 
 
 # --- Title and Artist label ---
 class AudioTitleLabel(MarqueeLabel):
+    """A QLabel widget for displaying the current audio title.
+
+    The default text is 'Song Title'.
     """
-    A QLabel widget for displaying the current audio title. The default text is 'Song Title'.
-    """
+
     def __init__(self, text: str = DEFAULT_SONG.title):
-        """Initializes AudioTitleLabel instance."""
+        """Initialize AudioTitleLabel instance."""
         super().__init__(text)
 
         self.setFixedWidth(100)
@@ -71,11 +69,13 @@ class AudioTitleLabel(MarqueeLabel):
 
 
 class AudioArtistLabel(MarqueeLabel):
+    """A QLabel widget for displaying the current audio artist.
+
+    The default text is 'Song Artist'.
     """
-    A QLabel widget for displaying the current audio artist. The default text is 'Song Artist'.
-    """
+
     def __init__(self, text: str = DEFAULT_SONG.artist):
-        """Initializes AudioArtistLabel instance."""
+        """Initialize AudioArtistLabel instance."""
         super().__init__(text=text)
 
         self.setFixedWidth(100)
@@ -88,10 +88,11 @@ class AudioArtistLabel(MarqueeLabel):
 #
 # --- Now playing section ---
 class NowPlayingDisplay(QWidget):
+    """A QWidget container for widgets that displays current song information.
+
+    This includes album art, song title, and artist label.
     """
-    A QWidget container for widgets that displays current song information
-    such as album art, song title, and artist label.
-    """
+
     def __init__(self, playback_viewmodel: PlaybackControlViewModel):
         """Initialize NowPlayingDisplay instance."""
         super().__init__()
@@ -101,14 +102,12 @@ class NowPlayingDisplay(QWidget):
         self.title_label = AudioTitleLabel()
         self.artist_label = AudioArtistLabel()
 
-        self.widget_placeholder = []
-
         self._init_ui()
 
-        self._viewmodel.playback_started.connect(self._on_playback_start)
+        self._viewmodel.track_info.connect(self._on_playback_start)
 
     def _init_ui(self):
-        """Initializes the instance's internal widgets and layouts"""
+        """Initialize the instance's internal widgets and layouts."""
         # --- Left section: Album art ---
         layout = QHBoxLayout()
 

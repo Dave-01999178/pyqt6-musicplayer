@@ -1,12 +1,9 @@
-"""
-This module provides reusable widgets for creating consistent UI components.
-"""
 import logging
 from pathlib import Path
 
 from PyQt6.QtCore import QSize, QTimer
-from PyQt6.QtGui import QPaintEvent, QPainter, QIcon
-from PyQt6.QtWidgets import QPushButton, QLabel
+from PyQt6.QtGui import QIcon, QPainter, QPaintEvent
+from PyQt6.QtWidgets import QLabel, QPushButton
 
 from pyqt6_music_player.config import SMALL_BUTTON, SMALL_ICON
 
@@ -17,32 +14,34 @@ from pyqt6_music_player.config import SMALL_BUTTON, SMALL_ICON
 #
 # --- Icon button ---
 class IconButton(QPushButton):
-    """
-    A customizable QPushButton with fixed size and icon, and a configurable properties
-    for icon-based buttons that require custom behavior or state.
+    """A customizable QPushButton with fixed size, icon, and a configurable properties.
 
-    This class extends the QPushButton widget to provide a consistent and reusable button with
-    options for a fixed icon and widget size, button text, icon size, and a custom object name for
-    styling.
+    This class extends the QPushButton widget to provide a consistent,
+    and reusable button with options for a fixed icon and widget size, button text,
+    icon size, and a custom object name for styling for icon-based buttons that
+    require custom behavior or state.
     """
+
     def __init__(
             self,
             icon_path: Path,
             icon_size: tuple[int, int] = SMALL_ICON,
             widget_size: tuple[int, int] = SMALL_BUTTON,
             button_text: str | None = None,
-            object_name: str | None = None
+            object_name: str | None = None,
     ) -> None:
-        """
-        Initializes IconButton instance.
+        """Initialize IconButton instance.
 
         Args:
             icon_path: Path to the icon file.
             icon_size: ``(width, height)`` of the *icon* inside the button.
                        Defaults to ``(15, 15)``.
-            widget_size: ``(width, height)`` of the whole button widget. Defaults to ``(30, 30)``.
+            widget_size: ``(width, height)`` of the whole button widget.
+                         Defaults to ``(30, 30)``.
             button_text: Optional text for the button. Defaults to ``None``.
-            object_name: Qt object name – useful for QSS selectors. Defaults to ``None``.
+            object_name: Qt object name - useful for QSS selectors.
+                         Defaults to ``None``.
+
         """
         super().__init__(text=button_text)
         self.icon_path = icon_path
@@ -53,7 +52,7 @@ class IconButton(QPushButton):
         self._configure_properties()
 
     def _configure_properties(self):
-        """Configures the instance properties."""
+        """Configure the instance properties."""
         icon = self.path_to_qicon(self.icon_path)
 
         self.setIcon(icon)
@@ -66,20 +65,20 @@ class IconButton(QPushButton):
 
     @staticmethod
     def path_to_qicon(icon_path: str | Path) -> QIcon:
-        """
-        Converts an icon image into QIcon instance.
+        """Convert an icon image into QIcon instance.
 
         Args:
             icon_path: Icon image's file path.
 
         Returns:
             QIcon: A QIcon instance.
+
         """
         try:
             return QIcon(str(icon_path))
         except Exception as e:
             logging.error("Icon path: %s not found, %s", icon_path, e)
-            # Empty QIcon() fallback instead of None to avoid mypy incompatible type error.
+            # Return empty icon instead of None to avoid mypy incompatible type error.
             return QIcon()
 
 
@@ -123,9 +122,10 @@ class MarqueeLabel(QLabel):
         # Compute the horizontal pixel width of the current text.
         text_width = font_metrics.horizontalAdvance(self.text())
 
-        # If the current text fits, use default QLabel painting.
+        # If the current text fits, let QLabel paint itself
+        # to preserve default behaviour (default painting).
         if text_width <= self.width():
-            super().paintEvent(event)  # Let QLabel paint itself to preserve default behaviour.
+            super().paintEvent(event)
             return
 
         # Else, draw scrolling text.
@@ -137,10 +137,10 @@ class MarqueeLabel(QLabel):
         y = (self.height() + font_metrics.ascent()) // 2  # Vertically centers the text.
 
         # To create a seamless marquee effect when the text is wider than the widget:
-        # - The first `drawText` renders the "leaving" instance (shifted left from the visible
-        #   area).
-        # - The second `drawText` renders the "entering" instance (positioned after the text, and
-        #   gap).
+        # - The first `drawText` renders the "leaving" instance
+        #   (shifted left from the visible area).
+        # - The second `drawText` renders the "entering" instance
+        #  (positioned after the text, and gap).
         # Together, they produce a continuous looping scroll.
         painter.drawText(x, y, current_text)
         painter.drawText(x + text_width + self._gap, y, current_text)
@@ -159,6 +159,7 @@ class MarqueeLabel(QLabel):
 # Factory for creating static/stateless buttons.
 class IconButtonFactory:
     """Reusable factory class for creating static IconButtons."""
+
     def __init__(
             self,
             icon_path: Path,
@@ -166,18 +167,20 @@ class IconButtonFactory:
             icon_size: tuple[int, int] = SMALL_ICON,
             widget_size: tuple[int, int] = SMALL_BUTTON,
             button_text: str | None = None,
-            object_name: str | None = None
+            object_name: str | None = None,
     ):
-        """
-        A factory for creating static/stateless buttons.
+        """Create static/stateless buttons.
 
         Args:
             icon_path: Path to the icon file.
             icon_size: ``(width, height)`` of the *icon* inside the button.
                        Defaults to ``(15, 15)``.
-            widget_size: ``(width, height)`` of the whole button widget. Defaults to ``(30, 30)``.
+            widget_size: ``(width, height)`` of the whole button widget.
+                         Defaults to ``(30, 30)``.
             button_text: Optional text for the button. Defaults to ``None``.
-            object_name: Qt object name – useful for QSS selectors. Defaults to ``None``.
+            object_name: Qt object name - useful for QSS selectors.
+                         Defaults to ``None``.
+
         """
         self.icon_path = icon_path
         self.icon_size = icon_size
@@ -185,11 +188,11 @@ class IconButtonFactory:
         self.button_text = button_text
         self.object_name = object_name
 
-    def __call__(self,) -> IconButton:
+    def __call__(self) -> IconButton:
         return IconButton(
             icon_path=self.icon_path,
             icon_size=self.icon_size,
             widget_size=self.widget_size,
             button_text=self.button_text,
-            object_name=self.object_name
+            object_name=self.object_name,
         )

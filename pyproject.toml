@@ -31,6 +31,29 @@ pytest = "^8.4.1"
 pytest-qt = "^4.5.0"
 pytest-mock = "^3.14.1"
 
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes (logic errors)
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "C90",  # mccabe complexity
+    "I",    # isort
+    "N",    # pep8-naming
+    "D",    # pydocstyle
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "A",    # flake8-builtins
+    "COM",  # flake8-commas
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "T20",  # flake8-print
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "ERA",  # eradicate (commented-out code)
+    "PL",   # pylint rules (important!)
+    "RUF",  # Ruff-specific rules
+]
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

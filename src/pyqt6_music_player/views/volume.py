@@ -1,14 +1,9 @@
-"""
-This module provides UI components for volume control, including a custom volume icon button
-that updates its icon based on the current volume level and can be toggled to mute and unmute
-the audio, a slider to adjust the volume, and a label to display the current volume value.
-"""
-import enum
+from enum import Enum, auto
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QLabel, QSizePolicy, QSlider, QWidget, QHBoxLayout
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QSlider, QWidget
 
 from pyqt6_music_player.config import (
     HIGH_VOLUME_ICON_PATH,
@@ -16,41 +11,43 @@ from pyqt6_music_player.config import (
     MEDIUM_VOLUME_ICON_PATH,
     MUTED_VOLUME_ICON_PATH,
 )
-from pyqt6_music_player.constants import MIN_VOLUME, MAX_VOLUME
+from pyqt6_music_player.constants import MAX_VOLUME, MIN_VOLUME
 from pyqt6_music_player.view_models import VolumeViewModel
 from pyqt6_music_player.views import IconButton
 
 
-class VolumeLevel(enum.Enum):
-    HIGH = 3
-    MEDIUM = 2
-    LOW = 1
-    MUTE = 0
+class VolumeLevel(Enum):
+    MUTE = auto()
+    LOW = auto()
+    MEDIUM = auto()
+    HIGH = auto()
 
 
 # ================================================================================
 # VOLUME WIDGETS
 # ================================================================================
+#
+# --- Volume button ---
 class VolumeButton(IconButton):
-    """
-    A custom button for controlling and displaying the current volume state.
+    """A custom button for controlling and displaying the current volume state.
 
     This button changes its icon based on the volume level and can be toggled
     to mute or unmute the audio.
     """
+
     HIGH_LOWER_BOUND = 67
     MEDIUM_LOWER_BOUND = 34
     LOW_LOWER_BOUND = 1
 
     def __init__(self, icon_path: Path = HIGH_VOLUME_ICON_PATH):
-        """
-        Initializes VolumeButton instance.
+        """Initialize VolumeButton instance.
 
         Args:
             icon_path: Path to the icon file. Defaults to 'high-volume' icon.
+
         """
         super().__init__(icon_path=icon_path)
-        self.volume_icons:dict[VolumeLevel, QIcon] = {}
+        self.volume_icons: dict[VolumeLevel, QIcon] = {}
 
         self._init_icons()
 
@@ -65,11 +62,11 @@ class VolumeButton(IconButton):
         }
 
     def update_button_icon(self, new_volume: int) -> None:
-        """
-        Updates the button's icon based on the new volume level.
+        """Update the button's icon based on the new volume level.
 
         Args:
             new_volume: The current volume level (0-100).
+
         """
         if not (MIN_VOLUME <= new_volume <= MAX_VOLUME):
             raise ValueError(f"New volume: {new_volume} is out of range.")
@@ -83,56 +80,56 @@ class VolumeButton(IconButton):
         else:
             icon = self.volume_icons[VolumeLevel.MUTE]
 
-        # Avoid unnecessary UI updates by skipping `setIcon` calls if the new, and current icon
-        # are the same.
+        # Avoid unnecessary UI updates by skipping `setIcon` calls if the new,
+        # and current icon are the same.
         if icon.cacheKey() == self.icon().cacheKey():
-            return None
+            return
 
         self.setIcon(icon)
 
 
+# TODO: Volume slider and display should get their default values from model
+#  (default value) on app start.
+# --- Volume slider ---
 class VolumeSlider(QSlider):
-    """
-    A horizontal slider for controlling the volume level.
+    """A horizontal slider for controlling the volume level.
 
-    This slider is configured with a specific range (0-100) and a default value (100) for
-    managing audio volume.
+    This slider is configured with a specific range (0-100),
+    and a default value (100) for managing audio volume.
     """
-    handle_released = pyqtSignal(int)
 
     def __init__(self, orientation: Qt.Orientation = Qt.Orientation.Horizontal):
-        """
-        Initializes VolumeSlider instance.
+        """Initialize VolumeSlider instance.
 
         Args:
             orientation: VolumeSlider instance orientation.
                          Defaults to `Qt.Orientation.Horizontal` (horizontal).
+
         """
         super().__init__(orientation=orientation)
 
         self._configure_properties()
 
     def _configure_properties(self):
-        """Configures the instance's properties"""
+        """Configure the instance's properties."""
         self.setRange(MIN_VOLUME, MAX_VOLUME)
 
 
+# --- Volume display ---
 class VolumeLabel(QLabel):
-    """
-    A label widget for displaying the current volume level.
+    """A label widget for displaying the current volume level.
 
     This label shows the volume as a number (0-100).
     """
+
     def __init__(self):
-        """
-        Initializes VolumeLabel instance.
-        """
+        """Initialize VolumeLabel instance."""
         super().__init__()
 
         self._configure_properties()
 
     def _configure_properties(self):
-        """Configures the instance properties"""
+        """Configure the instance properties."""
         label_width = self.fontMetrics().horizontalAdvance("100") + 4
 
         self.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
@@ -144,17 +141,15 @@ class VolumeLabel(QLabel):
 # VOLUME CONTROLS
 # ================================================================================
 class VolumeControls(QWidget):
-    """
-    A QWidget container for grouping volume-related widgets that is used to control
-    and display volume such as button, slider and label.
+    """A QWidget container for grouping volume-related widgets.
 
     This container also acts as the main view layer for volume and is responsible for:
-
      - Displaying volume UIs.
-     - Handling volume-related input events by calling the appropriate volume viewmodel commands
-       (View -> ViewModel).
+     - Handling volume-related input events by calling the appropriate volume viewmodel
+       commands (View -> ViewModel).
      - Observing volume viewmodel layer for data/state changes (ViewModel -> View).
     """
+
     def __init__(self, volume_viewmodel: VolumeViewModel):
         """Initialize VolumeControls instance."""
         super().__init__()
@@ -168,7 +163,7 @@ class VolumeControls(QWidget):
         self._setup_binding()
 
     def _init_ui(self):
-        """Initializes the instance's internal widgets and layouts"""
+        """Initialize the instance's internal widgets and layouts."""
         layout = QHBoxLayout()
 
         layout.addWidget(self._volume_button)

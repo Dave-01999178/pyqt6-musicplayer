@@ -1,13 +1,17 @@
-from PyQt6.QtCore import Qt, QModelIndex
+from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtGui import QBrush, QColor, QPalette
 from PyQt6.QtWidgets import (
     QAbstractItemView,
+    QFileDialog,
+    QHBoxLayout,
     QHeaderView,
     QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
-    QTableWidget, QWidget, QHBoxLayout, QFileDialog, QVBoxLayout
+    QTableWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from pyqt6_music_player.config import (
@@ -20,7 +24,6 @@ from pyqt6_music_player.constants import FILE_DIALOG_FILTER
 from pyqt6_music_player.view_models import PlaylistViewModel
 from pyqt6_music_player.views import IconButtonFactory
 
-
 # ================================================================================
 # PLAYLIST MANAGER BUTTON WIDGETS
 # ================================================================================
@@ -28,19 +31,19 @@ AddSongButton = IconButtonFactory(
     ADD_ICON_PATH,
     widget_size=RECTANGLE_MEDIUM,
     button_text="Add song(s)",
-    object_name="addSongBtn"
+    object_name="addSongBtn",
 )
 RemoveSongButton = IconButtonFactory(
     REMOVE_ICON_PATH,
     widget_size=RECTANGLE_MEDIUM,
     button_text="Remove",
-    object_name="removeSongBtn"
+    object_name="removeSongBtn",
 )
 LoadSongFolderButton = IconButtonFactory(
     LOAD_FOLDER_ICON_PATH,
     widget_size=RECTANGLE_MEDIUM,
     button_text="Load folder",
-    object_name="loadFolderBtn"
+    object_name="loadFolderBtn",
 )
 
 
@@ -48,18 +51,18 @@ LoadSongFolderButton = IconButtonFactory(
 # PLAYLIST MANAGER
 # ================================================================================
 class PlaylistManager(QWidget):
-    """
-    A QWidget container for grouping playlist manager-related widgets that is used to manage
-    the playlist such as add, remove and load folder button.
+    """A QWidget container for grouping playlist manager-related widgets.
 
-    This container also acts as the main view layer for playlist manager and is responsible for:
+    This container contains add, remove and load folder button, and also acts
+    as the main view layer for playlist manager, and is responsible for:
 
      - Displaying playlist manager UIs.
-     - Handling playlist manager-related input events by calling the appropriate playlist manager
-       viewmodel commands (View -> ViewModel).
+     - Handling playlist manager-related input events by calling the appropriate
+       playlist manager viewmodel commands (View -> ViewModel).
     """
+
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
-        """Initializes PlaylistManager instance."""
+        """Initialize PlaylistManager instance."""
         super().__init__()
         self._viewmodel = playlist_viewmodel
 
@@ -71,7 +74,7 @@ class PlaylistManager(QWidget):
         self._bind_viewmodel()
 
     def _init_ui(self):
-        """Initializes the container's internal widgets and layouts"""
+        """Initialize the container's internal widgets and layouts."""
         layout = QHBoxLayout()
 
         layout.addWidget(self._add_button)
@@ -87,9 +90,13 @@ class PlaylistManager(QWidget):
         self._add_button.clicked.connect(self._on_add_song_clicked)
 
     def _on_add_song_clicked(self):
-        # The `getOpenFileNames()` returns a tuple containing the list of selected filenames and
-        # the name of the selected filter. We use `_` to discard the filter name.
-        file_paths, _ = QFileDialog.getOpenFileNames(parent=self, filter=FILE_DIALOG_FILTER)
+        # The `getOpenFileNames()` returns a tuple containing the list of selected
+        # filenames, and the name of the selected filter so we use `_` to discard
+        # the filter name.
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            parent=self,
+            filter=FILE_DIALOG_FILTER,
+        )
 
         # Do nothing if the file dialog is cancelled.
         if not file_paths:
@@ -114,7 +121,7 @@ class HoverRowDelegate(QStyledItemDelegate):
             self._hover_row = row
 
             # Ask the table (parent) to repaint its viewport so the hover effect
-            # is immediately visible. Without this, Qt wouldn’t know it needs
+            # is immediately visible. Without this, Qt wouldn't know it needs
             # to redraw the cells when the mouse moves.
             #
             # Note: self.parent() is the QTableView that owns this delegate.
@@ -123,22 +130,23 @@ class HoverRowDelegate(QStyledItemDelegate):
                 self._parent.viewport().update()
 
     def paint(self, painter, option, index):
-        # 'QStyleOptionViewItem(option).state or opt.state' is a set of bit flags that describe how
-        # the cell should be drawn.
+        # 'QStyleOptionViewItem(option).state or opt.state' is a set of bit flags
+        # that describe how the cell should be drawn.
         opt = QStyleOptionViewItem(option)
 
         # QStyle.StateFlag.State_HasFocus is a single bitmask.
-        # So '~QStyle.StateFlag.State_HasFocus' means everything except the HasFocus bit.
+        # So '~QStyle.StateFlag.State_HasFocus' means everything except HasFocus bit.
         opt.state &= ~QStyle.StateFlag.State_HasFocus
 
         # When hovering an unselected row, paint it as selected with our color
-        if index.row() == self._hover_row and not (opt.state & QStyle.StateFlag.State_Selected):
+        state_flag = QStyle.StateFlag.State_Selected
+        if index.row() == self._hover_row and not (opt.state & state_flag):
             opt.palette.setBrush(QPalette.ColorRole.Highlight, self._hover_brush)
 
             # Keep normal text color
             opt.palette.setBrush(
                 QPalette.ColorRole.HighlightedText,
-                opt.palette.brush(QPalette.ColorRole.Text)
+                opt.palette.brush(QPalette.ColorRole.Text),
             )
 
             opt.state |= QStyle.StateFlag.State_Selected
@@ -163,24 +171,32 @@ class PlaylistTableWidget(QTableView):
         super().leaveEvent(e)
 
     def _configure_properties(self):
-        # Add`is not None` check to resolve mypy no attribute [union-attr] errors (optional).
+        # Add`is not None` check to resolve mypy no attribute [union-attr] errors
+        # (optional).
         header = self.horizontalHeader()
         if header is not None:
-            header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            header.setDefaultAlignment(
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            )
             header.setSectionsClickable(False)
             header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-        # Add `is not None` check to resolve mypy no attribute [union-attr] errors (optional).
+        # Add `is not None` check to resolve mypy no attribute [union-attr] errors
+        # (optional).
         rows = self.verticalHeader()
         if rows is not None:
             rows.setDefaultSectionSize(50)
             rows.hide()
 
-        self.setAlternatingRowColors(True)  # Alternating row colors
-        self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)  # Disable cell edit
-        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # Remove cell focus on click
-        self.setObjectName("playlistTableView")  # Set object name for qss.
-        self.setShowGrid(False)  # Remove grid inside table
+        # Disable cell edit.
+        self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+
+        # Remove cell focus on click.
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
+        self.setAlternatingRowColors(True)
+        self.setObjectName("playlistTableView")
+        self.setShowGrid(False)
 
         # Select the entire row on click
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -206,8 +222,9 @@ class PlaylistTableWidget(QTableView):
 # ================================================================================
 class PlaylistDisplay(QWidget):
     """A QWidget container for the main playlist widget."""
+
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
-        """Initializes PlaylistDisplay instance."""
+        """Initialize PlaylistDisplay instance."""
         super().__init__()
         self._viewmodel = playlist_viewmodel
         self._playlist_window = PlaylistTableWidget()
@@ -218,7 +235,7 @@ class PlaylistDisplay(QWidget):
         self._setup_binding()
 
     def _init_ui(self):
-        """Initializes the container's internal widgets and layouts"""
+        """Initialize the container's internal widgets and layouts."""
         section_layout = QVBoxLayout()
 
         section_layout.addWidget(self.playlist_window)
