@@ -34,7 +34,10 @@ class PlaybackControlViewModel(QObject):
     track_info = pyqtSignal(str, str)
     track_duration = pyqtSignal(int)
     position_changed = pyqtSignal(int, int)
+    player_playback_state_changed = pyqtSignal(PlaybackState)
     shutdown_finished = pyqtSignal()
+
+    enable_ui = pyqtSignal()
 
     def __init__(
             self,
@@ -50,9 +53,16 @@ class PlaybackControlViewModel(QObject):
         self._connect_signals()
 
     def _connect_signals(self):
+        # Model -> Viewmodel
+        self._playlist.playlist_changed.connect(self._on_playlist_add_song)
+
+        # AudioPlayer -> Viewmodel
         self._player_engine.audio_data_loaded.connect(self._play)
         self._player_engine.playback_started.connect(self._on_audio_player_playback_start)
         self._player_engine.position_changed.connect(self._on_audio_player_position_change)
+        self._player_engine.player_playback_state_changed.connect(
+            self._on_player_playback_state_changed
+        )
         self._player_engine.playback_finished.connect(self.next_track)
         self._player_engine.shutdown_finished.connect(self.shutdown_finished)
 
@@ -78,6 +88,15 @@ class PlaybackControlViewModel(QObject):
         time_remaining = int(time_remaining * 1000)
 
         self.position_changed.emit(elapsed_time, time_remaining)
+
+    @pyqtSlot(PlaybackState)
+    def _on_player_playback_state_changed(self, new_playback_state: PlaybackState) -> None:
+        self.player_playback_state_changed.emit(new_playback_state)
+
+    @pyqtSlot(int)
+    def _on_playlist_add_song(self, new_song_count):
+        if self._playlist.song_count - new_song_count == 0:
+            self.enable_ui.emit()
 
     # --- Private methods ---
     # TODO: Separate loading later for better Separation of Concerns (SoC).
@@ -238,6 +257,7 @@ class PlaylistViewModel(QAbstractTableModel):
     # TODO: Temporary logic, replace later.
     # Notify views if new song(s) are added.
     # Initial implementation (insertion order).
+    @pyqtSlot(int)
     def _on_model_song_insert(self, new_song_count: int) -> None:
         prev_playlist_len = self._model.song_count - new_song_count
 

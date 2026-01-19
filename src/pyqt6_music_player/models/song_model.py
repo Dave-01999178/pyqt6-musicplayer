@@ -45,7 +45,7 @@ class AudioTrack:
             An AudioTrack instance containing the audio file path and its metadata,
             or None if the file cannot be read or contains invalid audio data.
         """
-        # --- Load audio file. ---
+        # Load audio file.
         try:
             audio = mutagen.File(path)
         except (mutagen.MutagenError, OSError) as e:
@@ -55,7 +55,7 @@ class AudioTrack:
             logging.error("Unexpected error while reading %s: %s", path, e)
             return None
 
-        # --- Extract metadata. ---
+        # Extract metadata.
         metadata = get_metadata(audio)
 
         return cls(
