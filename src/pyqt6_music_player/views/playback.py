@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QWidget
 
 from pyqt6_music_player.config import (
@@ -10,9 +10,9 @@ from pyqt6_music_player.config import (
     PLAY_ICON_PATH,
     PREV_ICON_PATH,
     REPEAT_ICON_PATH,
-    REPLAY_ICON_PATH,
+    REPLAY_ICON_PATH, PAUSE_ICON_PATH,
 )
-from pyqt6_music_player.constants import DefaultAudioInfo
+from pyqt6_music_player.constants import DefaultAudioInfo, PlaybackState
 from pyqt6_music_player.helpers import format_duration
 from pyqt6_music_player.view_models import PlaybackControlViewModel
 from pyqt6_music_player.views import IconButton, IconButtonFactory
@@ -86,7 +86,11 @@ class PlayPauseButton(IconButton):
             widget_size=widget_size,
             object_name=object_name,
         )
-        self.setCheckable(True)
+
+    def update_icon(self, icon_path: str | Path):
+        icon = self.path_to_qicon(icon_path)
+
+        self.setIcon(icon)
 
 
 ReplayButton = IconButtonFactory(REPLAY_ICON_PATH)
@@ -126,10 +130,12 @@ class PlaybackProgress(QWidget):
         layout.setSpacing(10)
 
         self.setLayout(layout)
+        self.setDisabled(True)
 
     def _connect_signals(self):
         self._viewmodel.track_duration.connect(self._on_playback_start)
         self._viewmodel.position_changed.connect(self._on_playback_position_change)
+        self._viewmodel.enable_ui.connect(self._on_initial_song_add)
 
     def _on_playback_start(self, duration):
         self.progress_bar.setRange(0, duration * 1000)
@@ -140,6 +146,9 @@ class PlaybackProgress(QWidget):
         self.elapsed_time.setText(format_duration(elapsed_time // 1000))
         self.total_duration.setText(format_duration(time_remaining // 1000))
 
+    @pyqtSlot()
+    def _on_initial_song_add(self):
+        self.setEnabled(True)
 
 # ================================================================================
 # PLAYBACK CONTROLS
@@ -177,6 +186,7 @@ class PlaybackControls(QWidget):
         layout.setSpacing(10)
 
         self.setLayout(layout)
+        self.setDisabled(True)
 
     def _bind_viewmodel(self):
         # View -> Viewmodel
@@ -186,8 +196,10 @@ class PlaybackControls(QWidget):
         self.replay_button.clicked.connect(self._on_replay_button_clicked)
         self.repeat_button.clicked.connect(self._on_repeat_button_clicked)
 
-    # TODO: Switch out toggle to avoid UI and player sync issues.
-    #  E.g. toggled to play and the player did not run on first playback.
+        # Viewmodel -> View
+        self._viewmodel.enable_ui.connect(self._on_initial_song_add)
+        self._viewmodel.player_playback_state_changed.connect(self._on_playback_state_changed)
+
     def _on_play_pause_button_clicked(self):
         self._viewmodel.play_pause()
 
@@ -202,3 +214,14 @@ class PlaybackControls(QWidget):
 
     def _on_repeat_button_clicked(self):
         self._viewmodel.repeat()
+
+    @pyqtSlot(PlaybackState)
+    def _on_playback_state_changed(self, playback_state):
+        if playback_state in {PlaybackState.PAUSED, PlaybackState.STOPPED}:
+            self.play_pause_button.update_icon(PLAY_ICON_PATH)
+        else:
+            self.play_pause_button.update_icon(PAUSE_ICON_PATH)
+
+    @pyqtSlot()
+    def _on_initial_song_add(self):
+        self.setEnabled(True)
