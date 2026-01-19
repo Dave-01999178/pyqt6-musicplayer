@@ -352,6 +352,9 @@ class AudioPlayerService(QObject):
     def pause_playback(self):
         self.pause_playback_requested.emit()
 
+    def is_running(self) -> bool:
+        return self._worker_thread is not None and self._worker_thread.isRunning()
+
     def shutdown(self):
         if self._worker_thread is None:
             self.shutdown_finished.emit()

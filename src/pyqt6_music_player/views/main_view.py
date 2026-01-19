@@ -69,8 +69,7 @@ class MusicPlayerView(QWidget):
         self.setLayout(main_layout)
 
     def closeEvent(self, a0):
-        # TODO: Should close quickly when audio player is not running (fix).
-        if self._should_close:
+        if self._should_close or not self.ctx.playback_viewmodel.service_running():
             a0.accept()
             return
 

@@ -180,6 +180,9 @@ class PlaybackControlViewModel(QObject):
     def shutdown(self):
         self._player_engine.shutdown()
 
+    def service_running(self) -> bool:
+        return self._player_engine.is_running()
+
 
 # ================================================================================
 # PLAYLIST VIEWMODEL
