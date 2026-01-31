@@ -1,14 +1,22 @@
+from dataclasses import dataclass
 from typing import TypedDict
 
 from mutagen import FileType
 from mutagen.mp3 import MP3
 
-from pyqt6_music_player.constants import AudioMetadataFallback
-
 
 # ================================================================================
-# TYPED DICT
+# DATACLASS AND TYPED DICT
 # ================================================================================
+@dataclass(frozen=True)
+class AudioMetadataFallback:
+    """Fallback values for audio metadata."""
+
+    title: str = "Unknown Title"
+    artist: str = "Unknown Artist"
+    album: str = "Unknown Album"
+
+
 class AudioInfoDict(TypedDict):
     title: str
     artist: str

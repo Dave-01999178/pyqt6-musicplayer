@@ -1,18 +1,23 @@
-from PyQt6.QtCore import Qt
+"""Now playing UI components.
+
+This module defines widgets responsible for showing current track information
+including an album art, track title, and artist label.
+"""
+from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from pyqt6_music_player.config import ALBUM_ART_PLACEHOLDER
-from pyqt6_music_player.models import DEFAULT_SONG
-from pyqt6_music_player.view_models import PlaybackControlViewModel
+from pyqt6_music_player.models import DEFAULT_TRACK
+from pyqt6_music_player.view_models import PlaybackViewModel
 from pyqt6_music_player.views import MarqueeLabel
 
 
 # ================================================================================
-# NOW PLAYING WIDGETS
+# NOW PLAYING
 # ================================================================================
 #
-# --- Album art ---
+# --- WIDGETS ---
 class AlbumArtLabel(QLabel):
     """A QLabel widget for displaying album art.
 
@@ -21,20 +26,19 @@ class AlbumArtLabel(QLabel):
     """
 
     def __init__(self):
-        """Initialize AlbumArtLabel instance."""
+        """Initialize AlbumArtLabel."""
         super().__init__()
 
         self._configure_properties()
         self._init_ui()
 
+    def _init_ui(self):
+        """Initialize album art pixmap."""
+        self._set_image(ALBUM_ART_PLACEHOLDER)
+
     def _configure_properties(self):
-        """Configure the instance's properties."""
         self.setFixedSize(75, 75)
         self.setScaledContents(False)
-
-    def _init_ui(self):
-        """Initialize album art pixmap and scales it to fit."""
-        self._set_image(ALBUM_ART_PLACEHOLDER)
 
     def _set_image(self, image):
         pixmap = QPixmap(str(image))
@@ -46,22 +50,22 @@ class AlbumArtLabel(QLabel):
 
         self.setPixmap(scaled)
 
-    def update_image(self, image) -> None:
+    def set_image(self, image) -> None:
+        """Set instance image."""
         if image is None:
             return
 
         self._set_image(image)
 
 
-# --- Title and Artist label ---
 class AudioTitleLabel(MarqueeLabel):
     """A QLabel widget for displaying the current audio title.
 
     The default text is 'Song Title'.
     """
 
-    def __init__(self, text: str = DEFAULT_SONG.title):
-        """Initialize AudioTitleLabel instance."""
+    def __init__(self, text: str = DEFAULT_TRACK.title):
+        """Initialize AudioTitleLabel."""
         super().__init__(text)
 
         self.setFixedWidth(100)
@@ -74,36 +78,33 @@ class AudioArtistLabel(MarqueeLabel):
     The default text is 'Song Artist'.
     """
 
-    def __init__(self, text: str = DEFAULT_SONG.artist):
-        """Initialize AudioArtistLabel instance."""
+    def __init__(self, text: str = DEFAULT_TRACK.artist):
+        """Initialize AudioArtistLabel."""
         super().__init__(text=text)
 
         self.setFixedWidth(100)
         self.setObjectName("audioArtistLabel")
 
 
-# ================================================================================
-# NOW PLAYING SECTION
-# ================================================================================
-#
-# --- Now playing section ---
+# --- COMPONENT ---
 class NowPlayingDisplay(QWidget):
     """A QWidget container for widgets that displays current song information.
 
     This includes album art, song title, and artist label.
     """
 
-    def __init__(self, playback_viewmodel: PlaybackControlViewModel):
-        """Initialize NowPlayingDisplay instance."""
+    def __init__(self, playback_viewmodel: PlaybackViewModel):
+        """Initialize NowPlayingDisplay."""
         super().__init__()
+        # Playback viewmodel
         self._viewmodel = playback_viewmodel
 
+        # Now playing widgets
         self.album_art = AlbumArtLabel()
         self.title_label = AudioTitleLabel()
         self.artist_label = AudioArtistLabel()
 
         self._init_ui()
-
         self._viewmodel.track_info.connect(self._on_playback_start)
 
     def _init_ui(self):
@@ -123,6 +124,7 @@ class NowPlayingDisplay(QWidget):
 
         self.setLayout(layout)
 
+    @pyqtSlot(str, str)
     def _on_playback_start(self, song_title: str, song_artist: str):
         self.title_label.setText(song_title)
         self.artist_label.setText(song_artist)

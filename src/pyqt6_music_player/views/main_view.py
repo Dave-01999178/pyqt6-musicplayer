@@ -13,27 +13,33 @@ from pyqt6_music_player.config import (
     MUSIC_PLAYER_ICON_PATH,
 )
 from pyqt6_music_player.context import AppContext
-from pyqt6_music_player.views import PlayerbarView, PlaylistManagerView, PlaylistView
+from pyqt6_music_player.views import PlayerbarView, PlaylistDisplay, PlaylistManager
 
 
 # ================================================================================
 # MAIN VIEW
 # ================================================================================
 class MusicPlayerView(QWidget):
-    """App's main view."""
+    """Application main view."""
 
     def __init__(self, ctx: AppContext):
+        """Initialize MusicPlayerView."""
         super().__init__()
+        # App context
         self.ctx = ctx
-        self.playlist_manager_view = PlaylistManagerView(ctx.playlist_viewmodel)
-        self.playlist_view = PlaylistView(ctx.playlist_viewmodel)
+
+        # Sub-views
+        self.playlist_manager_view = PlaylistManager(ctx.playlist_viewmodel)
+        self.playlist_view = PlaylistDisplay(ctx.playlist_viewmodel)
         self.player_bar_view = PlayerbarView(
             ctx.playback_viewmodel,
             ctx.volume_viewmodel,
         )
 
+        # Close flag
         self._should_close = False
 
+        # UI and signals
         self._configure_properties()
         self._init_ui()
 

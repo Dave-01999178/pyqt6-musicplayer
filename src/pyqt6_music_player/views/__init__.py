@@ -28,7 +28,7 @@ from .playback import (
     PreviousButton,
     RepeatButton,
     ReplayButton,
-    TotalDurationLabel,
+    TimeRemainingLabel,
     PlaybackControls,
     PlaybackProgress,
 )
@@ -37,7 +37,7 @@ from .playback import (
 from .volume import VolumeButton, VolumeLabel, VolumeSlider, VolumeControls
 
 # Subviews
-from .subviews import PlayerbarView, PlaylistView, PlaylistManagerView
+from .subviews import PlayerbarView, PlaylistDisplay, PlaylistManager
 
 # Main view
 from .main_view import MusicPlayerView
@@ -62,7 +62,7 @@ __all__ = [
     "PreviousButton",
     "RepeatButton",
     "ReplayButton",
-    "TotalDurationLabel",
+    "TimeRemainingLabel",
     "PlaybackControls",
     "PlaybackProgress",
 
@@ -82,8 +82,8 @@ __all__ = [
 
     # Subviews
     "PlayerbarView",
-    "PlaylistView",
-    "PlaylistManagerView",
+    "PlaylistDisplay",
+    "PlaylistManager",
 
     # Main view
     "MusicPlayerView",

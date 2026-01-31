@@ -1,8 +1,8 @@
-from .viewmodel import PlaybackControlViewModel, PlaylistViewModel, VolumeViewModel
+from .viewmodel import PlaybackViewModel, PlaylistViewModel, VolumeViewModel
 
 
 __all__ = [
-    "PlaybackControlViewModel",
+    "PlaybackViewModel",
     "PlaylistViewModel",
     "VolumeViewModel"
 ]

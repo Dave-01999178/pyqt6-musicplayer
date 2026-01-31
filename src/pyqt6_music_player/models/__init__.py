@@ -1,4 +1,4 @@
-from .song_model import AudioData, AudioTrack, DEFAULT_SONG
+from .track import DefaultAudioInfo, TrackAudio, Track, DEFAULT_TRACK
 from .player_engine import AudioPlayerService, AudioPlayerWorker
 from .model import (
     PlaylistModel,
@@ -6,9 +6,10 @@ from .model import (
 )
 
 __all__ = [
-    "AudioData",
-    "AudioTrack",
-    "DEFAULT_SONG",
+    "DefaultAudioInfo",
+    "TrackAudio",
+    "Track",
+    "DEFAULT_TRACK",
     "AudioPlayerService",
     "AudioPlayerWorker",
     "PlaylistModel",

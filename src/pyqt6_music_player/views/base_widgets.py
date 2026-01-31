@@ -1,3 +1,9 @@
+"""Base PyQt6 widgets and widget factories used throughout the application.
+
+This module provides reusable UI building blocks such as icon-based buttons
+and scrolling text labels, along with lightweight factories for creating
+preconfigured, stateless widgets with consistent sizing and styling.
+"""
 import logging
 from pathlib import Path
 
@@ -9,7 +15,7 @@ from pyqt6_music_player.config import SMALL_BUTTON, SMALL_ICON
 
 
 # ================================================================================
-# BASE ICON BUTTON
+# BASE WIDGETS
 # ================================================================================
 #
 # --- Icon button ---
@@ -52,7 +58,7 @@ class IconButton(QPushButton):
         self._configure_properties()
 
     def _configure_properties(self):
-        """Configure the instance properties."""
+        """Configure instance properties."""
         icon = self.path_to_qicon(self.icon_path)
 
         self.setIcon(icon)
@@ -84,7 +90,15 @@ class IconButton(QPushButton):
 
 # --- Marquee Label ---
 class MarqueeLabel(QLabel):
+    """Custom QLabel for track title, and artist to handle text spills."""
+
     def __init__(self, text: str | None = None):
+        """Initialize MarqueeLabel instance.
+
+        Args:
+            text: The text to display. Defaults to ``None``.
+
+        """
         super().__init__(text=text)
         # Marquee settings.
         self._offset = 0  # Current horizontal offset.
@@ -115,7 +129,7 @@ class MarqueeLabel(QLabel):
 
         self.update()
 
-    def paintEvent(self, event: QPaintEvent):
+    def paintEvent(self, event: QPaintEvent | None):
         # Get the font metrics for the widget's current font and style.
         font_metrics = self.fontMetrics()
 
@@ -147,7 +161,7 @@ class MarqueeLabel(QLabel):
 
     # Note: Override to reset animation when text changes.
     # This prevents mid-word jumps or weird starting positions.
-    def setText(self, text: str):
+    def setText(self, text: str | None):
         super().setText(text)
         self._offset = 0
 
@@ -189,6 +203,7 @@ class IconButtonFactory:
         self.object_name = object_name
 
     def __call__(self) -> IconButton:
+        """Turn instance into a callable object."""
         return IconButton(
             icon_path=self.icon_path,
             icon_size=self.icon_size,
