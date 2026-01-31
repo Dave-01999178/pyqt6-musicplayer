@@ -1,3 +1,9 @@
+"""Playback UI components.
+
+This module defines widgets responsible for track navigation, playback control,
+and displaying playback progress including progress bar, elapsed,
+and time remaining labels, play/pause, next/prev, repeat, and replay button.
+"""
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSlot
@@ -7,20 +13,24 @@ from pyqt6_music_player.config import (
     MEDIUM_BUTTON,
     MEDIUM_ICON,
     NEXT_ICON_PATH,
+    PAUSE_ICON_PATH,
     PLAY_ICON_PATH,
     PREV_ICON_PATH,
     REPEAT_ICON_PATH,
-    REPLAY_ICON_PATH, PAUSE_ICON_PATH,
+    REPLAY_ICON_PATH,
 )
-from pyqt6_music_player.constants import DefaultAudioInfo, PlaybackState
+from pyqt6_music_player.constants import PlaybackState
 from pyqt6_music_player.helpers import format_duration
-from pyqt6_music_player.view_models import PlaybackControlViewModel
+from pyqt6_music_player.models import DefaultAudioInfo
+from pyqt6_music_player.view_models import PlaybackViewModel
 from pyqt6_music_player.views import IconButton, IconButtonFactory
 
 
 # ================================================================================
-# PLAYBACK PROGRESS WIDGETS
+# PLAYBACK PROGRESS
 # ================================================================================
+#
+# --- WIDGETS ---
 class PlaybackProgressSlider(QSlider):
     """A horizontal slider widget for visualizing and controlling playback progress.
 
@@ -29,37 +39,113 @@ class PlaybackProgressSlider(QSlider):
     """
 
     def __init__(self):
-        """Initialize PlaybackProgressSlider instance."""
+        """Initialize PlaybackProgressSlider."""
         super().__init__(orientation=Qt.Orientation.Horizontal)
 
 
 class ElapsedTimeLabel(QLabel):
-    """A QLabel widget for displaying the elapsed time of the current song.
-
-    The default display is empty ('0:00:00').
-    """
+    """A QLabel widget for displaying the elapsed time of the current song."""
 
     def __init__(self, text=DefaultAudioInfo.elapsed_time):
-        """Initialize ElapsedTimeLabel instance."""
+        """Initialize ElapsedTimeLabel.
+
+        Args:
+            text: The elapsed time. The default display is ('0:00:00')
+
+        """
         super().__init__(text=text)
 
 
-class TotalDurationLabel(QLabel):
-    """A QLabel widget for displaying the total duration of the current song.
-
-    The default display is empty ('').
-    """
+class TimeRemainingLabel(QLabel):
+    """A QLabel widget for displaying the time remaining of the current song."""
 
     def __init__(self, text=DefaultAudioInfo.elapsed_time):
-        """Initialize TotalDurationLabel instance."""
+        """Initialize TimeRemainingLabel.
+
+        Args:
+            text: The time remaining. The default display is ('0:00:00')
+
+        """
         super().__init__(text=text)
 
 
+# --- COMPONENTS ---
+class PlaybackProgress(QWidget):
+    """A QWidget container for grouping playback progress widgets.
+
+    This container also acts as the main view layer for playback progress,
+    and is responsible for:
+     - Displaying playback progress UIs.
+     - Handling progress bar seek event by calling the appropriate viewmodel
+       command (View -> ViewModel).
+     - Observing viewmodel for audio player service for playback updates
+       (ViewModel -> View).
+    """
+
+    def __init__(self, playback_viewmodel: PlaybackViewModel):
+        """Initialize PlaybackProgress.
+
+        Args:
+            playback_viewmodel: The playback control viewmodel.
+
+        """
+        super().__init__()
+        # Playback viewmodel
+        self._viewmodel = playback_viewmodel
+
+        # Playback progress widgets
+        self.progress_bar = PlaybackProgressSlider()
+        self.elapsed_time = ElapsedTimeLabel()
+        self.total_duration = TimeRemainingLabel()
+
+        # Setup
+        self._init_ui()
+        self._connect_signals()
+
+    def _init_ui(self):
+        """Initialize instance's internal widgets and layouts."""
+        layout = QHBoxLayout()
+
+        layout.addWidget(self.elapsed_time)
+        layout.addWidget(self.progress_bar)
+        layout.addWidget(self.total_duration)
+
+        layout.setSpacing(10)
+
+        self.setLayout(layout)
+        self.setDisabled(True)
+
+    def _connect_signals(self):
+        self._viewmodel.track_duration.connect(self._on_playback_start)
+        self._viewmodel.position_changed.connect(self._on_playback_position_change)
+        self._viewmodel.enable_ui.connect(self._on_initial_song_add)
+
+    # --- Slots ---
+    @pyqtSlot(int)
+    def _on_playback_start(self, duration):
+        duration_in_ms = duration * 1000
+
+        self.progress_bar.setRange(0, duration_in_ms)
+
+    @pyqtSlot(int, int)
+    def _on_playback_position_change(self, elapsed_time: int, time_remaining: int):
+        # TODO: Block signals later before setting values.
+        self.progress_bar.setValue(elapsed_time)
+        self.elapsed_time.setText(format_duration(elapsed_time // 1000))
+        self.total_duration.setText(format_duration(time_remaining // 1000))
+
+    @pyqtSlot()
+    def _on_initial_song_add(self):
+        self.setEnabled(True)
+
+
 # ================================================================================
-# PLAYBACK CONTROL WIDGETS
+# PLAYBACK CONTROL
 # ================================================================================
+#
+# --- WIDGETS ---
 class PlayPauseButton(IconButton):
-    """A custom play/pause button."""
+    """Play/Pause button."""
 
     def __init__(
             self,
@@ -68,7 +154,7 @@ class PlayPauseButton(IconButton):
             widget_size: tuple[int, int] = MEDIUM_BUTTON,
             object_name: str | None = "playPauseBtn",
     ):
-        """Initialize PlayPauseButton instance.
+        """Initialize PlayPauseButton.
 
         Args:
             icon_path: Path to the icon file. Defaults to 'play' icon.
@@ -87,7 +173,13 @@ class PlayPauseButton(IconButton):
             object_name=object_name,
         )
 
-    def update_icon(self, icon_path: str | Path):
+    def update_icon(self, icon_path: str | Path) -> None:
+        """Update the button's icon using the given icon.
+
+        Args:
+            icon_path: Icon image's file path.
+
+        """
         icon = self.path_to_qicon(icon_path)
 
         self.setIcon(icon)
@@ -99,79 +191,38 @@ NextButton = IconButtonFactory(NEXT_ICON_PATH)
 RepeatButton = IconButtonFactory(REPEAT_ICON_PATH)
 
 
-# ================================================================================
-# PLAYBACK PROGRESS
-# ================================================================================
-class PlaybackProgress(QWidget):
-    """A QWidget container for widgets used to control and display playback progress.
-
-    This includes progress bar, and time labels.
-    """
-
-    def __init__(self, playback_viewmodel: PlaybackControlViewModel):
-        """Initialize PlaybackProgress instance."""
-        super().__init__()
-        self._viewmodel = playback_viewmodel
-        self.progress_bar = PlaybackProgressSlider()
-        self.elapsed_time = ElapsedTimeLabel()
-        self.total_duration = TotalDurationLabel()
-
-        self._init_ui()
-        self._connect_signals()
-
-    def _init_ui(self):
-        """Initialize the container's internal widgets and layouts."""
-        layout = QHBoxLayout()
-
-        layout.addWidget(self.elapsed_time)
-        layout.addWidget(self.progress_bar)
-        layout.addWidget(self.total_duration)
-
-        layout.setSpacing(10)
-
-        self.setLayout(layout)
-        self.setDisabled(True)
-
-    def _connect_signals(self):
-        self._viewmodel.track_duration.connect(self._on_playback_start)
-        self._viewmodel.position_changed.connect(self._on_playback_position_change)
-        self._viewmodel.enable_ui.connect(self._on_initial_song_add)
-
-    def _on_playback_start(self, duration):
-        self.progress_bar.setRange(0, duration * 1000)
-
-    def _on_playback_position_change(self, elapsed_time: int, time_remaining: int):
-        # TODO: Block signals later before setting values.
-        self.progress_bar.setValue(elapsed_time)
-        self.elapsed_time.setText(format_duration(elapsed_time // 1000))
-        self.total_duration.setText(format_duration(time_remaining // 1000))
-
-    @pyqtSlot()
-    def _on_initial_song_add(self):
-        self.setEnabled(True)
-
-# ================================================================================
-# PLAYBACK CONTROLS
-# ================================================================================
+# --- VIEW ---
 class PlaybackControls(QWidget):
-    """A QWidget container for track navigation, and playback control widgets.
+    """A QWidget container for grouping playback control, and track navigation widgets.
 
-    This includes replay, next, previous, repeat, and play/pause button.
+    This container also acts as the main view layer for playback control,
+    and is responsible for:
+     - Displaying playback control UIs.
+     - Handling playback control input events by calling the appropriate viewmodel
+       command (View -> ViewModel).
     """
 
-    def __init__(self, playback_viewmodel: PlaybackControlViewModel) -> None:
-        """Initialize PlaybackControls instance."""
+    def __init__(self, playback_viewmodel: PlaybackViewModel) -> None:
+        """Initialize PlaybackControls
+
+        Args:
+            playback_viewmodel: The playback control viewmodel.
+
+        """
         super().__init__()
+        # Viewmodel
         self._viewmodel = playback_viewmodel
 
+        # Widgets
         self.replay_button = ReplayButton()
         self.previous_button = PreviousButton()
         self.play_pause_button = PlayPauseButton()
         self.next_button = NextButton()
         self.repeat_button = RepeatButton()
 
+        # Setup
         self._init_ui()
-        self._bind_viewmodel()
+        self._setup_binding()
 
     def _init_ui(self):
         """Initialize the instance's internal widgets and layouts."""
@@ -188,7 +239,8 @@ class PlaybackControls(QWidget):
         self.setLayout(layout)
         self.setDisabled(True)
 
-    def _bind_viewmodel(self):
+    def _setup_binding(self):
+        """Set up volume viewmodel and view binding."""
         # View -> Viewmodel
         self.play_pause_button.clicked.connect(self._on_play_pause_button_clicked)
         self.next_button.clicked.connect(self._on_next_button_clicked)
@@ -198,20 +250,26 @@ class PlaybackControls(QWidget):
 
         # Viewmodel -> View
         self._viewmodel.enable_ui.connect(self._on_initial_song_add)
-        self._viewmodel.player_playback_state_changed.connect(self._on_playback_state_changed)
+        self._viewmodel.player_state_changed.connect(self._on_playback_state_changed)
 
+    # --- Slots ---
+    @pyqtSlot()
     def _on_play_pause_button_clicked(self):
         self._viewmodel.play_pause()
 
+    @pyqtSlot()
     def _on_next_button_clicked(self):
         self._viewmodel.next_track()
 
+    @pyqtSlot()
     def _on_previous_button_clicked(self):
         self._viewmodel.previous_track()
 
+    @pyqtSlot()
     def _on_replay_button_clicked(self):
         self._viewmodel.replay()
 
+    @pyqtSlot()
     def _on_repeat_button_clicked(self):
         self._viewmodel.repeat()
 

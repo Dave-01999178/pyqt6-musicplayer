@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from pyqt6_music_player.models import AudioPlayerService, PlaylistModel, VolumeModel
 from pyqt6_music_player.view_models import (
-    PlaybackControlViewModel,
+    PlaybackViewModel,
     PlaylistViewModel,
     VolumeViewModel
 )
@@ -18,7 +18,7 @@ class AppContext:
     volume_model: VolumeModel
 
     # --- ViewModels ---
-    playback_viewmodel: PlaybackControlViewModel
+    playback_viewmodel: PlaybackViewModel
     playlist_viewmodel: PlaylistViewModel
     volume_viewmodel: VolumeViewModel
 
@@ -32,7 +32,7 @@ def build_context():
     volume_model = VolumeModel()
 
     # --- ViewModels ---
-    playback_viewmodel = PlaybackControlViewModel(playlist_model, player_engine)
+    playback_viewmodel = PlaybackViewModel(playlist_model, player_engine)
     playlist_viewmodel = PlaylistViewModel(playlist_model)
     volume_viewmodel = VolumeViewModel(volume_model, player_engine)
 

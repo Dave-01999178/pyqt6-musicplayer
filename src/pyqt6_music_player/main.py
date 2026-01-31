@@ -23,7 +23,7 @@ def exception_hook(exc_type, value, tb):
 sys.excepthook = exception_hook
 
 
-def load_stylesheet(path: str| Path) -> str | None:
+def load_stylesheet(path: str | Path) -> str | None:
     if not os.path.isfile(path):
         logger.warning("[WARNING] Stylesheet not found: %s", path)
         return None
@@ -40,7 +40,7 @@ def main():
     # --- Log ---
     setup_logging()
 
-    logger.info("Application started")
+    logger.info("Application started.")
 
     # --- App ---
     app = QApplication(sys.argv)

@@ -8,19 +8,27 @@ import numpy as np
 from numpy.typing import NDArray
 from pydub import AudioSegment
 
-from pyqt6_music_player.constants import DefaultAudioInfo, SUPPORTED_BYTES
+from pyqt6_music_player.constants import SUPPORTED_BYTES
 from pyqt6_music_player.metadata import get_metadata
 
 
+@dataclass(frozen=True)
+class DefaultAudioInfo:
+    title = "Song Title"
+    artist = "Song Artist"
+    album = "Song Album"
+    elapsed_time = "0:00:00"
+    total_duration = ""
+
+
 # ================================================================================
-# AUDIO MODEL
+# TRACK
 # ================================================================================
 #
-# ---------- Audio track (file path and metadata) ----------
+# --- Track file path, and metadata ---
 @dataclass(frozen=True, eq=True)
-class AudioTrack:
-    """
-    Represents an audio track with metadata.
+class Track:
+    """Represent an audio track with metadata.
 
     Attributes:
         path: Filesystem path to the audio file.
@@ -28,22 +36,23 @@ class AudioTrack:
         artist: Track artist.
         album: Album name.
         duration: Track duration in seconds (float).
+
     """
+
     path: Path | None = None
     title: str = DefaultAudioInfo.title
     artist: str = DefaultAudioInfo.artist
     album: str = DefaultAudioInfo.album
     duration: str | float = DefaultAudioInfo.elapsed_time
-    # album_art: QPixmap
 
     @classmethod
     def from_path(cls, path: Path) -> Self | None:
-        """
-        Creates an AudioTrack instance from an audio file.
+        """Create a Track instance from an audio file.
 
         Returns:
-            An AudioTrack instance containing the audio file path and its metadata,
+            A Track instance containing the audio file path and its metadata,
             or None if the file cannot be read or contains invalid audio data.
+
         """
         # Load audio file.
         try:
@@ -63,15 +72,14 @@ class AudioTrack:
             title=metadata["title"],
             artist=metadata["artist"],
             album=metadata["album"],
-            duration=metadata["duration"]
+            duration=metadata["duration"],
         )
 
 
-# ---------- Audio data (PCM and format parameters) ----------
+# --- Track PCM and format parameters ---
 @dataclass(frozen=True, eq=True)
-class AudioData:
-    """
-    Represents PCM audio samples normalized to [-1.0, 1.0].
+class TrackAudio:
+    """Represents PCM audio samples normalized to [-1.0, 1.0].
 
     Attributes:
         channels: Number of audio channels.
@@ -80,7 +88,9 @@ class AudioData:
         orig_dtype: Original PCM numpy dtype.
         orig_dtype_max: Maximum representable value of original dtype.
         samples: Normalized audio samples as float32.
+
     """
+
     channels: int
     sample_rate: int
     sample_width: int
@@ -89,6 +99,7 @@ class AudioData:
     samples: NDArray[np.float32]
 
     def __post_init__(self) -> None:
+        """Set PCM samples to read-only."""
         arr = self.samples
 
         if not arr.flags.writeable:
@@ -97,12 +108,18 @@ class AudioData:
         arr.setflags(write=False)  # Set to read-only.
 
     @classmethod
-    def from_file(cls, file: Path) -> Self | None:
+    def from_file(cls, path: Path) -> Self | None:
+        """Decode and parse AudioSegment.
+
+        Args:
+            path: The filesystem path to the audio file.
+
+        """
         # --- Load and decode file. ---
         try:
-            audio_segment = AudioSegment.from_file(file)
+            audio_segment = AudioSegment.from_file(path)
         except Exception as e:
-            logging.error("Failed to decode file: %s, %s.", file, e)
+            logging.error("Failed to decode file: %s, %s.", path, e)
             return None
 
         # --- Parse raw data from AudioSegment. ---
@@ -114,17 +131,23 @@ class AudioData:
             logging.error("Invalid/Unsupported sample width: %d", sample_width)
             return None
 
-        if sample_width == 1:
+        one_byte = 1
+        two_bytes = 2
+
+        if sample_width == one_byte:
             orig_dtype = np.uint8
-        elif sample_width == 2:
+        elif sample_width == two_bytes:
             orig_dtype = np.int16
         else:
             orig_dtype = np.int32
 
-        samples = np.frombuffer(buffer=audio_segment.raw_data, dtype=orig_dtype).astype(np.float32)
+        samples = np.frombuffer(
+            buffer=audio_segment.raw_data,
+            dtype=orig_dtype,
+        ).astype(np.float32)
 
         # --- Normalize samples to [-1.0, 1.0] range. ---
-        if sample_width == 1:
+        if sample_width == one_byte:
             max_value = np.iinfo(orig_dtype).max
             samples_normalized = (samples - 128.0) / 128.0
         else:
@@ -135,7 +158,8 @@ class AudioData:
             samples_normalized = samples / float(max_value)
 
         # --- Reshape samples array: (frames, channels). ---
-        # '-1' is a numpy trick to automatically calculate that dimension size (rows in this case).
+        # '-1' is a numpy trick to automatically calculate a dimension size
+        # (rows in this case).
         samples_normalized = samples_normalized.reshape(-1, audio_segment.channels)
 
         return cls(
@@ -144,8 +168,8 @@ class AudioData:
             sample_width=sample_width,
             orig_dtype=orig_dtype,
             orig_dtype_max=max_value,
-            samples=samples_normalized
+            samples=samples_normalized,
         )
 
 
-DEFAULT_SONG: AudioTrack = AudioTrack()
+DEFAULT_TRACK: Track = Track()

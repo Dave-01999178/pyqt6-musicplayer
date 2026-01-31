@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
 
 from pyqt6_music_player.view_models import (
-    PlaybackControlViewModel,
+    PlaybackViewModel,
     PlaylistViewModel,
     VolumeViewModel,
 )
@@ -16,7 +16,15 @@ from pyqt6_music_player.views import (
 
 
 class PlaylistManagerView(QFrame):
+    """A customizable frame container for playlist manager."""
+
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
+        """Initialize PlaylistManagerView.
+
+        Args:
+            playlist_viewmodel: The playlist viewmodel.
+
+        """
         super().__init__()
         self._playlist_manager = PlaylistManager(playlist_viewmodel)
 
@@ -33,13 +41,17 @@ class PlaylistManagerView(QFrame):
 
         self.setLayout(instance_layout)
 
-    @property
-    def playlist_manager(self):
-        return self._playlist_manager
-
 
 class PlaylistView(QFrame):
+    """A customizable frame container for playlist display."""
+
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
+        """Initialize PlaylistView.
+
+        Args:
+            playlist_viewmodel: The playlist viewmodel.
+
+        """
         super().__init__()
         self._playlist_display = PlaylistDisplay(playlist_viewmodel)
 
@@ -56,10 +68,6 @@ class PlaylistView(QFrame):
 
         self.setLayout(instance_layout)
 
-    @property
-    def playlist_display(self):
-        return self._playlist_display
-
 
 class PlayerbarView(QFrame):
     """A customizable QFrame container for grouping player-related view/components.
@@ -70,9 +78,16 @@ class PlayerbarView(QFrame):
 
     def __init__(
             self,
-            playback_viewmodel: PlaybackControlViewModel,
+            playback_viewmodel: PlaybackViewModel,
             volume_viewmodel: VolumeViewModel,
     ):
+        """Initialize PlayerbarView.
+
+        Args:
+            playback_viewmodel: The playback viewmodel.
+            volume_viewmodel: The volume viewmodel.
+
+        """
         super().__init__()
         self._playback_progress = PlaybackProgress(playback_viewmodel)
         self._now_playing_display = NowPlayingDisplay(playback_viewmodel)
@@ -82,14 +97,13 @@ class PlayerbarView(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        """Initialize the instance's internal widgets and layouts."""
+        """Initialize instance's internal widgets and layouts."""
         instance_layout = QVBoxLayout()
 
         # --- Top section ---
         top_layout = QHBoxLayout()
 
-        # Top (Playback progress widgets): Progress bar, elapsed time and total duration
-        # label.
+        # Playback progress widgets: progress bar, elapsed, and time remaining label.
         top_layout.addWidget(self._playback_progress)
 
         # --- Bottom section ---

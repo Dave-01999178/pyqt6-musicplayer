@@ -65,7 +65,7 @@ SMALL_ICON = (15, 15)
 MEDIUM_BUTTON = (40, 40)
 MEDIUM_ICON = (20, 20)
 
-RECTANGLE_MEDIUM = (120, 40)
+HORIZONTAL_MEDIUM_BUTTON = (120, 40)
 
 
 # ================================================================================
