@@ -43,16 +43,16 @@ class PlaybackViewModel(QObject):
     ):
         super().__init__()
         self._player_engine = player_engine
-        self._model = playlist_model
+        self._playlist = playlist_model
 
-        self._current_song = None
-        self._current_song_index = None
+        self._current_track = None
 
         self._connect_signals()
 
     def _connect_signals(self):
         # Model -> Viewmodel
-        self._model.playlist_changed.connect(self._on_playlist_add_song)
+        self._playlist.playlist_changed.connect(self._on_playlist_initial_add_song)
+        self._playlist.playing_index_changed.connect(self._on_playlist_index_changed)
 
         # AudioPlayer -> Viewmodel
         self._player_engine.playback_started.connect(
@@ -70,9 +70,9 @@ class PlaybackViewModel(QObject):
     # --- Slots ---
     @pyqtSlot()
     def _on_audio_player_playback_start(self):
-        song_title = self._current_song.title
-        song_album = self._current_song.album
-        song_duration = int(self._current_song.duration)
+        song_title = self._current_track.title
+        song_album = self._current_track.album
+        song_duration = int(self._current_track.duration)
 
         self.track_info.emit(song_title, song_album)
         self.track_duration.emit(song_duration)
@@ -91,36 +91,59 @@ class PlaybackViewModel(QObject):
         self.position_changed.emit(elapsed_time, time_remaining)
 
     @pyqtSlot(int)
-    def _on_playlist_add_song(self, new_song_count) -> None:
-        if self._model.song_count - new_song_count != 0:
+    def _on_playlist_initial_add_song(self, new_song_count) -> None:
+        if self._playlist.song_count - new_song_count != 0:
             return
 
         self.enable_ui.emit()
 
+    @pyqtSlot(int)
+    def _on_playlist_index_changed(self, new_index: int):
+        selected_track = self._playlist.get_track(new_index)
+        audio = self._get_audio(selected_track)
+
+        if audio is not None:
+            self._player_engine.load_audio(audio)
+
+            # TODO: Extract and move to another slot, this should only trigger
+            #  when audio is loaded successfully.
+            self._current_track = selected_track
+
+            self._player_engine.start_playback()
+
     # --- Private methods ---
-    # TODO: Separate loading later for better Separation of Concerns (SoC).
-    def _play(self, song: Track) -> None:
-        # Do not load if same song. E.g. repeat or song at the end of playlist.
-        if song == self._current_song:
+    @staticmethod
+    def _get_audio(track: Track) -> TrackAudio | None:
+        file_path = track.path
+
+        return TrackAudio.from_file(file_path)
+
+    def _load_and_play(self, track: Track = None) -> None:
+        track_to_use = track or self._playlist.selected_track
+
+        if track_to_use == self._current_track:
             return
 
-        file_path = song.path
-        audio_data = TrackAudio.from_file(file_path)
+        audio = self._get_audio(track_to_use)
 
-        if audio_data is None:
+        if audio is None:
             return
 
-        self._player_engine.load_audio(audio_data)
+        self._player_engine.load_audio(audio)
 
-        self._current_song = song
+        # TODO: Extract and move to another slot, this should only trigger
+        #  when audio is loaded successfully.
+        selected_index = self._playlist.selected_index
+
+        self._current_track = track_to_use
+        self._playlist.set_playing_index(selected_index)
 
         self._player_engine.start_playback()
 
     # --- Commands ---
     def play_pause(self):
         """Start, pause and resume playback based on the current playback state."""
-        # Do nothing if there's no song playing or selected.
-        if self._model.selected_song is None:
+        if self._playlist.selected_track is None:
             return
 
         # Resume
@@ -131,38 +154,16 @@ class PlaybackViewModel(QObject):
         elif self._player_engine.playback_state is PlaybackState.PLAYING:
             self._player_engine.pause_playback()
 
-        # Start playback
+        # Start a new playback
         else:
-            selected_song = self._model.selected_song
-
-            self._play(selected_song)
+            self._load_and_play()  # Load on demand approach.
 
     @pyqtSlot()
     def next_track(self):
-        current_index = self._model.current_index
-
-        # Can't move on to the next track if there's no song selected or playing.
-        if current_index is None and self._current_song is None:
-            return
-
-        self._model.set_selected_index(current_index + 1)
-
-        next_song = self._model.selected_song
-
-        self._play(next_song)
+        self._playlist.next_track()
 
     def previous_track(self):
-        current_index = self._model.current_index
-
-        # Can't move on to the previous track if there's no song selected or playing.
-        if current_index is None and self._current_song is None:
-            return
-
-        self._model.set_selected_index(current_index - 1)
-
-        prev_song = self._model.selected_song
-
-        self._play(prev_song)
+        self._playlist.prev_track()
 
     def replay(self):
         pass
@@ -207,7 +208,7 @@ class PlaylistViewModel(QAbstractTableModel):
         self._model = playlist_model
 
         self._model.playlist_changed.connect(self._on_model_song_added)
-        self._model.selected_index_updated.connect(self._on_model_index_updated)
+        self._model.selected_index_changed.connect(self._on_model_index_updated)
 
     # --- QAbstractTableModel methods (overridden) ---
     def rowCount(self, parent=None):
@@ -283,14 +284,14 @@ class PlaylistViewModel(QAbstractTableModel):
         self.model_index_updated.emit(new_index)  # type: ignore
 
     # --- Commands ---
-    def add_song(self, files: Sequence[str]) -> None:
+    def add_songs(self, files: Sequence[str]) -> None:
         """Command for adding new songs to playlist model.
 
         Args:
             files: A sequence of path-like objects.
 
         """
-        self._model.add_song(files)
+        self._model.add_songs(files)
 
     def set_selected_index(self, index: int) -> None:
         """Command for setting a new index in playlist model.
@@ -300,28 +301,6 @@ class PlaylistViewModel(QAbstractTableModel):
 
         """
         self._model.set_selected_index(index)
-
-    # --- Properties ---
-    @property
-    def playlist(self) -> list[Track]:
-        """Expose the model's current playlist.
-
-        Returns:
-            list[Track]: The current playlist.
-
-        """
-        return self._model.playlist
-
-    @property
-    def selected_song(self) -> Track | None:
-        """Expose the model's currently selected song.
-
-        Returns:
-            Track | None: The selected song from the model,
-                         or ``None`` if the playlist is empty, or nothing is selected.
-
-        """
-        return self._model.selected_song
 
 
 # ================================================================================

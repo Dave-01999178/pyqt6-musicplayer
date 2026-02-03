@@ -115,7 +115,7 @@ class PlaylistManager(QWidget):
         if not file_paths:
             return
 
-        self._viewmodel.add_song(file_paths)
+        self._viewmodel.add_songs(file_paths)
 
 
 # ================================================================================
@@ -318,7 +318,8 @@ class PlaylistDisplay(QWidget):
             new_index: The new row index.
 
         """
-        self._playlist_window.selectRow(new_index)
+        if new_index != self._playlist_window.currentIndex().row():
+            self._playlist_window.selectRow(new_index)
 
     # --- Properties ---
     @property

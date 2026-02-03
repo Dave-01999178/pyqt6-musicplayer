@@ -22,6 +22,7 @@ MAX_VOLUME = 100
 # Enums
 # ================================================================================
 class PlaybackState(Enum):
+    # IDLE = auto()  # Default state, no track loaded.
     PLAYING = auto()
     PAUSED = auto()
-    STOPPED = auto()
+    STOPPED = auto()  # Playback interrupted, track loaded but not playing.
