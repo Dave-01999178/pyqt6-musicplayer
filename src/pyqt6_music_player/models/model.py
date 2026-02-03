@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # APP MODELS
 # ================================================================================
 #
-# ---------- Playlist model ----------
+# --- Playlist model ---
 class PlaylistModel(QObject):
     """The playlist model.
 
@@ -26,7 +26,8 @@ class PlaylistModel(QObject):
     """
 
     playlist_changed = pyqtSignal(int)  # TODO: Rename to song_added.
-    selected_index_updated = pyqtSignal(int)
+    selected_index_changed = pyqtSignal(int)
+    playing_index_changed = pyqtSignal(int)
 
     def __init__(self) -> None:
         """Initialize PlaylistModel instance."""
@@ -34,7 +35,8 @@ class PlaylistModel(QObject):
         self._playlist: list[Track] = []  # TODO: Consider replacing list.
         self._playlist_set: set[Path] = set()
 
-        self._current_index: int | None = None
+        self._selected_index: int | None = None
+        self._playing_index: int | None = None
 
     # --- Private methods ---
     @staticmethod
@@ -69,7 +71,7 @@ class PlaylistModel(QObject):
         return normalized_paths
 
     # --- Public methods ---
-    def add_song(self, files: Sequence[str | Path]) -> None:
+    def add_songs(self, files: Sequence[str | Path]) -> None:
         """Add one or more audio files to the playlist.
 
         Supported extensions: .mp3, .wav, .flac, .ogg
@@ -78,7 +80,7 @@ class PlaylistModel(QObject):
             files: A sequence of path-like objects.
 
         """
-        if not files:
+        if not files or files is None:
             return
 
         # Allow single str/Path input by wrapping into a list.
@@ -86,7 +88,6 @@ class PlaylistModel(QObject):
             files = [files]
 
         paths = self._normalize_to_paths(files)
-
         from_path = Track.from_path  # Store locally to avoid repeated lookups.
         add_count = 0
         for p in paths:
@@ -128,8 +129,41 @@ class PlaylistModel(QObject):
         """
 
         if 0 <= index < len(self._playlist):
-            self._current_index = index
-            self.selected_index_updated.emit(self._current_index)
+            self._selected_index = index
+
+            self.selected_index_changed.emit(self._selected_index)
+
+    def set_playing_index(self, index: int):
+        if 0 <= index < len(self._playlist):
+            self._playing_index = index
+
+    def next_track(self):
+        if self._playing_index is None:
+            return
+
+        next_index = self._playing_index + 1
+        if 0 <= next_index < len(self._playlist):
+            self.set_selected_index(next_index)
+
+            self.set_playing_index(next_index)
+            self.playing_index_changed.emit(next_index)
+
+    def prev_track(self):
+        if self._playing_index is None:
+            return
+
+        prev_index = self._playing_index - 1
+        if 0 <= prev_index < len(self._playlist):
+            self.set_selected_index(prev_index)
+
+            self.set_playing_index(prev_index)
+            self.playing_index_changed.emit(prev_index)
+
+    def get_track(self, index) -> Track | None:
+        if self._playlist is None or not (0 <= index < len(self._playlist)):
+            return None
+
+        return self._playlist[index]
 
     # --- Properties ---
     @property
@@ -143,28 +177,35 @@ class PlaylistModel(QObject):
         return self._playlist_set
 
     @property
-    def current_index(self) -> int | None:
+    def selected_index(self) -> int | None:
         """Return the active playlist index, or None if the playlist is empty."""
         if not self._playlist:
             return None
 
-        return self._current_index
+        return self._selected_index
 
     @property
-    def selected_song(self) -> Track | None:
-        """Return the currently selected song based on the active playlist index.
+    def selected_track(self) -> Track | None:
+        """Return the currently selected track based on the active playlist index.
 
-        If no song is selected or the playlist is empty, this property returns
+        If no track is selected or the playlist is empty, this property returns
         ``None``. A valid selection occurs only when the internal index is set
         and falls within the bounds of the playlist.
 
         Returns:
-            Track | None: The selected song from the model,
+            Track | None: The selected track from the model,
                          or ``None`` if the playlist is empty, or nothing is selected.
 
         """
-        if self._current_index is not None:
-            return self._playlist[self._current_index]
+        if self._selected_index is not None:
+            return self._playlist[self._selected_index]
+
+        return None
+
+    @property
+    def track_playing(self) -> Track | None:
+        if self._playing_index is not None:
+            return self._playlist[self._playing_index]
 
         return None
 
@@ -174,7 +215,7 @@ class PlaylistModel(QObject):
         return len(self._playlist)
 
 
-# ---------- Volume model ----------
+# --- Volume model ---
 class VolumeModel(QObject):
     """Volume model.
 

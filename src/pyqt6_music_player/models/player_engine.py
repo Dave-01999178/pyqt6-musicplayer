@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 #
 # ---------- Audio player worker ----------
 class AudioPlayerWorker(QObject):
+    audio_loaded = pyqtSignal()
     playback_started = pyqtSignal()
     frame_position_changed = pyqtSignal(float, float)
     playback_state_changed = pyqtSignal(PlaybackState)
@@ -137,6 +138,8 @@ class AudioPlayerWorker(QObject):
         frame_position = self._frame_position
         frame_remaining = total_frames - self._frame_position
 
+        # TODO: Move at the beginning to capture initial positions then remove initial
+        #  duration emit in viewmodel.
         QMetaObject.invokeMethod(
             self,
             "_on_frame_position_changed",
@@ -210,16 +213,14 @@ class AudioPlayerWorker(QObject):
             audio_data: The audio data to load.
 
         """
-        if not isinstance(audio_data, TrackAudio):
-            return
-
         if self._playback_state is not PlaybackState.STOPPED:
             self._set_playback_state(PlaybackState.STOPPED)
 
-        self._release_stream()  # Release stream before loading the audio data.
+        self._release_stream()  # Release PyAudio stream before loading new audio.
 
         self._frame_position = 0  # Reset frame position.
         self._audio_data = audio_data
+
 
     @pyqtSlot()
     def start_playback(self):
@@ -353,23 +354,36 @@ class AudioPlayerService(QObject):
 
     # --- Public methods ---
     def load_audio(self, audio_data: TrackAudio):
+        if not isinstance(audio_data, TrackAudio):
+            return
+
         self._init_thread_and_worker()
 
         self.load_audio_requested.emit(audio_data)
 
-    def start_playback(self):
+    def start_playback(self) -> None:
+        """Start new playback."""
         self.start_playback_requested.emit()
 
-    def resume_playback(self):
+    def resume_playback(self) -> None:
+        """Resume current playback."""
         self.resume_playback_requested.emit()
 
-    def pause_playback(self):
+    def pause_playback(self) -> None:
+        """Pause current playback."""
         self.pause_playback_requested.emit()
 
     def is_running(self) -> bool:
+        """Check if there's an active thread.
+
+        Returns:
+            ``True`` if there's an active thread; otherwise, ``False``.
+
+        """
         return self._worker_thread is not None and self._worker_thread.isRunning()
 
     def shutdown(self):
+        """Shutdown current thread."""
         if self._worker_thread is None:
             self.worker_resources_released.emit()
             return
