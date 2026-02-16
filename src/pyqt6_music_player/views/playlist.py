@@ -21,8 +21,8 @@ from PyQt6.QtWidgets import (
 
 from pyqt6_music_player.config import (
     ADD_ICON_PATH,
-    LOAD_FOLDER_ICON_PATH,
     HORIZONTAL_MEDIUM_BUTTON,
+    LOAD_FOLDER_ICON_PATH,
     REMOVE_ICON_PATH,
 )
 from pyqt6_music_player.constants import FILE_DIALOG_FILTER
@@ -34,19 +34,19 @@ from pyqt6_music_player.views import IconButtonFactory
 # ================================================================================
 #
 # --- WIDGETS ---
-AddSongButton = IconButtonFactory(
+AddTrackButton = IconButtonFactory(
     ADD_ICON_PATH,
     widget_size=HORIZONTAL_MEDIUM_BUTTON,
     button_text="Add song(s)",
     object_name="addSongBtn",
 )
-RemoveSongButton = IconButtonFactory(
+RemoveTrackButton = IconButtonFactory(
     REMOVE_ICON_PATH,
     widget_size=HORIZONTAL_MEDIUM_BUTTON,
     button_text="Remove",
     object_name="removeSongBtn",
 )
-LoadSongFolderButton = IconButtonFactory(
+LoadFolderButton = IconButtonFactory(
     LOAD_FOLDER_ICON_PATH,
     widget_size=HORIZONTAL_MEDIUM_BUTTON,
     button_text="Load folder",
@@ -73,36 +73,40 @@ class PlaylistManager(QWidget):
 
         """
         super().__init__()
-        # Playlist viewmodel
-        self._viewmodel = playlist_viewmodel
+        # Viewmodel
+        self._playlist_viewmodel = playlist_viewmodel
 
-        # Playlist manager widgets
-        self._add_button = AddSongButton()
-        self._remove_button = RemoveSongButton()
-        self._load_button = LoadSongFolderButton()
+        # Widgets
+        self._add_track_btn = AddTrackButton()
+        self._remove_track_btn = RemoveTrackButton()
+        self._load_folder_btn = LoadFolderButton()
 
+        # Setup
         self._init_ui()
-        self._bind_viewmodel()
+        self._connect_signals()
 
+    # --- Private methods ---
     def _init_ui(self):
         """Initialize instance's internal widgets and layouts."""
         layout = QHBoxLayout()
 
-        layout.addWidget(self._add_button)
-        layout.addWidget(self._remove_button)
-        layout.addWidget(self._load_button)
+        layout.addWidget(self._add_track_btn)
+        layout.addWidget(self._remove_track_btn)
+        layout.addWidget(self._load_folder_btn)
 
         layout.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter)
 
         self.setLayout(layout)
 
-    def _bind_viewmodel(self):
-        """Bind playlist viewmodel to playlist manager view."""
-        # View -> ViewModel (user actions)
-        self._add_button.clicked.connect(self._on_add_song_clicked)
+    def _connect_signals(self):
+        """Connect button widget signals to their respective slots."""
+        # View -> ViewModel (user actions).
+        self._add_track_btn.clicked.connect(self._on_add_track_btn_clicked)
 
-    def _on_add_song_clicked(self):
-        """Add the selected song(s) to playlist."""
+    # --- Slots ---
+    @pyqtSlot()
+    def _on_add_track_btn_clicked(self) -> None:
+        """Add track button click event signal handler."""
         # The `getOpenFileNames()` returns a tuple containing the list of selected
         # filenames, and the name of the selected filter so we use `_` to discard
         # the filter name.
@@ -115,7 +119,7 @@ class PlaylistManager(QWidget):
         if not file_paths:
             return
 
-        self._viewmodel.add_songs(file_paths)
+        self._playlist_viewmodel.add_tracks(file_paths)
 
 
 # ================================================================================
@@ -124,7 +128,7 @@ class PlaylistManager(QWidget):
 #
 # --- PLAYLIST WIDGET ROW HOVER EFFECTS ---
 class HoverRowDelegate(QStyledItemDelegate):
-    """Custom class for QTableView row hover effect."""
+    """Custom QTableView row hover effect."""
 
     def __init__(self, parent=None, hover_color: str="#3a3f4b"):
         """Initialize HoverRowDelegate.
@@ -132,6 +136,7 @@ class HoverRowDelegate(QStyledItemDelegate):
         Args:
             parent: The parent object.
             hover_color: The desired row hover color. Defaults to #3a3f4b.
+
         """
         super().__init__()
         self._parent = parent
@@ -180,20 +185,19 @@ class HoverRowDelegate(QStyledItemDelegate):
 
 
 # --- WIDGETS ---
-class PlaylistTableWidget(QTableView):
-    """Playlist table."""
+class PlaylistWidget(QTableView):
+    """Playlist widget."""
 
     def __init__(self):
-        """Initialize PlaylistTableWidget."""
+        """Initialize PlaylistWidget."""
         super().__init__()
+        # Setup
         self._configure_properties()
         self._configure_viewport()
         self._configure_delegate()
 
     def _configure_properties(self):
         """Configure instance's properties."""
-        # Add`is not None` check to resolve mypy no attribute [union-attr] errors
-        # (optional).
         header = self.horizontalHeader()
         if header is not None:
             header.setDefaultAlignment(
@@ -202,8 +206,6 @@ class PlaylistTableWidget(QTableView):
             header.setSectionsClickable(False)
             header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-        # Add `is not None` check to resolve mypy no attribute [union-attr] errors
-        # (optional).
         rows = self.verticalHeader()
         if rows is not None:
             rows.setDefaultSectionSize(50)
@@ -227,7 +229,6 @@ class PlaylistTableWidget(QTableView):
 
     def _configure_viewport(self):
         """Configure instance's viewport."""
-        # Add `is not None` check to resolve mypy no attribute [union-attr] errors.
         self._viewport = self.viewport()
         if self._viewport is not None:
             self._viewport.setMouseTracking(True)
@@ -255,7 +256,6 @@ class PlaylistDisplay(QWidget):
      - Displaying main playlist widget.
      - Handling playlist-related input events by calling the appropriate viewmodel
        commands (View -> ViewModel).
-     - Observing viewmodel layer for model updates (ViewModel -> View).
     """
 
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
@@ -266,41 +266,44 @@ class PlaylistDisplay(QWidget):
 
         """
         super().__init__()
-        self._viewmodel = playlist_viewmodel
-        self._playlist_window = PlaylistTableWidget()
-        self._playlist_window.setModel(self._viewmodel)
-        self.selection_model = self.playlist_window.selectionModel()
+        # Viewmodel
+        self._playlist_viewmodel = playlist_viewmodel
 
+        # Widget
+        self._playlist_widget = PlaylistWidget()
+        self._playlist_widget.setModel(self._playlist_viewmodel)
+
+        self.selection_model = self._playlist_widget.selectionModel()
+
+        # Setup
         self._init_ui()
-        self._bind_viewmodel()
+        self._connect_signals()
 
     # --- UI and Widgets ---
     def _init_ui(self):
         """Initialize instance's internal widgets and layouts."""
         section_layout = QVBoxLayout()
 
-        section_layout.addWidget(self.playlist_window)
+        section_layout.addWidget(self._playlist_widget)
 
         self.setLayout(section_layout)
 
-    def _bind_viewmodel(self):
-        """Bind playlist viewmodel to view."""
-        # View -> ViewModel (user actions).
+    def _connect_signals(self):
+        """Connect playlist widget, and viewmodel signals to their respective slots."""
+        # View -> ViewModel (User actions).
         self.selection_model.currentRowChanged.connect(self._on_row_changed)
 
-        # ViewModel -> View (model updates).
-        self._viewmodel.model_index_updated.connect(self._on_model_index_changed)
+        # ViewModel -> View (Event updates).
+        self._playlist_viewmodel.selected_index_changed.connect(self._on_model_index_changed)
 
     # --- Slots ---
     @pyqtSlot(QModelIndex, QModelIndex)
     def _on_row_changed(self, current_index: QModelIndex, previous_index: QModelIndex):
-        """Update the model index.
-
-        Set the model index to the index of the selected row in playlist widget.
+        """Playlist row selection change signal handler.
 
         Args:
-            current_index: The current row index.
-            previous_index: The previous row index.
+            current_index: The selected row index.
+            previous_index: The previous selected row index.
 
         """
         if not current_index.isValid():
@@ -308,21 +311,17 @@ class PlaylistDisplay(QWidget):
 
         row_index = current_index.row()
 
-        self._viewmodel.set_selected_index(row_index)
+        self._playlist_viewmodel.set_selected_index(row_index)
 
     @pyqtSlot(int)
     def _on_model_index_changed(self, new_index: int) -> None:
-        """Update the playlist widget's current index.
+        """Model selected index update signal handler.
+
+        Updates the playlist widget's highlighted row (track) if it's new.
 
         Args:
-            new_index: The new row index.
+            new_index: The updated index from model.
 
         """
-        if new_index != self._playlist_window.currentIndex().row():
-            self._playlist_window.selectRow(new_index)
-
-    # --- Properties ---
-    @property
-    def playlist_window(self) -> QTableView:
-        """Return playlist widget instance."""
-        return self._playlist_window
+        if new_index != self._playlist_widget.currentIndex().row():
+            self._playlist_widget.selectRow(new_index)

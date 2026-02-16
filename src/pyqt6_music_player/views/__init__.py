@@ -3,10 +3,10 @@ from .base_widgets import IconButton, MarqueeLabel, IconButtonFactory
 
 # Playlist widgets
 from .playlist import (
-    AddSongButton,
-    LoadSongFolderButton,
-    RemoveSongButton,
-    PlaylistTableWidget,
+    AddTrackButton,
+    LoadFolderButton,
+    RemoveTrackButton,
+    PlaylistWidget,
     PlaylistManager,
     PlaylistDisplay,
 )
@@ -67,10 +67,10 @@ __all__ = [
     "PlaybackProgress",
 
     # Playlist widgets
-    "AddSongButton",
-    "LoadSongFolderButton",
-    "PlaylistTableWidget",
-    "RemoveSongButton",
+    "AddTrackButton",
+    "LoadFolderButton",
+    "PlaylistWidget",
+    "RemoveTrackButton",
     "PlaylistManager",
     "PlaylistDisplay",
 

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum, auto
 
 # ================================================================================
@@ -21,8 +20,8 @@ MAX_VOLUME = 100
 # ================================================================================
 # Enums
 # ================================================================================
-class PlaybackState(Enum):
-    # IDLE = auto()  # Default state, no track loaded.
+class PlaybackStatus(Enum):
+    IDLE = auto()  # Default status, audio player initialized but no track loaded.
     PLAYING = auto()
     PAUSED = auto()
-    STOPPED = auto()  # Playback interrupted, track loaded but not playing.
+    STOPPED = auto()

@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 
-from pyqt6_music_player.models import AudioPlayerService, PlaylistModel, VolumeModel
+from pyqt6_music_player.models import AudioPlayerService, Playlist, VolumeModel
+from pyqt6_music_player.models.model import PlaybackState
+from pyqt6_music_player.services.playback_service import PlaybackService
+from pyqt6_music_player.services.playlist_service import PlaylistService
 from pyqt6_music_player.view_models import (
     PlaybackViewModel,
     PlaylistViewModel,
@@ -11,11 +14,15 @@ from pyqt6_music_player.view_models import (
 @dataclass
 class AppContext:
     # --- Player engine ---
-    player_engine: AudioPlayerService
+    audio_player: AudioPlayerService
 
-    # --- Models ---
-    playlist_model: PlaylistModel
+    # --- State/Models ---
+    playback_state: PlaybackState
+    playlist_model: Playlist
     volume_model: VolumeModel
+
+    # --- Service ---
+    playback_service: PlaybackService
 
     # --- ViewModels ---
     playback_viewmodel: PlaybackViewModel
@@ -25,21 +32,28 @@ class AppContext:
 
 def build_context():
     # --- Player engine ---
-    player_engine = AudioPlayerService()
+    audio_player = AudioPlayerService()
 
     # --- Models ---
-    playlist_model = PlaylistModel()
+    playback_state = PlaybackState()
+    playlist_model = Playlist()
     volume_model = VolumeModel()
 
-    # --- ViewModels ---
-    playback_viewmodel = PlaybackViewModel(playlist_model, player_engine)
-    playlist_viewmodel = PlaylistViewModel(playlist_model)
-    volume_viewmodel = VolumeViewModel(volume_model, player_engine)
+    # -- Service ---
+    playlist_service = PlaylistService(playlist_model)
+    playback_service = PlaybackService(audio_player, playback_state, playlist_service)
+
+    # --- Viewmodels ---
+    playback_viewmodel = PlaybackViewModel(playlist_service, playback_service)
+    playlist_viewmodel = PlaylistViewModel(playlist_service)
+    volume_viewmodel = VolumeViewModel(volume_model, audio_player)
 
     return AppContext(
-        player_engine=player_engine,
+        audio_player=audio_player,
+        playback_state=playback_state,
         playlist_model=playlist_model,
         volume_model=volume_model,
+        playback_service=playback_service,
         playback_viewmodel=playback_viewmodel,
         playlist_viewmodel=playlist_viewmodel,
         volume_viewmodel=volume_viewmodel

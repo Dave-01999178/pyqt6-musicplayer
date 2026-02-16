@@ -10,229 +10,218 @@ from PyQt6.QtCore import (
     QObject,
     Qt,
     pyqtSignal,
-    pyqtSlot,
 )
 
-from pyqt6_music_player.constants import PlaybackState
-from pyqt6_music_player.helpers import format_duration
-from pyqt6_music_player.models import (
-    TrackAudio,
-    AudioPlayerService,
-    Track,
-    PlaylistModel,
-    VolumeModel,
-)
+from pyqt6_music_player.constants import PlaybackStatus
+from pyqt6_music_player.models import Track, VolumeModel
+from pyqt6_music_player.services import PlaybackService, PlaylistService
 
 logger = logging.getLogger(__name__)
 
 
 # ================================================================================
-# PLAYBACK CONTROL VIEWMODEL
+# HELPERS
 # ================================================================================
+def format_duration(duration: int | float) -> str:
+    """Convert seconds to (HH:MM:SS) format string.
+
+    Args:
+        duration: Duration in seconds.
+
+    Returns:
+        Formatted time string in HH:MM:SS format (e.g., "01:23:45").
+
+    """
+    duration = int(duration)
+    secs_in_hr = 3600
+    secs_in_min = 60
+
+    hours, remainder = divmod(duration, secs_in_hr)
+    minutes, seconds = divmod(remainder, secs_in_min)
+
+
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+# ================================================================================
+# PLAYBACK VIEWMODEL
+# ================================================================================
+#
 # noinspection PyUnresolvedReferences
 class PlaybackViewModel(QObject):
-    track_info = pyqtSignal(str, str)
-    track_duration = pyqtSignal(int)
-    position_changed = pyqtSignal(int, int)
-    player_state_changed = pyqtSignal(PlaybackState)
-    shutdown_finished = pyqtSignal()
+    track_loaded = pyqtSignal(str, str)  # Title, Album
+    playback_started = pyqtSignal(int, str)  # Display duration, duration in ms
+    playback_position_changed = pyqtSignal(int, str, str)
+    initial_track_added = pyqtSignal()
+    player_state_changed = pyqtSignal(PlaybackStatus)
 
-    enable_ui = pyqtSignal()
-
-    def __init__(self, playlist_model: PlaylistModel, player_engine: AudioPlayerService,
+    def __init__(
+            self,
+            playlist_service: PlaylistService,
+            playback_service: PlaybackService,
     ):
+        """Initialize viewmodel and connect to service signals.
+
+        Args:
+            playlist_service: Service managing playlist state and operations.
+            playback_service: Service managing track loading and audio playback.
+        """
         super().__init__()
-        self._player_engine = player_engine
-        self._playlist = playlist_model
+        # Service
+        self._playlist_service = playlist_service
+        self._playback_service = playback_service
 
-        self._current_track = None
-
+        # Setup
         self._connect_signals()
 
-    def _connect_signals(self):
-        # Model -> Viewmodel
-        self._playlist.playlist_changed.connect(self._on_playlist_initial_add_song)
-        self._playlist.playing_index_changed.connect(self._on_playlist_index_changed)
+    # --- Private methods ---
+    def _connect_signals(self) -> None:
+        """Establish signal–slot connections between the viewmodel and service."""
+        # Playlist service signals
+        self._playlist_service.tracks_added.connect(self._on_track_added)
 
-        # AudioPlayer -> Viewmodel
-        self._player_engine.playback_started.connect(
-            self._on_audio_player_playback_start
+        # Playback service signals
+        self._playback_service.track_loaded.connect(self._on_track_loaded)
+        self._playback_service.playback_started.connect(self._on_playback_started)
+        self._playback_service.playback_position_changed.connect(
+            self._on_playback_position_changed,
         )
-        self._player_engine.frame_position_changed.connect(
-            self._on_audio_player_position_change
-        )
-        self._player_engine.playback_state_changed.connect(
-            self.player_state_changed.emit
-        )
-        self._player_engine.playback_ended.connect(self.next_track)
-        self._player_engine.worker_resources_released.connect(self.shutdown_finished)
+        self._playback_service.player_state_changed.connect(self._on_player_state_changed)
 
-    # --- Slots ---
-    @pyqtSlot()
-    def _on_audio_player_playback_start(self):
-        song_title = self._current_track.title
-        song_album = self._current_track.album
-        song_duration = int(self._current_track.duration)
+    # --- Custom signal slots ---
+    def _on_track_added(self, add_count: int, new_track_count: int) -> None:
+        """Enable playback UI when the first track is added to an empty playlist.
 
-        self.track_info.emit(song_title, song_album)
-        self.track_duration.emit(song_duration)
+        Args:
+            add_count: Number of tracks just added.
+            new_track_count: Total tracks in playlist after addition.
 
-        logger.info("Now playing: %s.\n", song_title)
+        """
+        initial_track_add = (new_track_count - add_count == 0)
+        if initial_track_add:
+            self.initial_track_added.emit()
 
-    @pyqtSlot(float, float)
-    def _on_audio_player_position_change(
+    def _on_track_loaded(self, current_track: Track) -> None:
+        """Emit track metadata when a new track is loaded.
+
+        Args:
+            current_track: The newly loaded track.
+
+        """
+        self.track_loaded.emit(current_track.title, current_track.album)
+
+    def _on_playback_started(self, track_duration: float) -> None:
+        """Convert and emit track duration in milliseconds, and formatted string.
+
+        Args:
+            track_duration: The current track duration in seconds.
+
+        """
+        track_duration_in_ms = int(track_duration * 1000)
+        formatted_duration = format_duration(track_duration_in_ms)
+
+        self.playback_started.emit(track_duration_in_ms, formatted_duration)
+
+    def _on_playback_position_changed(
             self,
             elapsed_time: float,
             time_remaining: float,
-    ):
-        elapsed_time = int(elapsed_time * 1000)
-        time_remaining = int(time_remaining * 1000)
+    ) -> None:
+        """Convert and emit playback position in milliseconds and formatted strings.
 
-        self.position_changed.emit(elapsed_time, time_remaining)
+        Args:
+            elapsed_time: Seconds elapsed since playback start.
+            time_remaining: Seconds remaining until track end.
 
-    @pyqtSlot(int)
-    def _on_playlist_initial_add_song(self, new_song_count) -> None:
-        if self._playlist.song_count - new_song_count != 0:
-            return
+        """
+        # Elapsed time in ms (for smooth slider movement)
+        elapsed_time_in_ms = int(elapsed_time * 1000)
 
-        self.enable_ui.emit()
+        # Formatted playback position
+        formatted_elapsed_time = format_duration(elapsed_time)
+        formatted_time_remaining = format_duration(time_remaining)
 
-    @pyqtSlot(int)
-    def _on_playlist_index_changed(self, new_index: int):
-        selected_track = self._playlist.get_track(new_index)
-        audio = self._get_audio(selected_track)
+        self.playback_position_changed.emit(
+            elapsed_time_in_ms,
+            formatted_elapsed_time,
+            formatted_time_remaining,
+        )
 
-        if audio is not None:
-            self._player_engine.load_audio(audio)
+    def _on_player_state_changed(self, player_state: PlaybackStatus):
+        self.player_state_changed.emit(player_state)
 
-            # TODO: Extract and move to another slot, this should only trigger
-            #  when audio is loaded successfully.
-            self._current_track = selected_track
+    # --- Public methods (Commands). ---
+    def play_pause(self) -> None:
+        """Command for starting, pausing, and resuming playback."""
+        self._playback_service.play_pause()
 
-            self._player_engine.start_playback()
+    def next_track(self) -> None:
+        """Command for playing next track."""
+        self._playback_service.next_track()
 
-    # --- Private methods ---
-    @staticmethod
-    def _get_audio(track: Track) -> TrackAudio | None:
-        file_path = track.path
-
-        return TrackAudio.from_file(file_path)
-
-    def _load_and_play(self, track: Track = None) -> None:
-        track_to_use = track or self._playlist.selected_track
-
-        if track_to_use == self._current_track:
-            return
-
-        audio = self._get_audio(track_to_use)
-
-        if audio is None:
-            return
-
-        self._player_engine.load_audio(audio)
-
-        # TODO: Extract and move to another slot, this should only trigger
-        #  when audio is loaded successfully.
-        selected_index = self._playlist.selected_index
-
-        self._current_track = track_to_use
-        self._playlist.set_playing_index(selected_index)
-
-        self._player_engine.start_playback()
-
-    # --- Commands ---
-    def play_pause(self):
-        """Start, pause and resume playback based on the current playback state."""
-        if self._playlist.selected_track is None:
-            return
-
-        # Resume
-        if self._player_engine.playback_state is PlaybackState.PAUSED:
-            self._player_engine.resume_playback()
-
-        # Pause
-        elif self._player_engine.playback_state is PlaybackState.PLAYING:
-            self._player_engine.pause_playback()
-
-        # Start a new playback
-        else:
-            self._load_and_play()  # Load on demand approach.
-
-    @pyqtSlot()
-    def next_track(self):
-        self._playlist.next_track()
-
-    def previous_track(self):
-        self._playlist.prev_track()
-
-    def replay(self):
-        pass
-
-    def repeat(self):
-        pass
-
-    def seek(self):
-        pass
-
-    def shutdown(self):
-        self._player_engine.shutdown()
-
-    def service_running(self) -> bool:
-        return self._player_engine.is_running()
+    def previous_track(self) -> None:
+        """Command for playing previous track."""
+        self._playback_service.previous_track()
 
 
 # ================================================================================
 # PLAYLIST VIEWMODEL
 # ================================================================================
 class PlaylistViewModel(QAbstractTableModel):
-    """Playlist viewmodel.
-
-    This class acts as an intermediary between the PlaylistModel and any
-    UI components that display or modify the application's playlist state.
-
-    It forwards model updates to the view via Qt signals and provides
-    commands for modifying playlist model.
-    """
-
-    model_index_updated = pyqtSignal(int)
-
     DEFAULT_COLUMNS: ClassVar[tuple[tuple[str, str]]] = (
         ("title", "Title"),
         ("artist", "Artist"),
         ("album", "Album"),
         ("duration", "Duration"),
-    )
-    def __init__(self, playlist_model: PlaylistModel):
-        """Initialize PlaylistViewModel instance."""
+    )  # Field_name, Field_label
+
+    selected_index_changed = pyqtSignal(int)
+
+    def __init__(self, playlist_service: PlaylistService):
+        """Initialize viewmodel and connect to service signals.
+
+        Args:
+            playlist_service: Service managing playlist state and operations.
+
+        """
         super().__init__()
-        self._model = playlist_model
+        # Service
+        self._playlist_service = playlist_service
 
-        self._model.playlist_changed.connect(self._on_model_song_added)
-        self._model.selected_index_changed.connect(self._on_model_index_updated)
+        # Setup
+        self._connect_signals()
 
-    # --- QAbstractTableModel methods (overridden) ---
+    # --- Private methods ---
+    def _connect_signals(self) -> None:
+        """Connect service signals."""
+        self._playlist_service.tracks_added.connect(self._on_track_added)
+        self._playlist_service.selection_index_changed.connect(
+            self._on_selected_index_changed,
+        )
+
+    # --- QAbstractTableModel methods ---
     def rowCount(self, parent=None):
-        """Set the number of row based on the length of current playlist."""
-        return len(self._model.playlist)
+        """Set the number of row based on the number of tracks in playlist."""
+        return self._playlist_service.get_track_count()
 
     def columnCount(self, parent=None):
-        """Set the number of column based on the number of song metadata."""
+        """Set the number of column based on the number of track metadata."""
         return len(self.DEFAULT_COLUMNS)
 
     def data(self, index, role=...):
-        """Display the text in row cells."""
+        """Render body row data."""
         if not index.isValid():
             return None
 
         row = index.row()
         col = index.column()
-        song = self._model.playlist[row]
+        track = self._playlist_service.get_track_by_index(row)
         field_name = self.DEFAULT_COLUMNS[col][0]
 
         if role == Qt.ItemDataRole.DisplayRole:
             if field_name == "duration":
-                return format_duration(song.duration)
-            return getattr(song, field_name)
+                return format_duration(track.duration)
+            return getattr(track, field_name)
 
         if role == Qt.ItemDataRole.TextAlignmentRole and field_name == "duration":
             return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
@@ -240,82 +229,78 @@ class PlaylistViewModel(QAbstractTableModel):
         return None
 
     def headerData(self, section, orientation, role=...):
-        """Display the text in headers cells."""
-        field_title = self.DEFAULT_COLUMNS[section][1]
+        """Render header row data."""
+        field_label = self.DEFAULT_COLUMNS[section][1]
         is_header_field = (
                 role == Qt.ItemDataRole.DisplayRole
                 and orientation == Qt.Orientation.Horizontal
         )
-        is_duration_field = (
+        is_duration_header = (
                 role == Qt.ItemDataRole.TextAlignmentRole
-                and field_title == "Duration"
+                and field_label == "Duration"
         )
 
         if is_header_field:
-            return field_title
+            return field_label
 
-        if is_duration_field:
+        if is_duration_header:
             return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
 
         return None
 
     # --- Slots ---
     # TODO: Initial implementation (insertion order), replace later.
-    @pyqtSlot(int)
-    def _on_model_song_added(self, new_song_count: int) -> None:
-        """Insert and display the added song(s) to the playlist widget."""
-        prev_playlist_len = self._model.song_count - new_song_count
+    def _on_track_added(self, add_count: int, new_track_count: int) -> None:
+        """Playlist add track event signal handler.
 
-        self.beginInsertRows(
-            QModelIndex(),
-            prev_playlist_len,
-            self._model.song_count - 1,
-        )
+        Displays the newly added tracks(s) in the playlist widget.
+
+        Args:
+            add_count: The number of added track(s).
+            new_track_count: The new playlist track count.
+
+        """
+        start = new_track_count - add_count
+        end = new_track_count - 1
+
+        self.beginInsertRows(QModelIndex(), start, end)
         self.endInsertRows()
 
-    @pyqtSlot(int)
-    def _on_model_index_updated(self, new_index: int) -> None:
-        """Notify the view of model index changes.
+        logger.info("%s tracks(s) was added to the playlist.", add_count)
+
+    def _on_selected_index_changed(self, new_index) -> None:
+        """Model selected index update signal handler.
 
         Args:
-            new_index: The updated model index.
+            new_index: The updated index from model.
 
         """
-        self.model_index_updated.emit(new_index)  # type: ignore
+        self.selected_index_changed.emit(new_index)  # type: ignore
 
-    # --- Commands ---
-    def add_songs(self, files: Sequence[str]) -> None:
-        """Command for adding new songs to playlist model.
+    # --- Public methods (Commands) ---
+    def add_tracks(self, paths: Sequence[str]) -> None:
+        """Command for adding tracks to the playlist.
 
         Args:
-            files: A sequence of path-like objects.
+            paths: A sequence of path-like objects.
 
         """
-        self._model.add_songs(files)
+        self._playlist_service.add_tracks(paths)
 
     def set_selected_index(self, index: int) -> None:
-        """Command for setting a new index in playlist model.
+        """Model selected index setter.
 
         Args:
-            index: The selected row index in playlist widget.
+            index: The selected row index in playlist.
 
         """
-        self._model.set_selected_index(index)
+        self._playlist_service.set_selected_index(index)
 
 
 # ================================================================================
 # VOLUME VIEWMODEL
 # ================================================================================
 class VolumeViewModel(QObject):
-    """Volume viewmodel.
-
-    This class acts as a middleman between the VolumeModel and VolumeControls
-    that display or modify the application's volume state.
-
-    It forwards model updates to the view via Qt signals and provides
-    commands for view to modify the volume model.
-    """
-
     model_volume_changed = pyqtSignal(int)
     model_mute_state_changed = pyqtSignal(bool)
 
