@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -7,212 +8,149 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from pyqt6_music_player.constants import (
     MAX_VOLUME,
     MIN_VOLUME,
-    SUPPORTED_AUDIO_FORMAT,
 )
 from pyqt6_music_player.models import Track
 
 logger = logging.getLogger(__name__)
 
 # ================================================================================
-# APP MODELS
+# APP STATE/MODELS
 # ================================================================================
 #
+# --- Playback state ---
+@dataclass
+class PlaybackState:
+    current_track: Track | None = None
+    track_index: int | None = None
+    playback_status = None
+
+
 # --- Playlist model ---
-class PlaylistModel(QObject):
-    """The playlist model.
-
-    This class is responsible for managing playlist, and providing playlist
-    related data.
-    """
-
-    playlist_changed = pyqtSignal(int)  # TODO: Rename to song_added.
-    selected_index_changed = pyqtSignal(int)
-    playing_index_changed = pyqtSignal(int)
+class Playlist:
+    """Manages playlist tracks and selection state."""
 
     def __init__(self) -> None:
-        """Initialize PlaylistModel instance."""
+        """Initialize PlaylistModel."""
         super().__init__()
-        self._playlist: list[Track] = []  # TODO: Consider replacing list.
-        self._playlist_set: set[Path] = set()
+        self._tracks: list[Track] = []  # TODO: Consider replacing list.
+        self._track_paths: set[Path] = set()
+        self._selected_index: int = -1  # -1 means no selection
 
-        self._selected_index: int | None = None
-        self._playing_index: int | None = None
-
-    # --- Private methods ---
-    @staticmethod
-    def _normalize_to_paths(files: Sequence[str | Path]) -> list[Path]:
-        """Convert valid path-like inputs into a Path object.
+    def set_selected_index(self, index: int) -> int | None:
+        """Set the selected track index.
 
         Args:
-            files: A sequence of path-like objects.
+            index: The row index to select.
 
         Returns:
-            list[Path]: The normalized input as Path objects stored in a list.
-
-        Raises:
-            TypeError: If the list contains unsupported types,
-                       or if the argument type is not supported.
+            The updated index, or None if invalid or unchanged.
 
         """
-        normalized_paths = []
-        for file_path in files:
-            # Ignore the strings that could point to directories/cwd.
-            if file_path in {"", "."}:
-                continue
-
-            path = Path(file_path)
-
-            # Skip cwd ('.'), empty values, or directories
-            if path in {Path(""), Path(".")} or path.is_dir():
-                continue
-
-            normalized_paths.append(path)
-
-        return normalized_paths
-
-    # --- Public methods ---
-    def add_songs(self, files: Sequence[str | Path]) -> None:
-        """Add one or more audio files to the playlist.
-
-        Supported extensions: .mp3, .wav, .flac, .ogg
-
-        Args:
-            files: A sequence of path-like objects.
-
-        """
-        if not files or files is None:
-            return
-
-        # Allow single str/Path input by wrapping into a list.
-        if isinstance(files, (str | Path)):
-            files = [files]
-
-        paths = self._normalize_to_paths(files)
-        from_path = Track.from_path  # Store locally to avoid repeated lookups.
-        add_count = 0
-        for p in paths:
-            try:
-                resolved_path = p.resolve(strict=True)
-            except FileNotFoundError:
-                continue
-
-            is_new = resolved_path not in self._playlist_set
-            is_supported = resolved_path.suffix.lower() in SUPPORTED_AUDIO_FORMAT
-            if is_new and is_supported:
-                song = from_path(resolved_path)
-
-                if song is not None:
-                    self._playlist.append(song)
-                    self._playlist_set.add(resolved_path)
-                    add_count += 1
-
-        if add_count != 0:
-            self.playlist_changed.emit(add_count)
-
-            logger.info("%s song(s) was added to the playlist.", add_count)
-
-    def set_selected_index(self, index: int) -> None:
-        """Set the currently selected playlist index.
-
-        This updates the internal pointer based on the index of the selected item
-        in playlist widget.
-
-        The internal pointer is used for retrieving ``Song`` objects from the internal
-        playlist.
-
-        Args:
-            index: The index of the selected item in the playlist widget.
-
-        Raises:
-            TypeError: If the given index is not an integer.
-
-        """
-
-        if 0 <= index < len(self._playlist):
-            self._selected_index = index
-
-            self.selected_index_changed.emit(self._selected_index)
-
-    def set_playing_index(self, index: int):
-        if 0 <= index < len(self._playlist):
-            self._playing_index = index
-
-    def next_track(self):
-        if self._playing_index is None:
-            return
-
-        next_index = self._playing_index + 1
-        if 0 <= next_index < len(self._playlist):
-            self.set_selected_index(next_index)
-
-            self.set_playing_index(next_index)
-            self.playing_index_changed.emit(next_index)
-
-    def prev_track(self):
-        if self._playing_index is None:
-            return
-
-        prev_index = self._playing_index - 1
-        if 0 <= prev_index < len(self._playlist):
-            self.set_selected_index(prev_index)
-
-            self.set_playing_index(prev_index)
-            self.playing_index_changed.emit(prev_index)
-
-    def get_track(self, index) -> Track | None:
-        if self._playlist is None or not (0 <= index < len(self._playlist)):
+        if index < -1 or index >= len(self._tracks):
             return None
 
-        return self._playlist[index]
-
-    # --- Properties ---
-    @property
-    def playlist(self) -> list[Track]:
-        """Return the current playlist."""
-        return self._playlist.copy()
-
-    @property
-    def playlist_set(self) -> set[Path]:
-        """Return the set version of playlist, used for membership checks."""
-        return self._playlist_set
-
-    @property
-    def selected_index(self) -> int | None:
-        """Return the active playlist index, or None if the playlist is empty."""
-        if not self._playlist:
+        if self._selected_index == index:
             return None
+
+        self._selected_index = index
 
         return self._selected_index
 
-    @property
-    def selected_track(self) -> Track | None:
-        """Return the currently selected track based on the active playlist index.
+    def get_track_by_index(self, index: int) -> Track | None:
+        """Get track at the specified index.
 
-        If no track is selected or the playlist is empty, this property returns
-        ``None``. A valid selection occurs only when the internal index is set
-        and falls within the bounds of the playlist.
+        Args:
+            index: The track index.
 
         Returns:
-            Track | None: The selected track from the model,
-                         or ``None`` if the playlist is empty, or nothing is selected.
+            The track at index, or None if invalid.
 
         """
-        if self._selected_index is not None:
-            return self._playlist[self._selected_index]
+        if not (0 <= index < len(self._tracks)):
+            return None
 
-        return None
+        return self._tracks[index]
+
+    def has_track(self, track_path: Path) -> bool:
+        """Check if playlist contains a track with the given path.
+
+        Args:
+            track_path: Path to check.
+
+        Returns:
+            True if track exists in playlist; Otherwise, False.
+
+        """
+        return Path(track_path) in self._track_paths
+
+    def is_valid_index(self, index: int) -> bool:
+        """Check if index is within playlist bounds.
+
+        Args:
+            index: Index to validate.
+
+        Returns:
+            True if index is valid; Otherwise, False
+
+        """
+        return 0 <= index < len(self._tracks)
+
+    def add_tracks(self, tracks: Sequence[Track]) -> int:
+        """Add tracks to the playlist.
+
+        Args:
+            tracks: Tracks to add.
+
+        Returns:
+            Number of tracks added.
+
+        """
+        added_count = 0
+
+        for track in tracks:
+            track_path = track.path
+
+            # No duplicates
+            if track_path in self._track_paths:
+                continue
+
+            self._tracks.append(track)
+            self._track_paths.add(track_path)
+
+            added_count += 1
+
+        return added_count
+
+    # --- Properties ---
+    @property
+    def get_all_tracks(self) -> list[Track]:
+        """Return all tracks in the playlist.
+
+        Returns:
+            A list of tracks.
+
+        """
+        return self._tracks.copy()
 
     @property
-    def track_playing(self) -> Track | None:
-        if self._playing_index is not None:
-            return self._playlist[self._playing_index]
+    def track_count(self) -> int:
+        """Return the number of tracks in the playlist.
 
-        return None
+        Returns:
+            The number of tracks in playlist.
+
+        """
+        return len(self._tracks)
 
     @property
-    def song_count(self) -> int:
-        """Return the current number of songs in playlist."""
-        return len(self._playlist)
+    def selected_index(self) -> int:
+        """Return the currently selected track index.
+
+        Returns:
+            The selected track index or -1 if none.
+
+        """
+        return self._selected_index
 
 
 # --- Volume model ---

@@ -3,7 +3,6 @@
 This module defines the `MusicPlayerView`, the central container widget
 that holds all major UI components (playlist, player bar, controls).
 """
-from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtGui import QColor, QIcon, QPalette
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
@@ -36,13 +35,11 @@ class MusicPlayerView(QWidget):
             ctx.volume_viewmodel,
         )
 
-        # Close flag
-        self._should_close = False
-
         # UI and signals
         self._configure_properties()
         self._init_ui()
 
+    # --- Private methods ---
     def _configure_properties(self):
         """Configure the instance's properties."""
         self.resize(*APP_DEFAULT_SIZE)
@@ -74,20 +71,16 @@ class MusicPlayerView(QWidget):
 
         self.setLayout(main_layout)
 
+    # --- QWidget methods ---
     def closeEvent(self, a0):
-        if self._should_close or not self.ctx.playback_viewmodel.service_running():
+        """Custom close event."""
+        audio_player = self.ctx.audio_player
+
+        if not audio_player.is_running():
             a0.accept()
             return
 
         a0.ignore()
 
-        self.ctx.playback_viewmodel.shutdown()
-        self.ctx.playback_viewmodel.shutdown_finished.connect(
-            self._on_shutdown_finished,
-        )
-
-    @pyqtSlot()
-    def _on_shutdown_finished(self):
-        self._should_close = True
-
-        self.close()
+        audio_player.shutdown()
+        audio_player.worker_resources_released.connect(self.close)

@@ -17,7 +17,7 @@ from pyqt6_music_player.views import MarqueeLabel
 # NOW PLAYING
 # ================================================================================
 #
-# --- WIDGETS ---
+# ----- WIDGETS -----
 class AlbumArtLabel(QLabel):
     """A QLabel widget for displaying album art.
 
@@ -28,15 +28,16 @@ class AlbumArtLabel(QLabel):
     def __init__(self):
         """Initialize AlbumArtLabel."""
         super().__init__()
-
         self._configure_properties()
         self._init_ui()
 
+    # --- Private methods ---
     def _init_ui(self):
-        """Initialize album art pixmap."""
+        """Initialize and set default album art."""
         self._set_image(ALBUM_ART_PLACEHOLDER)
 
     def _configure_properties(self):
+        """Configure instance properties."""
         self.setFixedSize(75, 75)
         self.setScaledContents(False)
 
@@ -50,8 +51,8 @@ class AlbumArtLabel(QLabel):
 
         self.setPixmap(scaled)
 
+    # --- Public methods ---
     def set_image(self, image) -> None:
-        """Set instance image."""
         if image is None:
             return
 
@@ -59,34 +60,44 @@ class AlbumArtLabel(QLabel):
 
 
 class AudioTitleLabel(MarqueeLabel):
-    """A QLabel widget for displaying the current audio title.
-
-    The default text is 'Song Title'.
-    """
+    """A QLabel widget for displaying the current audio title."""
 
     def __init__(self, text: str = DEFAULT_TRACK.title):
-        """Initialize AudioTitleLabel."""
-        super().__init__(text)
+        """Initialize AudioTitleLabel.
 
+        Args:
+            text: The text to display. The default text is "Song Title".
+
+        """
+        super().__init__(text)
+        self._configure_properties()
+
+    def _configure_properties(self):
+        """Configure instance properties."""
         self.setFixedWidth(100)
         self.setObjectName("audioTitleLabel")
 
 
 class AudioArtistLabel(MarqueeLabel):
-    """A QLabel widget for displaying the current audio artist.
-
-    The default text is 'Song Artist'.
-    """
+    """A QLabel widget for displaying the current audio artist."""
 
     def __init__(self, text: str = DEFAULT_TRACK.artist):
-        """Initialize AudioArtistLabel."""
-        super().__init__(text=text)
+        """Initialize AudioArtistLabel.
 
+        Args:
+            text: The text to display. The default text is "Song Artist".
+
+        """
+        super().__init__(text=text)
+        self._configure_properties()
+
+    def _configure_properties(self):
+        """Configure instance properties."""
         self.setFixedWidth(100)
         self.setObjectName("audioArtistLabel")
 
 
-# --- COMPONENT ---
+# ----- COMPONENT -----
 class NowPlayingDisplay(QWidget):
     """A QWidget container for widgets that displays current song information.
 
@@ -96,35 +107,45 @@ class NowPlayingDisplay(QWidget):
     def __init__(self, playback_viewmodel: PlaybackViewModel):
         """Initialize NowPlayingDisplay."""
         super().__init__()
-        # Playback viewmodel
+        # Viewmodel
         self._viewmodel = playback_viewmodel
 
-        # Now playing widgets
+        # Widget
         self.album_art = AlbumArtLabel()
         self.title_label = AudioTitleLabel()
         self.artist_label = AudioArtistLabel()
 
         self._init_ui()
-        self._viewmodel.track_info.connect(self._on_playback_start)
 
+        self._viewmodel.track_loaded.connect(self._on_track_loaded)
+
+    # --- Private methods ---
     def _init_ui(self):
-        """Initialize the instance's internal widgets and layouts."""
-        # --- Left section: Album art ---
-        layout = QHBoxLayout()
+        """Initialize instance internal widgets and layouts."""
+        main_layout_horizontal = QHBoxLayout()
 
-        layout.addWidget(self.album_art)
+        # Left: Album art widget
+        main_layout_horizontal.addWidget(self.album_art)
 
-        # --- Right section: Song title and artist label ---
-        label_layout = QVBoxLayout()
+        # Right: Metadata label section
+        right_section_vertical = QVBoxLayout()
 
-        label_layout.addWidget(self.title_label)
-        label_layout.addWidget(self.artist_label)
+        right_section_vertical.addWidget(self.title_label)
+        right_section_vertical.addWidget(self.artist_label)
 
-        layout.addLayout(label_layout)
+        main_layout_horizontal.addLayout(right_section_vertical)
 
-        self.setLayout(layout)
+        self.setLayout(main_layout_horizontal)
 
     @pyqtSlot(str, str)
-    def _on_playback_start(self, song_title: str, song_artist: str):
-        self.title_label.setText(song_title)
-        self.artist_label.setText(song_artist)
+    def _on_track_loaded(self, track_title: str, track_artist: str) -> None:
+        """Display loaded track metadata in UI.
+
+        Args:
+            track_title: The track title.
+            track_artist: The track artist.
+
+        """
+        # Update the UI so users can see the loaded track information.
+        self.title_label.setText(track_title)
+        self.artist_label.setText(track_artist)

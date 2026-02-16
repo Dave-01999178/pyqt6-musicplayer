@@ -17,8 +17,7 @@ class DefaultAudioInfo:
     title = "Song Title"
     artist = "Song Artist"
     album = "Song Album"
-    elapsed_time = "0:00:00"
-    total_duration = ""
+    duration = "00:00:00"
 
 
 # ================================================================================
@@ -43,7 +42,7 @@ class Track:
     title: str = DefaultAudioInfo.title
     artist: str = DefaultAudioInfo.artist
     album: str = DefaultAudioInfo.album
-    duration: str | float = DefaultAudioInfo.elapsed_time
+    duration: str | float = DefaultAudioInfo.duration
 
     @classmethod
     def from_path(cls, path: Path) -> Self | None:
@@ -99,7 +98,7 @@ class TrackAudio:
     samples: NDArray[np.float32]
 
     def __post_init__(self) -> None:
-        """Set PCM samples to read-only."""
+        """Set PCM samples to read-only after initializing."""
         arr = self.samples
 
         if not arr.flags.writeable:
