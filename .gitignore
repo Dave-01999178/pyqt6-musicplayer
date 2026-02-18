@@ -23,3 +23,6 @@ Thumbs.db
 # Log and Text files
 *.log
 *.txt
+
+# Note: Temporary ignore test directory due to outdated tests.
+/tests
