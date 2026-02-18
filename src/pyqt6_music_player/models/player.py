@@ -113,10 +113,10 @@ class AudioPlayerWorker(QObject):
 
     def _audio_callback(
             self,
-            in_data,
+            _in_data,
             frame_count,
-            time_info,
-            status_flags,
+            _time_info,
+            _status_flags,
     ) -> tuple[bytes | None, int]:
         """Callback for playing audio bytes, used by PyAudio stream.
 
@@ -263,13 +263,6 @@ class AudioPlayerWorker(QObject):
 
             self.playback_error.emit()
 
-        else:
-            self._set_status(PlaybackStatus.PLAYING)
-
-            self.playback_started.emit()
-
-            logger.info("Playback started.")
-
     @pyqtSlot()
     def pause_playback(self) -> None:
         """Pause current playback."""
@@ -299,7 +292,11 @@ class AudioPlayerWorker(QObject):
     @pyqtSlot()
     def _on_playback_started(self) -> None:
         """Emit playback started signal to external observers."""
+        self._set_status(PlaybackStatus.PLAYING)
+
         self.playback_started.emit()
+
+        logger.info("Playback started.")
 
     @pyqtSlot()
     def _on_playback_finished(self) -> None:

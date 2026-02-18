@@ -49,7 +49,7 @@ def format_duration(duration: int | float) -> str:
 #
 # noinspection PyUnresolvedReferences
 class PlaybackViewModel(QObject):
-    track_loaded = pyqtSignal(str, str)  # Title, Album
+    track_loaded = pyqtSignal(str, str, int, str)  # Title, Album, Duration
     playback_started = pyqtSignal(int, str)  # Display duration, duration in ms
     playback_position_changed = pyqtSignal(int, str, str)
     initial_track_added = pyqtSignal()
@@ -82,7 +82,6 @@ class PlaybackViewModel(QObject):
 
         # Playback service signals
         self._playback_service.track_loaded.connect(self._on_track_loaded)
-        self._playback_service.playback_started.connect(self._on_playback_started)
         self._playback_service.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
@@ -108,19 +107,15 @@ class PlaybackViewModel(QObject):
             current_track: The newly loaded track.
 
         """
-        self.track_loaded.emit(current_track.title, current_track.album)
+        track_duration_in_ms = int(current_track.duration * 1000)
+        formatted_duration = format_duration(int(current_track.duration))
 
-    def _on_playback_started(self, track_duration: float) -> None:
-        """Convert and emit track duration in milliseconds, and formatted string.
-
-        Args:
-            track_duration: The current track duration in seconds.
-
-        """
-        track_duration_in_ms = int(track_duration * 1000)
-        formatted_duration = format_duration(track_duration_in_ms)
-
-        self.playback_started.emit(track_duration_in_ms, formatted_duration)
+        self.track_loaded.emit(
+            current_track.title,
+            current_track.album,
+            track_duration_in_ms,
+            formatted_duration
+        )
 
     def _on_playback_position_changed(
             self,

@@ -26,8 +26,8 @@ class PlaybackService:
         self._state = playback_state
 
         # Cache
-        # self._current_track = None
-        # self._track_index = None
+        self._selected_track = None
+        self._track_index = None
 
         # Signals
         self.track_loaded = Signal()
@@ -40,7 +40,7 @@ class PlaybackService:
     # --- Private methods ---
     def _connect_signals(self) -> None:
         """Establish signal-handler connections between the service and viewmodel."""
-        self._audio_player.audio_loaded.connect(self._on_audio_loaded)
+        self._audio_player.audio_loaded.connect(self._on_player_audio_loaded)
         self._audio_player.playback_started.connect(self._on_playback_started)
         self._audio_player.playback_position_changed.connect(
             self._on_playback_position_changed,
@@ -69,28 +69,26 @@ class PlaybackService:
         """
         track = self._playlist.get_track_by_index(index)
         if track is not None:
+            self._selected_track = track
+
             audio = self._get_audio_from_track(track)
             if audio is not None:
                 self._audio_player.load_track_audio(audio)
 
     # --- Custom signal event handler ---
-    def _on_audio_loaded(self) -> None:
+    def _on_player_audio_loaded(self) -> None:
         """Update state and start playback when audio finishes loading."""
-        selected_index = self._playlist.get_selected_index()
-        selected_track = self._playlist.get_track_by_index(selected_index)
-
-        self._state.current_track = selected_track
-        self._state.track_index = selected_index
-
-        self.track_loaded.emit(selected_track)
+        self.track_loaded.emit(self._selected_track)
 
         self._audio_player.start_playback()
 
     def _on_playback_started(self) -> None:
         """Emit playback started signal with track duration."""
-        track_duration = self._state.current_track.duration
+        self._state.current_track = self._selected_track
+        self._state.track_index = self._track_index
 
-        self.playback_started.emit(track_duration)
+        self._selected_track = None
+        self._track_index = None
 
     def _on_playback_position_changed(self, elapsed_time: float) -> None:
         """Emit position update with elapsed and remaining time.
@@ -125,14 +123,17 @@ class PlaybackService:
         else:
             selected_index = self._playlist.get_selected_index()
 
+            self._track_index = selected_index
+
             self._play_track_at_index(selected_index)
 
     def next_track(self) -> None:
         """Play next track."""
         next_index = self._state.track_index + 1
-
         new_selected_index = self._playlist.set_selected_index(next_index)
         if new_selected_index is not None:
+            self._track_index = new_selected_index
+
             self._play_track_at_index(new_selected_index)
 
     def previous_track(self) -> None:
@@ -141,4 +142,6 @@ class PlaybackService:
 
         new_selected_index = self._playlist.set_selected_index(prev_index)
         if new_selected_index is not None:
+            self._track_index = new_selected_index
+
             self._play_track_at_index(new_selected_index)

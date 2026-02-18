@@ -1,89 +1,51 @@
 # Base widgets
-from .base_widgets import IconButton, MarqueeLabel, IconButtonFactory
-
-# Playlist widgets
-from .playlist import (
-    AddTrackButton,
-    LoadFolderButton,
-    RemoveTrackButton,
-    PlaylistWidget,
-    PlaylistManager,
-    PlaylistDisplay,
-)
-
-# Now playing display widgets
-from .now_playing import (
+from .widgets import (
     AlbumArtLabel,
-    AudioArtistLabel,
-    AudioTitleLabel,
-    NowPlayingDisplay,
+    IconButton,
+    MarqueeLabel,
+    PlaylistWidget,
+    VolumeButton,
+    VolumeLabel,
 )
 
-# Playback widgets
-from .playback import (
-    ElapsedTimeLabel,
-    NextButton,
-    PlaybackProgressSlider,
-    PlayPauseButton,
-    PreviousButton,
-    RepeatButton,
-    ReplayButton,
-    TimeRemainingLabel,
+from .components import (
+    NowPlaying,
     PlaybackControls,
+    PlaylistDisplay,
+    PlaylistManager,
     PlaybackProgress,
+    VolumeControls,
 )
-
-# Volume widgets
-from .volume import VolumeButton, VolumeLabel, VolumeSlider, VolumeControls
 
 # Subviews
-from .subviews import PlayerbarView, PlaylistDisplay, PlaylistManager
+from .subviews import PlayerbarView, PlaylistView, PlaylistManagerView
 
 # Main view
 from .main_view import MusicPlayerView
 
 __all__ = [
     # Base widgets
+    "AlbumArtLabel",
     "IconButton",
     "MarqueeLabel",
-    "IconButtonFactory",
-
-    # Metadata widgets
-    "AlbumArtLabel",
-    "AudioArtistLabel",
-    "AudioTitleLabel",
-    "NowPlayingDisplay",
-
-    # Playback widgets
-    "ElapsedTimeLabel",
-    "NextButton",
-    "PlaybackProgressSlider",
-    "PlayPauseButton",
-    "PreviousButton",
-    "RepeatButton",
-    "ReplayButton",
-    "TimeRemainingLabel",
-    "PlaybackControls",
-    "PlaybackProgress",
-
-    # Playlist widgets
-    "AddTrackButton",
-    "LoadFolderButton",
     "PlaylistWidget",
-    "RemoveTrackButton",
-    "PlaylistManager",
-    "PlaylistDisplay",
-
-    # Volume widgets
     "VolumeButton",
     "VolumeLabel",
-    "VolumeSlider",
+
+    # Components
+    "NowPlaying",
+    "PlaybackControls",
+    "PlaylistManager",
+    "PlaybackProgress",
     "VolumeControls",
+
+    # Playlist widgets
+    "PlaylistDisplay",
 
     # Subviews
     "PlayerbarView",
-    "PlaylistDisplay",
-    "PlaylistManager",
+    "PlaylistView",
+    "PlaylistManagerView",
 
     # Main view
     "MusicPlayerView",

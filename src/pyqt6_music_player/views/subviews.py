@@ -6,7 +6,7 @@ from pyqt6_music_player.view_models import (
     VolumeViewModel,
 )
 from pyqt6_music_player.views import (
-    NowPlayingDisplay,
+    NowPlaying,
     PlaybackControls,
     PlaybackProgress,
     PlaylistDisplay,
@@ -90,7 +90,7 @@ class PlayerbarView(QFrame):
         """
         super().__init__()
         self._playback_progress = PlaybackProgress(playback_viewmodel)
-        self._now_playing_display = NowPlayingDisplay(playback_viewmodel)
+        self._now_playing_display = NowPlaying(playback_viewmodel)
         self._playback_controls = PlaybackControls(playback_viewmodel)
         self._volume_controls = VolumeControls(volume_viewmodel)
 
