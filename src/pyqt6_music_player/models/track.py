@@ -14,9 +14,9 @@ from pyqt6_music_player.metadata import get_metadata
 
 @dataclass(frozen=True)
 class DefaultAudioInfo:
-    title = "Song Title"
-    artist = "Song Artist"
-    album = "Song Album"
+    title = "Track Title"
+    artist = "Track Artist"
+    album = "Track Album"
     duration = "00:00:00"
 
 

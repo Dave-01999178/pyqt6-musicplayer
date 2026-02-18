@@ -16,12 +16,21 @@ MIN_VOLUME = 0
 MAX_VOLUME = 100
 
 
-# TODO: Move out later.
 # ================================================================================
 # Enums
 # ================================================================================
+# TODO: Move out later.
 class PlaybackStatus(Enum):
     IDLE = auto()  # Default status, audio player initialized but no track loaded.
     PLAYING = auto()
     PAUSED = auto()
     STOPPED = auto()
+
+
+class VolumeLevel(Enum):
+    """Represent discrete volume intensity levels."""
+
+    MUTE = auto()
+    LOW = auto()
+    MEDIUM = auto()
+    HIGH = auto()
