@@ -25,4 +25,4 @@ Thumbs.db
 *.txt
 
 # Note: Temporary ignore test directory due to outdated tests.
-/tests
+tests/
