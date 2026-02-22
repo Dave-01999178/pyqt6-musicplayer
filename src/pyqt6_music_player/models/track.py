@@ -8,8 +8,8 @@ import numpy as np
 from numpy.typing import NDArray
 from pydub import AudioSegment
 
-from pyqt6_music_player.constants import SUPPORTED_BYTES
-from pyqt6_music_player.metadata import get_metadata
+from pyqt6_music_player.core import SUPPORTED_BYTES
+from pyqt6_music_player.utils import get_metadata
 
 
 @dataclass(frozen=True)

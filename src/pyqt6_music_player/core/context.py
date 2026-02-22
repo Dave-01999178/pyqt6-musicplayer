@@ -1,16 +1,12 @@
 from dataclasses import dataclass
 
-from pyqt6_music_player.models import (
-    AudioPlayerService,
-    PlaybackState,
-    Playlist,
-    VolumeModel,
-)
+from pyqt6_music_player.audio import AudioPlayerService
+from pyqt6_music_player.models import PlaybackState, Playlist, VolumeModel
 from pyqt6_music_player.services import PlaybackService, PlaylistService
 from pyqt6_music_player.view_models import (
     PlaybackViewModel,
     PlaylistViewModel,
-    VolumeViewModel
+    VolumeViewModel,
 )
 
 

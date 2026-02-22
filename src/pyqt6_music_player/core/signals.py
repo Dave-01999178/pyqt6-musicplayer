@@ -28,7 +28,7 @@ class Signal:
             if isinstance(slot, weakref.WeakMethod):
                 func = slot()
                 if func is None:
-                    # Object was destroyed → remove dead reference
+                    # Remove dead reference
                     self._slots.remove(slot)
                     continue
                 func(*args, **kwargs)

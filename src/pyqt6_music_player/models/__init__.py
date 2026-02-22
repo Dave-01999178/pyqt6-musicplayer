@@ -1,5 +1,4 @@
 from .track import DefaultAudioInfo, TrackAudio, Track, DEFAULT_TRACK
-from .player import AudioPlayerService, AudioPlayerWorker
 from .model import (
     PlaybackState,
     Playlist,
@@ -11,8 +10,6 @@ __all__ = [
     "TrackAudio",
     "Track",
     "DEFAULT_TRACK",
-    "AudioPlayerService",
-    "AudioPlayerWorker",
     "PlaybackState",
     "Playlist",
     "VolumeModel",
