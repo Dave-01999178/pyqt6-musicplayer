@@ -1,9 +1,8 @@
 from pathlib import Path
 from typing import Sequence
 
-from pyqt6_music_player.constants import SUPPORTED_AUDIO_FORMAT
+from pyqt6_music_player.core import SUPPORTED_AUDIO_FORMAT, Signal
 from pyqt6_music_player.models import Playlist, Track
-from pyqt6_music_player.signals import Signal
 
 
 class PlaylistService:
@@ -104,8 +103,7 @@ class PlaylistService:
         return new_index
 
     # --- Queries ---
-    # Only expose what viewmodel and other service need for business logic,
-    # and rendering display; this prevents viewmodel direct access to models.
+    # Note: Expose only what is needed
     def get_track_count(self) -> int:
         return self._playlist.track_count
 

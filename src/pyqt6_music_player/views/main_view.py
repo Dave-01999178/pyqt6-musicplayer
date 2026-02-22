@@ -6,12 +6,12 @@ that holds all major UI components (playlist, player bar, controls).
 from PyQt6.QtGui import QColor, QIcon, QPalette
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
-from pyqt6_music_player.config import (
+from pyqt6_music_player.core import (
     APP_DEFAULT_SIZE,
     APP_TITLE,
     MUSIC_PLAYER_ICON_PATH,
+    AppContext
 )
-from pyqt6_music_player.context import AppContext
 from pyqt6_music_player.views import PlayerbarView, PlaylistDisplay, PlaylistManager
 
 
@@ -83,4 +83,4 @@ class MusicPlayerView(QWidget):
         a0.ignore()
 
         audio_player.shutdown()
-        audio_player.worker_resources_released.connect(self.close)
+        audio_player.player_resources_released.connect(self.close)

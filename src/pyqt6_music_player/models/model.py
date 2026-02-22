@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.constants import (
+from pyqt6_music_player.core import (
     MAX_VOLUME,
     MIN_VOLUME,
 )
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class PlaybackState:
     current_track: Track | None = None
     track_index: int | None = None
-    playback_status = None
+    playback_status = None  # TODO: Sync value to audio player on startup
 
 
 # --- Playlist model ---
@@ -105,7 +105,7 @@ class Playlist:
             Number of tracks added.
 
         """
-        added_count = 0
+        add_count = 0
 
         for track in tracks:
             track_path = track.path
@@ -117,9 +117,14 @@ class Playlist:
             self._tracks.append(track)
             self._track_paths.add(track_path)
 
-            added_count += 1
+            add_count += 1
 
-        return added_count
+        if add_count == 1:
+            logger.info("Added track '%s' to the playlist.", tracks[0].title)
+        else:
+            logger.info("Added %d tracks to playlist.", add_count)
+
+        return add_count
 
     # --- Properties ---
     @property

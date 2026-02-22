@@ -29,17 +29,19 @@ from PyQt6.QtWidgets import (
     QTableWidget,
 )
 
-from pyqt6_music_player.config import (
+from pyqt6_music_player.core import (
     ALBUM_ART_PLACEHOLDER,
     HIGH_VOLUME_ICON_PATH,
     LOW_VOLUME_ICON_PATH,
+    MAX_VOLUME,
     MEDIUM_VOLUME_ICON_PATH,
     METADATA_LABEL_SIZE,
+    MIN_VOLUME,
     MUTED_VOLUME_ICON_PATH,
     SMALL_BUTTON,
     SMALL_ICON,
+    VolumeLevel,
 )
-from pyqt6_music_player.constants import MAX_VOLUME, MIN_VOLUME, VolumeLevel
 
 
 # ================================================================================

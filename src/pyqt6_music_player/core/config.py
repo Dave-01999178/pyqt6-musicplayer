@@ -5,7 +5,7 @@ from pathlib import Path
 # ================================================================================
 #
 # ----- Base directories -----
-BASE_DIR = Path(__file__).resolve().parents[2]
+BASE_DIR = Path(__file__).resolve().parents[3]
 ASSETS_PATH = BASE_DIR / "assets"
 
 # ================================================================================

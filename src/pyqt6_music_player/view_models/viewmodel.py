@@ -1,5 +1,3 @@
-# TODO: Consider splitting this monolithic module into separate individual module
-#  when it grows, or became complex for easy navigation.
 import logging
 from collections.abc import Sequence
 from typing import ClassVar
@@ -12,7 +10,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 
-from pyqt6_music_player.constants import PlaybackStatus
+from pyqt6_music_player.core import PlaybackStatus
 from pyqt6_music_player.models import Track, VolumeModel
 from pyqt6_music_player.services import PlaybackService, PlaylistService
 
@@ -49,8 +47,7 @@ def format_duration(duration: int | float) -> str:
 #
 # noinspection PyUnresolvedReferences
 class PlaybackViewModel(QObject):
-    track_loaded = pyqtSignal(str, str, int, str)  # Title, Album, Duration
-    playback_started = pyqtSignal(int, str)  # Display duration, duration in ms
+    track_loaded = pyqtSignal(str, str, int, str)
     playback_position_changed = pyqtSignal(int, str, str)
     initial_track_added = pyqtSignal()
     player_state_changed = pyqtSignal(PlaybackStatus)
@@ -85,7 +82,9 @@ class PlaybackViewModel(QObject):
         self._playback_service.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
-        self._playback_service.player_state_changed.connect(self._on_player_state_changed)
+        self._playback_service.player_state_changed.connect(
+            self._on_player_state_changed,
+        )
 
     # --- Custom signal slots ---
     def _on_track_added(self, add_count: int, new_track_count: int) -> None:
@@ -146,9 +145,15 @@ class PlaybackViewModel(QObject):
         self.player_state_changed.emit(player_state)
 
     # --- Public methods (Commands). ---
-    def play_pause(self) -> None:
-        """Command for starting, pausing, and resuming playback."""
-        self._playback_service.play_pause()
+    def toggle_playback(self) -> None:
+        """Command for toggling playback state, used by play-pause button."""
+        self._playback_service.toggle_playback()
+
+    def pause(self):
+        self._playback_service.pause()
+
+    def resume(self):
+        self._playback_service.resume()
 
     def next_track(self) -> None:
         """Command for playing next track."""
@@ -157,6 +162,12 @@ class PlaybackViewModel(QObject):
     def previous_track(self) -> None:
         """Command for playing previous track."""
         self._playback_service.previous_track()
+
+    def seek(self, new_position_in_ms: int) -> None:
+        self._playback_service.seek(new_position_in_ms)
+
+    def get_playback_status(self) -> PlaybackStatus:
+        return self._playback_service.get_playback_status()
 
 
 # ================================================================================
@@ -260,8 +271,6 @@ class PlaylistViewModel(QAbstractTableModel):
 
         self.beginInsertRows(QModelIndex(), start, end)
         self.endInsertRows()
-
-        logger.info("%s tracks(s) was added to the playlist.", add_count)
 
     def _on_selected_index_changed(self, new_index) -> None:
         """Model selected index update signal handler.

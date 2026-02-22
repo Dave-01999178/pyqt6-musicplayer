@@ -1,27 +1,44 @@
-from PyQt6.QtCore import Qt, pyqtSlot, QModelIndex
+from PyQt6.QtCore import QModelIndex, Qt, pyqtSlot
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget, QFileDialog
+from PyQt6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QSlider,
+    QVBoxLayout,
+    QWidget,
+)
 
-from pyqt6_music_player.config import (
+from pyqt6_music_player.core import (
+    ADD_ICON_PATH,
     DEFAULT_SLIDER_RANGE,
+    FILE_DIALOG_FILTER,
+    LOAD_FOLDER_ICON_PATH,
     MEDIUM_BUTTON,
     MEDIUM_ICON,
     NEXT_ICON_PATH,
     PAUSE_ICON_PATH,
     PLAY_ICON_PATH,
+    PLAYLIST_MANAGER_BTN_SIZE,
     PREV_ICON_PATH,
+    REMOVE_ICON_PATH,
     REPEAT_ICON_PATH,
-    REPLAY_ICON_PATH, ADD_ICON_PATH, REMOVE_ICON_PATH, LOAD_FOLDER_ICON_PATH, PLAYLIST_MANAGER_BTN_SIZE,
+    REPLAY_ICON_PATH,
+    PlaybackStatus,
 )
-from pyqt6_music_player.constants import PlaybackStatus, FILE_DIALOG_FILTER
 from pyqt6_music_player.models import DEFAULT_TRACK, DefaultAudioInfo
-from pyqt6_music_player.view_models import PlaybackViewModel, VolumeViewModel, PlaylistViewModel
+from pyqt6_music_player.view_models import (
+    PlaybackViewModel,
+    PlaylistViewModel,
+    VolumeViewModel,
+)
 from pyqt6_music_player.views import (
     AlbumArtLabel,
     IconButton,
     MarqueeLabel,
+    PlaylistWidget,
     VolumeButton,
-    VolumeLabel, PlaylistWidget,
+    VolumeLabel,
 )
 
 
@@ -327,7 +344,7 @@ class PlaybackControls(QWidget):
     # --- Slots ---
     @pyqtSlot()
     def _on_play_pause_button_clicked(self) -> None:
-        self._viewmodel.play_pause()
+        self._viewmodel.toggle_playback()
 
     @pyqtSlot()
     def _on_next_button_clicked(self) -> None:
@@ -416,21 +433,27 @@ class PlaybackProgress(QWidget):
         )
         self._playback_viewmodel.initial_track_added.connect(self._on_initial_track_added)
 
-        # Note: Temporary signal for methods that analyzes seek bar behaviour.
-        self.seek_bar.sliderMoved.connect(self._on_slider_moved)
         self.seek_bar.sliderPressed.connect(self._on_slider_pressed)
+        self.seek_bar.sliderMoved.connect(self._on_slider_moved)
         self.seek_bar.sliderReleased.connect(self._on_slider_released)
 
-    # Note: Methods for analyzing QSlider behaviour before implementing
-    # seek functionality.
-    def _on_slider_moved(self):
-        print(f"Slider handle moved to a new position: {self.seek_bar.value()}")
-
+    @pyqtSlot()
     def _on_slider_pressed(self):
-        print(f"Slider handle pressed at position: {self.seek_bar.value()}")
+        playback_status = self._playback_viewmodel.get_playback_status()
+        if playback_status == PlaybackStatus.PLAYING:
+            self._playback_viewmodel.pause()
 
+    @pyqtSlot()
+    def _on_slider_moved(self):
+        self._playback_viewmodel.seek(self.seek_bar.value())
+
+    @pyqtSlot()
     def _on_slider_released(self):
-        print(f"Slider handle released at position: {self.seek_bar.value()}")
+        self._playback_viewmodel.seek(self.seek_bar.value())
+
+        playback_status = self._playback_viewmodel.get_playback_status()
+        if playback_status == PlaybackStatus.PAUSED:
+            self._playback_viewmodel.resume()
 
     # --- Slots ---
     @pyqtSlot(str, str, int, str)
@@ -472,11 +495,12 @@ class PlaybackProgress(QWidget):
                                       format.
 
         """
-        # TODO: Block progress bar setValue signal later before setting values
-        #  when implementing seek functionality.
         # Keep the slider position and time displays in sync with the
         # actual playback position so the UI accurately reflects playback progress.
+        self.seek_bar.blockSignals(True)
         self.seek_bar.setValue(elapsed_time_in_ms)
+        self.seek_bar.blockSignals(False)
+
         self.elapsed_time.setText(formatted_elapsed_time)
         self.time_remaining.setText(formatted_time_remaining)
 
