@@ -98,10 +98,10 @@ class PlaybackService:
 
         self.playback_position_changed.emit(elapsed_time, time_remaining)
 
-    def _on_player_state_changed(self, playback_status: PlaybackStatus):
-        self._state.playback_status = playback_status
+    def _on_player_state_changed(self, new_status: PlaybackStatus):
+        self._state.playback_status = new_status
 
-        self.player_state_changed.emit(playback_status)
+        self.player_state_changed.emit(new_status)
 
     # --- Public methods (Commands) ---
     def toggle_playback(self) -> None:

@@ -24,7 +24,7 @@ class PlaybackStatus(Enum):
     IDLE = auto()  # Default state on startup
     PLAYING = auto()
     PAUSED = auto()
-    STOPPED = auto()  # Playback interrupted (normally or due to an error).
+    STOPPED = auto()  # Playback interrupted (normally or due to an error)
 
 
 class VolumeLevel(Enum):

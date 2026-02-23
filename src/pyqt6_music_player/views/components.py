@@ -398,6 +398,9 @@ class PlaybackProgress(QWidget):
         self.seek_bar = QSlider()
         self.time_remaining = QLabel(DefaultAudioInfo.duration)
 
+        # Pre-seek playback state tracker.
+        self._pre_seek_playback_state: PlaybackStatus | None = None
+
         # Setup
         self._init_ui()
         self._connect_signals()
@@ -439,8 +442,11 @@ class PlaybackProgress(QWidget):
 
     @pyqtSlot()
     def _on_slider_pressed(self):
-        playback_status = self._playback_viewmodel.get_playback_status()
-        if playback_status == PlaybackStatus.PLAYING:
+        curr_playback_status = self._playback_viewmodel.get_playback_status()
+
+        self._pre_seek_playback_state = curr_playback_status
+
+        if curr_playback_status == PlaybackStatus.PLAYING:
             self._playback_viewmodel.pause()
 
     @pyqtSlot()
@@ -451,8 +457,7 @@ class PlaybackProgress(QWidget):
     def _on_slider_released(self):
         self._playback_viewmodel.seek(self.seek_bar.value())
 
-        playback_status = self._playback_viewmodel.get_playback_status()
-        if playback_status == PlaybackStatus.PAUSED:
+        if self._pre_seek_playback_state == PlaybackStatus.PLAYING:
             self._playback_viewmodel.resume()
 
     # --- Slots ---
