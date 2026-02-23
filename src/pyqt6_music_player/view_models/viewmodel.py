@@ -149,6 +149,9 @@ class PlaybackViewModel(QObject):
         """Command for toggling playback state, used by play-pause button."""
         self._playback_service.toggle_playback()
 
+    def play(self):
+        self._playback_service.play()
+
     def pause(self):
         self._playback_service.pause()
 

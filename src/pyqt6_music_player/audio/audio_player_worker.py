@@ -343,6 +343,8 @@ class AudioPlayerWorker(QObject):
 
         self.playback_finished.emit()
 
+    # TODO: Add playback ended signal and slot.
+
     def _on_byte_position_changed(self, byte_pos: int) -> None:
         """Convert byte position to seconds and emit byte position update signal.
 

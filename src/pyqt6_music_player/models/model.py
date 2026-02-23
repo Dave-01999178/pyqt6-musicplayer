@@ -8,6 +8,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from pyqt6_music_player.core import (
     MAX_VOLUME,
     MIN_VOLUME,
+    PlaybackStatus,
 )
 from pyqt6_music_player.models import Track
 
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 class PlaybackState:
     current_track: Track | None = None
     track_index: int | None = None
-    playback_status = None  # TODO: Sync value to audio player on startup
+    playback_status: PlaybackStatus | None = None  # TODO: Sync value to audio player on startup
 
 
 # --- Playlist model ---
