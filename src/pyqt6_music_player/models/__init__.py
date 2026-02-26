@@ -1,4 +1,4 @@
-from .track import DefaultAudioInfo, TrackAudio, Track, DEFAULT_TRACK
+from .track import DefaultTrackInfo, AudioPCM, Track, DEFAULT_TRACK
 from .model import (
     PlaybackState,
     Playlist,
@@ -6,8 +6,8 @@ from .model import (
 )
 
 __all__ = [
-    "DefaultAudioInfo",
-    "TrackAudio",
+    "DefaultTrackInfo",
+    "AudioPCM",
     "Track",
     "DEFAULT_TRACK",
     "PlaybackState",

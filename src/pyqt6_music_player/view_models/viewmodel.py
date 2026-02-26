@@ -57,7 +57,7 @@ class PlaybackViewModel(QObject):
             playlist_service: PlaylistService,
             playback_service: PlaybackService,
     ):
-        """Initialize viewmodel and connect to service signals.
+        """Initialize PlaybackViewModel.
 
         Args:
             playlist_service: Service managing playlist state and operations.
@@ -71,13 +71,47 @@ class PlaybackViewModel(QObject):
         # Setup
         self._connect_signals()
 
-    # --- Private methods ---
+    # --- Public methods (Commands). ---
+    def toggle_playback(self) -> None:
+        """Command for toggling playback state, used by play-pause button."""
+        self._playback_service.toggle_playback()
+
+    def play(self):
+        """Command for starting playback."""
+        self._playback_service.play()
+
+    def pause(self):
+        """Command for pausing playback"""
+        self._playback_service.pause()
+
+    def resume(self):
+        """Command for resuming paused playback."""
+        self._playback_service.resume()
+
+    def next_track(self) -> None:
+        """Command for playing next track."""
+        self._playback_service.play_next_track()
+
+    def previous_track(self) -> None:
+        """Command for playing previous track."""
+        self._playback_service.play_previous_track()
+
+    def seek(self, new_position_in_ms: int) -> None:
+        """Command for setting the playback position."""
+        self._playback_service.seek(new_position_in_ms)
+
+    def get_playback_status(self) -> PlaybackStatus:
+        """Returns the current playback status."""
+        return self._playback_service.get_playback_status()
+
+    # --- Protected/internal methods ---
     def _connect_signals(self) -> None:
-        """Establish signal–slot connections between the viewmodel and service."""
-        # Playlist service signals
+        # Wire service signals to PlaybackViewModel slots.
+        #
+        # PlaylistService -> PlaybackViewModel
         self._playlist_service.tracks_added.connect(self._on_track_added)
 
-        # Playback service signals
+        # PlaybackService -> PlaybackViewModel
         self._playback_service.track_loaded.connect(self._on_track_loaded)
         self._playback_service.playback_position_changed.connect(
             self._on_playback_position_changed,
@@ -86,26 +120,14 @@ class PlaybackViewModel(QObject):
             self._on_player_state_changed,
         )
 
-    # --- Custom signal slots ---
     def _on_track_added(self, add_count: int, new_track_count: int) -> None:
-        """Enable playback UI when the first track is added to an empty playlist.
-
-        Args:
-            add_count: Number of tracks just added.
-            new_track_count: Total tracks in playlist after addition.
-
-        """
+        # Emit `initial_track_added` signal on first insert
         initial_track_add = (new_track_count - add_count == 0)
         if initial_track_add:
             self.initial_track_added.emit()
 
     def _on_track_loaded(self, current_track: Track) -> None:
-        """Emit track metadata when a new track is loaded.
-
-        Args:
-            current_track: The newly loaded track.
-
-        """
+        # Emit track duration in milliseconds and formatted strings
         track_duration_in_ms = int(current_track.duration * 1000)
         formatted_duration = format_duration(int(current_track.duration))
 
@@ -121,17 +143,8 @@ class PlaybackViewModel(QObject):
             elapsed_time: float,
             time_remaining: float,
     ) -> None:
-        """Convert and emit playback position in milliseconds and formatted strings.
-
-        Args:
-            elapsed_time: Seconds elapsed since playback start.
-            time_remaining: Seconds remaining until track end.
-
-        """
-        # Elapsed time in ms (for smooth slider movement)
+        # Convert and emit playback position in milliseconds and formatted strings
         elapsed_time_in_ms = int(elapsed_time * 1000)
-
-        # Formatted playback position
         formatted_elapsed_time = format_duration(elapsed_time)
         formatted_time_remaining = format_duration(time_remaining)
 
@@ -142,35 +155,8 @@ class PlaybackViewModel(QObject):
         )
 
     def _on_player_state_changed(self, player_state: PlaybackStatus):
+        # Forward playback status changes
         self.player_state_changed.emit(player_state)
-
-    # --- Public methods (Commands). ---
-    def toggle_playback(self) -> None:
-        """Command for toggling playback state, used by play-pause button."""
-        self._playback_service.toggle_playback()
-
-    def play(self):
-        self._playback_service.play()
-
-    def pause(self):
-        self._playback_service.pause()
-
-    def resume(self):
-        self._playback_service.resume()
-
-    def next_track(self) -> None:
-        """Command for playing next track."""
-        self._playback_service.next_track()
-
-    def previous_track(self) -> None:
-        """Command for playing previous track."""
-        self._playback_service.previous_track()
-
-    def seek(self, new_position_in_ms: int) -> None:
-        self._playback_service.seek(new_position_in_ms)
-
-    def get_playback_status(self) -> PlaybackStatus:
-        return self._playback_service.get_playback_status()
 
 
 # ================================================================================
@@ -200,15 +186,28 @@ class PlaylistViewModel(QAbstractTableModel):
         # Setup
         self._connect_signals()
 
-    # --- Private methods ---
-    def _connect_signals(self) -> None:
-        """Connect service signals."""
-        self._playlist_service.tracks_added.connect(self._on_track_added)
-        self._playlist_service.selection_index_changed.connect(
-            self._on_selected_index_changed,
-        )
+    # --- Public methods ---
+    #
+    # Commands
+    def add_tracks(self, paths: Sequence[str]) -> None:
+        """Command for adding tracks to the playlist.
 
-    # --- QAbstractTableModel methods ---
+        Args:
+            paths: A sequence of path-like objects.
+
+        """
+        self._playlist_service.add_tracks(paths)
+
+    def set_selected_index(self, index: int) -> None:
+        """Model selected index setter.
+
+        Args:
+            index: The selected row index in playlist.
+
+        """
+        self._playlist_service.set_selected_index(index)
+
+    # QAbstractTableModel
     def rowCount(self, parent=None):
         """Set the number of row based on the number of tracks in playlist."""
         return self._playlist_service.get_track_count()
@@ -257,18 +256,17 @@ class PlaylistViewModel(QAbstractTableModel):
 
         return None
 
-    # --- Slots ---
+    # --- Protected/internal methods ---
+    def _connect_signals(self) -> None:
+        # Wire PlaylistService signals to PlaylistViewModel slots.
+        self._playlist_service.tracks_added.connect(self._on_track_added)
+        self._playlist_service.selection_index_changed.connect(
+            self._on_selected_index_changed,
+        )
+
     # TODO: Initial implementation (insertion order), replace later.
     def _on_track_added(self, add_count: int, new_track_count: int) -> None:
-        """Playlist add track event signal handler.
-
-        Displays the newly added tracks(s) in the playlist widget.
-
-        Args:
-            add_count: The number of added track(s).
-            new_track_count: The new playlist track count.
-
-        """
+        # Displays the newly added tracks(s) in the playlist widget.
         start = new_track_count - add_count
         end = new_track_count - 1
 
@@ -276,32 +274,8 @@ class PlaylistViewModel(QAbstractTableModel):
         self.endInsertRows()
 
     def _on_selected_index_changed(self, new_index) -> None:
-        """Model selected index update signal handler.
-
-        Args:
-            new_index: The updated index from model.
-
-        """
+        # Forward the new selection index
         self.selected_index_changed.emit(new_index)  # type: ignore
-
-    # --- Public methods (Commands) ---
-    def add_tracks(self, paths: Sequence[str]) -> None:
-        """Command for adding tracks to the playlist.
-
-        Args:
-            paths: A sequence of path-like objects.
-
-        """
-        self._playlist_service.add_tracks(paths)
-
-    def set_selected_index(self, index: int) -> None:
-        """Model selected index setter.
-
-        Args:
-            index: The selected row index in playlist.
-
-        """
-        self._playlist_service.set_selected_index(index)
 
 
 # ================================================================================
@@ -312,7 +286,7 @@ class VolumeViewModel(QObject):
     model_mute_state_changed = pyqtSignal(bool)
 
     def __init__(self, volume_model: VolumeModel, player_engine):
-        """Initialize VolumeViewModel instance."""
+        """Initialize VolumeViewModel."""
         super().__init__()
         self._player_engine = player_engine
         self._model = volume_model
@@ -320,36 +294,7 @@ class VolumeViewModel(QObject):
         # Establish Model-ViewModel connection.
         self._connect_signals()
 
-    def _connect_signals(self):
-        self._model.volume_changed.connect(self._on_model_volume_changed)
-        self._model.mute_changed.connect(self._on_model_mute_changed)
-
-    def _on_model_volume_changed(self, new_volume: int) -> None:
-        """Notify the volume view of model volume changes.
-
-        Args:
-            new_volume: The new model volume.
-
-        """
-        self.model_volume_changed.emit(new_volume)  # type: ignore
-
-    def _on_model_mute_changed(self, muted: bool) -> None:
-        """Notify the volume view of model mute state changes.
-
-        Args:
-            muted: The new model mute state.
-
-        """
-        self.model_mute_state_changed.emit(muted)  # type: ignore
-
-    def refresh(self) -> None:
-        """Re-emit the current volume to refresh any subscribed views.
-
-        Useful when view needs initial state sync.
-        """
-        self.model_volume_changed.emit(self._model.current_volume)  # type: ignore
-
-    # --- Commands ---
+    # --- Public methods ---
     def set_volume(self, new_volume) -> None:
         """Command for updating model volume.
 
@@ -367,3 +312,21 @@ class VolumeViewModel(QObject):
 
         """
         self._model.set_muted(mute)
+
+    # --- Protected/internal methods ---
+    def _connect_signals(self):
+        self._model.volume_changed.connect(self._on_model_volume_changed)
+        self._model.mute_changed.connect(self._on_model_mute_changed)
+
+    def _on_model_volume_changed(self, new_volume: int) -> None:
+        self.model_volume_changed.emit(new_volume)  # type: ignore
+
+    def _on_model_mute_changed(self, muted: bool) -> None:
+        self.model_mute_state_changed.emit(muted)  # type: ignore
+
+    def refresh(self) -> None:
+        """Re-emit the current volume to refresh any subscribed views.
+
+        Useful when view needs initial state sync.
+        """
+        self.model_volume_changed.emit(self._model.current_volume)  # type: ignore

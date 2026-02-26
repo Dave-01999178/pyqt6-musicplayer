@@ -36,7 +36,7 @@ def extract_id3_tags(
     This function retrieves text-based metadata fields (title, artist, album)
     stored in ID3 frames (e.g., TIT2, TPE1, TALB).
 
-    If a specific frame is missing or empty, a fallback value from `defaults` is used.
+    A fallback value from `defaults` is used when a specific frame is missing or empty.
 
     Args:
         mp3_audio: A mutagen.mp3.MP3 audio object containing ID3 tags.
@@ -49,7 +49,7 @@ def extract_id3_tags(
 
     """
     def _get_text(tag: str, default: str):
-        """Safely extract `text` values from ID3 frames."""
+        # Safely extract `text` values from ID3 frames.
         frame = mp3_audio.get(tag)
 
         if frame and hasattr(frame, "text") and frame.text:
@@ -71,7 +71,7 @@ def extract_generic_tags(
     """Extract standard metadata tags from a non-MP3 audio file.
 
     This function retrieves metadata tags stored in formats such as FLAC, Ogg, or WAV.
-    If a tag is missing, a fallback value from `defaults` is used.
+    A fallback value from `defaults` is used when a tag is missing.
 
     Args:
         audio: A non-mp3 mutagen audio object (e.g. FLAC, OggVorbis, or WAVE).
@@ -100,7 +100,7 @@ def extract_generic_tags(
 
 
 def get_metadata(audio: FileType) -> AudioInfoDict:
-    """Orchestrate metadata extraction for a given audio file.
+    """Orchestrate metadata extraction for the given audio file.
 
     Determines the correct extraction method based on the audio file type.
 

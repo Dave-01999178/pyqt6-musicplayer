@@ -25,6 +25,7 @@ class PlaybackStatus(Enum):
     PLAYING = auto()
     PAUSED = auto()
     STOPPED = auto()  # Playback interrupted (normally or due to an error)
+    ERROR = auto()
 
 
 class VolumeLevel(Enum):
