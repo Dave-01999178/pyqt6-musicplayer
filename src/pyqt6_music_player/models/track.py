@@ -13,7 +13,9 @@ from pyqt6_music_player.utils import get_metadata
 
 
 @dataclass(frozen=True)
-class DefaultAudioInfo:
+class DefaultTrackInfo:
+    """Placeholder for missing track metadata."""
+
     title = "Track Title"
     artist = "Track Artist"
     album = "Track Album"
@@ -24,7 +26,7 @@ class DefaultAudioInfo:
 # TRACK
 # ================================================================================
 #
-# --- Track file path, and metadata ---
+# ----- Track file path, and metadata -----
 @dataclass(frozen=True, eq=True)
 class Track:
     """Represent an audio track with metadata.
@@ -39,32 +41,38 @@ class Track:
     """
 
     path: Path | None = None
-    title: str = DefaultAudioInfo.title
-    artist: str = DefaultAudioInfo.artist
-    album: str = DefaultAudioInfo.album
-    duration: str | float = DefaultAudioInfo.duration
+    title: str = DefaultTrackInfo.title
+    artist: str = DefaultTrackInfo.artist
+    album: str = DefaultTrackInfo.album
+    duration: str | float = DefaultTrackInfo.duration
 
     @classmethod
-    def from_path(cls, path: Path) -> Self | None:
+    def from_file(cls, path: Path) -> Self | None:
         """Create a Track instance from an audio file.
+
+        Args:
+            path: The filesystem path to the audio file.
 
         Returns:
             A Track instance containing the audio file path and its metadata,
             or None if the file cannot be read or contains invalid audio data.
 
         """
-        # Load audio file.
+        # Load the audio file
         try:
             audio = mutagen.File(path)
+
         except (mutagen.MutagenError, OSError) as e:
             logging.warning("Invalid or unreadable audio file: %s (%s)", path, e)
             return None
+
         except Exception as e:
             logging.error("Unexpected error while reading %s: %s", path, e)
             return None
 
-        # Extract metadata.
-        metadata = get_metadata(audio)
+        else:
+            # Extract the metadata from audio file
+            metadata = get_metadata(audio)
 
         return cls(
             path=path,
@@ -75,27 +83,29 @@ class Track:
         )
 
 
-# --- Track PCM and format parameters ---
+# ----- Audio PCM -----
 @dataclass(frozen=True, eq=True)
-class TrackAudio:
+class AudioPCM:
     """Represents PCM audio samples normalized to [-1.0, 1.0].
 
     Attributes:
         channels: Number of audio channels.
         sample_rate: Samples per second (Hz).
         sample_width: Bytes per sample.
-        orig_dtype: Original PCM numpy dtype.
-        orig_dtype_max: Maximum representable value of original dtype.
         samples: Normalized audio samples as float32.
+        orig_dtype: Original PCM numpy dtype.
+        orig_scale: Value used to adjust, or transform data to a common scale or range.
 
     """
-
+    # Format parameters
     channels: int
     sample_rate: int
     sample_width: int
-    orig_dtype: type[np.uint8] | type[np.int16] | type[np.int32]
-    orig_dtype_max: int
+
+    # PCM data
     samples: NDArray[np.float32]
+    orig_dtype: type[np.uint8] | type[np.int16] | type[np.int32]
+    orig_scale: float
 
     def __post_init__(self) -> None:
         """Set PCM samples to read-only after initializing."""
@@ -114,7 +124,7 @@ class TrackAudio:
             path: The filesystem path to the audio file.
 
         """
-        # --- Load and decode file. ---
+        # --- Load and decode audio file. ---
         try:
             audio_segment = AudioSegment.from_file(path)
         except Exception as e:
@@ -122,20 +132,16 @@ class TrackAudio:
             return None
 
         # --- Parse raw data from AudioSegment. ---
-        #
-        # Omitted 24-bit audio (sample_width == 3) because pydub automatically converts
-        # 24-bit to 32-bit.
         sample_width = audio_segment.sample_width
         if sample_width not in SUPPORTED_BYTES:
             logging.error("Invalid/Unsupported sample width: %d", sample_width)
             return None
 
-        one_byte = 1
-        two_bytes = 2
-
-        if sample_width == one_byte:
+        # 'sample_width = 3' or '24-bit' is not included since PyDub automatically
+        # converts it into 32-bit due to limitations.
+        if sample_width == 1:
             orig_dtype = np.uint8
-        elif sample_width == two_bytes:
+        elif sample_width == 2:
             orig_dtype = np.int16
         else:
             orig_dtype = np.int32
@@ -145,29 +151,30 @@ class TrackAudio:
             dtype=orig_dtype,
         ).astype(np.float32)
 
+        info = np.iinfo(orig_dtype)
+
         # --- Normalize samples to [-1.0, 1.0] range. ---
-        if sample_width == one_byte:
-            max_value = np.iinfo(orig_dtype).max
-            samples_normalized = (samples - 128.0) / 128.0
+        if np.issubdtype(orig_dtype, np.unsignedinteger):
+            # For unsigned: subtract mid-point, then divide by float mid-point.
+            mid_point = (1 << (info.bits - 1))
+            scale = float(mid_point)
+            samples_normalized = (samples - mid_point) / scale
         else:
-            # For 16-bit (i2) and 32-bit (i4) signed integers.
-            # Use the maximum positive value (M_pos) for division.
-            # max_value = 32767 for 16-bit, 2147483647 for 32-bit.
-            max_value = np.iinfo(orig_dtype).max
-            samples_normalized = samples / float(max_value)
+            # For signed: divide by max positive value
+            scale = float(info.max)
+            samples_normalized = samples / scale
 
         # --- Reshape samples array: (frames, channels). ---
-        # '-1' is a numpy trick to automatically calculate a dimension size
-        # (rows in this case).
+        # '-1' is a numpy trick to automatically calculate a row, or column size
         samples_normalized = samples_normalized.reshape(-1, audio_segment.channels)
 
         return cls(
             channels=audio_segment.channels,
             sample_rate=audio_segment.frame_rate,
             sample_width=sample_width,
-            orig_dtype=orig_dtype,
-            orig_dtype_max=max_value,
             samples=samples_normalized,
+            orig_dtype=orig_dtype,
+            orig_scale=scale,
         )
 
 

@@ -1,4 +1,3 @@
-# Base widgets
 from .widgets import (
     AlbumArtLabel,
     IconButton,
@@ -7,24 +6,19 @@ from .widgets import (
     VolumeButton,
     VolumeLabel,
 )
-
-from .components import (
-    NowPlaying,
-    PlaybackControls,
-    PlaylistDisplay,
-    PlaylistManager,
-    PlaybackProgress,
-    VolumeControls,
+from .panels import (
+    NowPlayingPanel,
+    PlaybackControlsPanel,
+    PlaylistDisplayPanel,
+    PlaylistManagerPanel,
+    PlaybackProgressPanel,
+    VolumeControlsPanel,
 )
-
-# Subviews
-from .subviews import PlayerbarView, PlaylistView, PlaylistManagerView
-
-# Main view
+from .section_views import PlayerbarView, PlaylistView, PlaylistManagerView
 from .main_view import MusicPlayerView
 
 __all__ = [
-    # Base widgets
+    # Widgets
     "AlbumArtLabel",
     "IconButton",
     "MarqueeLabel",
@@ -32,17 +26,15 @@ __all__ = [
     "VolumeButton",
     "VolumeLabel",
 
-    # Components
-    "NowPlaying",
-    "PlaybackControls",
-    "PlaylistManager",
-    "PlaybackProgress",
-    "VolumeControls",
+    # Panels
+    "NowPlayingPanel",
+    "PlaybackControlsPanel",
+    "PlaylistDisplayPanel",
+    "PlaylistManagerPanel",
+    "PlaybackProgressPanel",
+    "VolumeControlsPanel",
 
-    # Playlist widgets
-    "PlaylistDisplay",
-
-    # Subviews
+    # Section views
     "PlayerbarView",
     "PlaylistView",
     "PlaylistManagerView",

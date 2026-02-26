@@ -14,35 +14,7 @@ class PlaylistService:
         self.tracks_added = Signal()
         self.selection_index_changed = Signal()
 
-    # --- Private methods ---
-    @staticmethod
-    def _normalize_to_path(paths: Sequence[str]) -> list[Path]:
-        """Convert valid path string input into a Path object.
-
-        Args:
-            paths: A sequence of paths as strings.
-
-        Returns:
-            list[Path]: The normalized input as Path objects stored in a list.
-
-        """
-        normalized_paths = []
-
-        for path in paths:
-            if path in {"", "."}:
-                continue
-
-            normalized_path = Path(path)
-
-            # Skip cwd, empty values, or directories
-            if normalized_path in {Path(""), Path(".")} or normalized_path.is_dir():
-                continue
-
-            normalized_paths.append(normalized_path)
-
-        return normalized_paths
-
-    # --- Commands ---
+    # --- Public methods ---
     def add_tracks(self, paths: Sequence[str]) -> None:
         """Command for adding tracks to the playlist.
 
@@ -73,7 +45,7 @@ class PlaylistService:
             if resolved_path.suffix.lower() not in SUPPORTED_AUDIO_FORMAT:
                 continue
 
-            track = Track.from_path(resolved_path)
+            track = Track.from_file(resolved_path)
 
             valid_tracks.append(track)
 
@@ -102,13 +74,50 @@ class PlaylistService:
 
         return new_index
 
-    # --- Queries ---
-    # Note: Expose only what is needed
     def get_track_count(self) -> int:
+        """Return the number of tracks in the playlist."""
         return self._playlist.track_count
 
     def get_track_by_index(self, index: int) -> Track | None:
+        """Get track at the specified index.
+
+        Args:
+            index: The track index.
+
+        Returns:
+            The track at given index, or None if invalid.
+
+        """
         return self._playlist.get_track_by_index(index)
 
     def get_selected_index(self) -> int:
+        """Return the currently selected track index."""
         return self._playlist.selected_index
+
+    # --- Protected/internal methods ---
+    @staticmethod
+    def _normalize_to_path(paths: Sequence[str]) -> list[Path]:
+        """Convert valid path string input into a Path object.
+
+        Args:
+            paths: A sequence of paths as strings.
+
+        Returns:
+            list[Path]: The normalized input as Path objects stored in a list.
+
+        """
+        normalized_paths = []
+
+        for path in paths:
+            if path in {"", "."}:
+                continue
+
+            normalized_path = Path(path)
+
+            # Skip cwd, empty values, or directories
+            if normalized_path in {Path(""), Path(".")} or normalized_path.is_dir():
+                continue
+
+            normalized_paths.append(normalized_path)
+
+        return normalized_paths

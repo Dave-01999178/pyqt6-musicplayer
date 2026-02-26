@@ -34,25 +34,28 @@ def load_stylesheet(path: str | Path) -> str | None:
         logger.error("Failed to load stylesheet: %s", e)
         return None
 
+
 # ================================================================================
 # MAIN
 # ================================================================================
-def main():
-    # --- Log ---
+def main() -> None:
+    """Application entry point.
+
+    Configures logging,loads styles, builds the application context,
+    initializes the Qt application creates the main view, and starts the event loop.
+    """
+    # --- Setup ---
     setup_logging()
+
+    ctx = build_context()
+    stylesheet = load_stylesheet(STYLESHEET)
 
     # --- App ---
     app = QApplication(sys.argv)
 
-    # --- Stylesheet ---
-    stylesheet = load_stylesheet(STYLESHEET)
     if stylesheet:
         app.setStyleSheet(stylesheet)
 
-    # --- App context ---
-    ctx = build_context()
-
-    # --- View ---
     main_view = MusicPlayerView(ctx)
     main_view.show()
 

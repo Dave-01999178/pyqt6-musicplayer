@@ -4,84 +4,91 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
 from pyqt6_music_player.audio import AudioPlayerWorker
 from pyqt6_music_player.core import PlaybackStatus
-from pyqt6_music_player.models import TrackAudio
+from pyqt6_music_player.models import AudioPCM
 
 logger = logging.getLogger(__name__)
 
 
 # ================================================================================
-# AUDIO PLAYER INTERFACE
+# AUDIO PLAYER SERVICE
 # ================================================================================
 #
 # noinspection PyUnresolvedReferences
 class AudioPlayerService(QObject):
-    # Service signals
-    load_audio_requested = pyqtSignal(TrackAudio)
+    """Manages audio playback worker thread and coordinates signal communication.
+
+    Acts as a thread-safe interface to the audio player worker, handling thread
+    lifecycle and signal routing between the main thread and worker thread.
+
+    """
+
+    # AudioPlayerService signals
+    load_audio_requested = pyqtSignal(AudioPCM)
     start_playback_requested = pyqtSignal()
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
     seek_requested = pyqtSignal(int)
     shutdown_requested = pyqtSignal()
 
-    # Worker signals
+    # AudioPlayerWorker signals
     audio_loaded = pyqtSignal()
     playback_started = pyqtSignal()
+    playback_finished = pyqtSignal()
     playback_position_changed = pyqtSignal(float)
     playback_status_changed = pyqtSignal(PlaybackStatus)
-    playback_finished = pyqtSignal()
     player_resources_released = pyqtSignal()
 
     def __init__(self):
+        """Initialize AudioPlayerService and its worker thread."""
         super().__init__()
+        # Thread and worker
         self._worker_thread = None
         self._worker = None
 
+        # Setup
         self._init_thread_and_worker()
 
-    # --- Slots ---
-    @pyqtSlot()
-    def _on_audio_load(self) -> None:
-        """Emit audio loaded signal to external observers."""
-        self.audio_loaded.emit()
+    # --- Public methods ---
+    def load_track_audio(self, audio_pcm: AudioPCM):
+        """Request track audio load to the worker."""
+        if not isinstance(audio_pcm, AudioPCM):
+            return
 
-    @pyqtSlot()
-    def _on_playback_started(self) -> None:
-        """Emit playback started signal to external observers."""
-        self.playback_started.emit()
+        self.load_audio_requested.emit(audio_pcm)
 
-    @pyqtSlot(float)
-    def _on_byte_position_changed(self, byte_pos_as_sec: float) -> None:
-        """Emit playback position in seconds.
+    def start_playback(self) -> None:
+        """Request playback start."""
+        self.start_playback_requested.emit()
 
-        Args:
-            byte_pos_as_sec: Byte position in seconds.
+    def pause_playback(self) -> None:
+        """Request playback pause."""
+        self.pause_playback_requested.emit()
 
+    def resume_playback(self) -> None:
+        """Request playback resume"""
+        self.resume_playback_requested.emit()
+
+    def seek(self, new_position_in_ms: int) -> None:
+        """Request playback position update."""
+        self.seek_requested.emit(new_position_in_ms)
+
+    def shutdown(self):
+        """Request thread shutdown."""
+        if self._worker_thread is None:
+            self.player_resources_released.emit()
+            return
+
+        self.shutdown_requested.emit()
+
+    def is_running(self) -> bool:
+        """Check if there's a current running thread.
+
+        Returns:
+            True if there is a running thread; Else, False.
         """
-        self.playback_position_changed.emit(byte_pos_as_sec)
+        return self._worker_thread is not None and self._worker_thread.isRunning()
 
-    @pyqtSlot()
-    def _on_playback_finished(self):
-        """Emit playback finished signal to external observers."""
-        self.playback_finished.emit()
-
-    @pyqtSlot(PlaybackStatus)
-    def _on_playback_status_changed(self, playback_status: PlaybackStatus) -> None:
-        self.playback_status_changed.emit(playback_status)
-
-    @pyqtSlot()
-    def _on_thread_finished(self):
-        """Cleanup thread, and worker."""
-        self._worker.deleteLater()
-        self._worker = None
-
-        self._worker_thread.deleteLater()
-        self._worker_thread = None
-
-        self.player_resources_released.emit()
-
-        logger.info("Worker and thread deleted.")
-
-    # --- Private methods ---
+    # --- Protected/internal methods ---
     def _connect_signals(self) -> None:
         """Establish signal–slot connections between the service and worker."""
         if self._worker is None:
@@ -105,7 +112,7 @@ class AudioPlayerService(QObject):
         self._worker_thread.finished.connect(self._on_thread_finished)
 
     def _init_thread_and_worker(self) -> None:
-        """Initialize thread, and worker then connect signals."""
+        """Initialize thread and worker then connect signals."""
         if self._worker_thread is not None:
             return
 
@@ -113,7 +120,8 @@ class AudioPlayerService(QObject):
         self._worker_thread = QThread()
         self._worker = AudioPlayerWorker()
 
-        # Move worker to thread
+        # IMPORTANT!!!
+        # Move the worker to thread first before connecting signals and starting thread
         self._worker.moveToThread(self._worker_thread)
 
         # Connect service and worker signals
@@ -122,31 +130,34 @@ class AudioPlayerService(QObject):
         # Start thread
         self._worker_thread.start()
 
-    # --- Public methods (Commands) ---
-    def load_track_audio(self, track_audio: TrackAudio):
-        if not isinstance(track_audio, TrackAudio):
-            return
+    @pyqtSlot()
+    def _on_audio_load(self) -> None:
+        self.audio_loaded.emit()
 
-        self.load_audio_requested.emit(track_audio)
+    @pyqtSlot()
+    def _on_playback_started(self) -> None:
+        self.playback_started.emit()
 
-    def start_playback(self) -> None:
-        self.start_playback_requested.emit()
+    @pyqtSlot(float)
+    def _on_byte_position_changed(self, byte_pos_as_sec: float) -> None:
+        self.playback_position_changed.emit(byte_pos_as_sec)
 
-    def pause_playback(self) -> None:
-        self.pause_playback_requested.emit()
+    @pyqtSlot()
+    def _on_playback_finished(self):
+        self.playback_finished.emit()
 
-    def resume_playback(self) -> None:
-        self.resume_playback_requested.emit()
+    @pyqtSlot(PlaybackStatus)
+    def _on_playback_status_changed(self, playback_status: PlaybackStatus) -> None:
+        self.playback_status_changed.emit(playback_status)
 
-    def seek(self, new_position_in_ms: int) -> None:
-        self.seek_requested.emit(new_position_in_ms)
+    @pyqtSlot()
+    def _on_thread_finished(self):
+        self._worker.deleteLater()
+        self._worker = None
 
-    def is_running(self) -> bool:
-        return self._worker_thread is not None and self._worker_thread.isRunning()
+        self._worker_thread.deleteLater()
+        self._worker_thread = None
 
-    def shutdown(self):
-        if self._worker_thread is None:
-            self.player_resources_released.emit()
-            return
+        logger.info("Worker and thread deleted.")
 
-        self.shutdown_requested.emit()
+        self.player_resources_released.emit()

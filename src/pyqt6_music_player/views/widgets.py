@@ -81,26 +81,18 @@ class IconButton(QPushButton):
 
         """
         super().__init__(text=button_text)
+        # Icon
         self._icon_path = icon_path
+
+        # Properties
         self._icon_size = icon_size
         self._widget_size = widget_size
         self._object_name = object_name
 
+        # Setup
         self._configure_properties()
 
-    # --- Private method ---
-    def _configure_properties(self):
-        """Configure instance properties."""
-        icon = self.path_to_qicon(self._icon_path)
-
-        self.setIcon(icon)
-        self.setIconSize(QSize(*self._icon_size))
-
-        self.setFixedSize(*self._widget_size)
-
-        if self._object_name:
-            self.setObjectName(self._object_name)
-
+    # --- Public methods ---
     @staticmethod
     def path_to_qicon(icon_path: str | Path) -> QIcon:
         """Convert an icon image into QIcon instance.
@@ -119,6 +111,18 @@ class IconButton(QPushButton):
 
             return QIcon()
 
+    # --- Protected/internal methods ---
+    def _configure_properties(self):
+        icon = self.path_to_qicon(self._icon_path)
+
+        self.setIcon(icon)
+        self.setIconSize(QSize(*self._icon_size))
+
+        self.setFixedSize(*self._widget_size)
+
+        if self._object_name:
+            self.setObjectName(self._object_name)
+
 
 # ================================================================================
 # CUSTOM WIDGETS
@@ -134,16 +138,23 @@ class AlbumArtLabel(QLabel):
     def __init__(self):
         """Initialize AlbumArtLabel."""
         super().__init__()
+        # Setup
         self._configure_properties()
         self._init_ui()
 
-    # --- Private methods ---
+    # --- Public methods ---
+    def set_image(self, image) -> None:
+        if image is None:
+            return
+
+        self._set_image(image)
+
+    # --- Protected/internal methods ---
     def _init_ui(self):
-        """Initialize and set instance default album art."""
+        # Set instance default album art placeholder
         self._set_image(ALBUM_ART_PLACEHOLDER)
 
     def _configure_properties(self):
-        """Configure instance properties."""
         self.setFixedSize(75, 75)
         self.setScaledContents(False)
 
@@ -156,13 +167,6 @@ class AlbumArtLabel(QLabel):
         )
 
         self.setPixmap(scaled)
-
-    # --- Public methods ---
-    def set_image(self, image) -> None:
-        if image is None:
-            return
-
-        self._set_image(image)
 
 
 # ----- Marquee Label -----
@@ -180,52 +184,33 @@ class MarqueeLabel(QLabel):
 
         Args:
             text: The text to display.
+            widget_size: Size of the marquee label as (width, height) in pixels.
+                         Defaults to (100, 25).
+            object_name: Qt object name useful for QSS selectors.
+                         Defaults to ``None``.
 
         """
         super().__init__(text=text)
-        # Instance configuration
+        # Instance properties
         self._widget_size = widget_size
         self._object_name = object_name
 
         self._configure_properties()
 
         # Marquee configuration
-        self._offset = 0  # Current horizontal offset.
-        self._speed = 1  # Pixels per timer tick.
-        self._gap = 20  # Space between repeated text instances.
+        self._offset = 0  # Current horizontal offset
+        self._speed = 1  # Pixels per timer tick
+        self._gap = 20  # Space between repeated text instances
 
-        # Timer
+        # Animation timer
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update_offset)  # type: ignore
 
         self._timer.start(20)
 
-    # --- Private methods ---
-    def _configure_properties(self):
-        self.setFixedSize(*self._widget_size)
-        self.setObjectName(self._object_name)
-
-    def _update_offset(self):
-        """Compute and update text offset based on the current text position."""
-        text_width = self.fontMetrics().horizontalAdvance(self.text())
-
-        # If the current text fits, do nothing.
-        if text_width <= self.width():
-            return
-
-        cycle_width = (text_width + self._gap)
-
-        self._offset = (self._offset + self._speed) % cycle_width
-
-        # Reset offset after one full marquee cycle (text + gap) has scrolled past
-        # for seamless animation.
-        if self._offset > text_width + self._gap:
-            self._offset = 0
-
-        self.update()
-
-    # --- QLabel methods ---
+    # --- Public methods (QLabel) ---
     def paintEvent(self, event: QPaintEvent | None):
+        # Custom paint event for scrolling text effect
         font_metrics = self.fontMetrics()
         text_width = font_metrics.horizontalAdvance(self.text())
 
@@ -240,23 +225,49 @@ class MarqueeLabel(QLabel):
         painter.setPen(self.palette().windowText().color())
 
         current_text = self.text()
-        x = -self._offset  # Shift the text leftward.
+        x = -self._offset  # Shifts the text leftward.
         y = (self.height() + font_metrics.ascent()) // 2  # Vertically centers the text.
 
-        # To create a seamless marquee effect when the text is wider than the widget:
-        # - The first `drawText` renders the "leaving" instance
+        # Create a seamless marquee effect when the text is wider than the widget:
+        # - The first `drawText` renders the "leaving" text
         #   (shifted left from the visible area).
-        # - The second `drawText` renders the "entering" instance
+        # - The second `drawText` renders the "entering" text
         #  (positioned after the text, and gap).
         # Together, they produce a continuous looping scroll.
         painter.drawText(x, y, current_text)
         painter.drawText(x + text_width + self._gap, y, current_text)
 
-    # Note: Override to reset animation when text changes.
-    # This prevents mid-word jumps and weird starting positions.
     def setText(self, text: str | None):
-        super().setText(text)
+        super().setText(text)  # Default behavior
+
+        # Reset offset when text changes to avoid mid-word jumps
+        # and weird starting positions.
         self._offset = 0
+
+    # --- Protected/internal methods ---
+    def _configure_properties(self):
+        self.setFixedSize(*self._widget_size)
+        self.setObjectName(self._object_name)
+
+    def _update_offset(self):
+        # Compute and update text offset based on the current text position.
+        text_width = self.fontMetrics().horizontalAdvance(self.text())
+        cycle_width = (text_width + self._gap)
+
+        # If the current text fits, do nothing.
+        if text_width <= self.width():
+            return
+
+        # Add '% cycle_width' to the offset formula to avoid the noticeable jump
+        # when the text resets.
+        self._offset = (self._offset + self._speed) % cycle_width
+
+        # Reset offset after one full marquee cycle (text + gap) has scrolled past
+        # for seamless animation.
+        if self._offset > text_width + self._gap:
+            self._offset = 0
+
+        self.update()
 
 
 # ----- PLAYLIST TABLE AND ROW HOVER EFFECTS -----
@@ -276,35 +287,27 @@ class HoverRowDelegate(QStyledItemDelegate):
         self._hover_row = -1  # '-1' means no row hovered
         self._hover_brush = QBrush(QColor(hover_color))
 
+    # --- Public methods (QStyledItemDelegate) ---
     def setHoverRow(self, row: int):
-        # Only do work if the hovered row actually changed
+        # Do work only if the hovered row actually changed
         if row != self._hover_row:
             self._hover_row = row
 
-            # Ask the table (parent) to repaint its viewport so the hover effect
-            # is immediately visible. Without this, Qt wouldn't know it needs
-            # to redraw the cells when the mouse moves.
+            # Ask the table (parent) to repaint its viewport (the display area)
+            # so the hover effect is immediately visible.
             #
-            # Note: self.parent() is the QTableView that owns this delegate.
-            # Its .viewport() is the widget that actually paints all the cells.
+            # Without this, Qt wouldn't know it needs to redraw the cells
+            # when the mouse moves.
             if self._parent:
                 self._parent.viewport().update()
 
     def paint(self, painter, option, index):
-        # 'QStyleOptionViewItem(option) is a set of bit flags that describes
-        # how the cell should be drawn.
         opt = QStyleOptionViewItem(option)
-
-        # QStyle.StateFlag.State_HasFocus is a single bitmask.
-        # So '~QStyle.StateFlag.State_HasFocus' means everything except HasFocus bit.
         opt.state &= ~QStyle.StateFlag.State_HasFocus
 
-        # When hovering an unselected row, paint it as selected with our color
         state_flag = QStyle.StateFlag.State_Selected
         if index.row() == self._hover_row and not (opt.state & state_flag):
             opt.palette.setBrush(QPalette.ColorRole.Highlight, self._hover_brush)
-
-            # Keep normal text color
             opt.palette.setBrush(
                 QPalette.ColorRole.HighlightedText,
                 opt.palette.brush(QPalette.ColorRole.Text),
@@ -312,14 +315,10 @@ class HoverRowDelegate(QStyledItemDelegate):
 
             opt.state |= QStyle.StateFlag.State_Selected
 
-        # Call the base class paint method.
-        # Qt does all normal painting, but now with modified options.
         super().paint(painter, opt, index)
 
 
 class PlaylistWidget(QTableView):
-    """Playlist widget."""
-
     def __init__(self):
         """Initialize PlaylistWidget."""
         super().__init__()
@@ -328,14 +327,24 @@ class PlaylistWidget(QTableView):
         self._configure_viewport()
         self._configure_delegate()
 
+    # --- Public method (QTableView) ---
+    def leaveEvent(self, e):
+        """QTableView leave event."""
+        self._hover_delegate.setHoverRow(-1)  # Reset the highlighted row
+        super().leaveEvent(e)
+
+    # --- Protected/internal methods ---
     def _configure_properties(self):
-        """Configure instance's properties."""
+        # Configure instance properties and behavior
         header = self.horizontalHeader()
         if header is not None:
             header.setDefaultAlignment(
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             )
             header.setSectionsClickable(False)
+
+            # Set resize mode to QHeaderView.ResizeMode.Stretch to evenly occupy
+            # available space
             header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         rows = self.verticalHeader()
@@ -360,7 +369,7 @@ class PlaylistWidget(QTableView):
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
     def _configure_viewport(self):
-        """Configure instance's viewport."""
+        # Enable widget and viewport (the display area) mouse tracking
         self._viewport = self.viewport()
         if self._viewport is not None:
             self._viewport.setMouseTracking(True)
@@ -368,15 +377,10 @@ class PlaylistWidget(QTableView):
         self.setMouseTracking(True)
 
     def _configure_delegate(self):
-        """Configure instance's hover row delegate (for custom row hover effect)."""
+        # Apply the custom row hover effect to instance
         self._hover_delegate = HoverRowDelegate(self, hover_color="#34495E")
         self.setItemDelegate(self._hover_delegate)
         self.entered.connect(lambda idx: self._hover_delegate.setHoverRow(idx.row()))
-
-    def leaveEvent(self, e):
-        """QTableView leave event."""
-        self._hover_delegate.setHoverRow(-1)
-        super().leaveEvent(e)
 
 
 # ----- Volume button -----
@@ -404,15 +408,7 @@ class VolumeButton(IconButton):
         self._init_icons()
         self.setCheckable(True)
 
-    def _init_icons(self):
-        """Initialize volume icons."""
-        self.volume_icons = {
-            VolumeLevel.HIGH: self.path_to_qicon(HIGH_VOLUME_ICON_PATH),
-            VolumeLevel.MEDIUM: self.path_to_qicon(MEDIUM_VOLUME_ICON_PATH),
-            VolumeLevel.LOW: self.path_to_qicon(LOW_VOLUME_ICON_PATH),
-            VolumeLevel.MUTE: self.path_to_qicon(MUTED_VOLUME_ICON_PATH),
-        }
-
+    # --- Public methods ---
     def update_icon(self, new_volume: int) -> None:
         """Update instance icon based on the new volume's current level.
 
@@ -432,12 +428,21 @@ class VolumeButton(IconButton):
         else:
             icon = self.volume_icons[VolumeLevel.MUTE]
 
-        # Avoid unnecessary UI updates by skipping `setIcon` calls if the new,
-        # and current icon are the same.
+        # Update icon only if it is new
         if icon.cacheKey() == self.icon().cacheKey():
             return
 
         self.setIcon(icon)
+
+    # --- Protected/internal methods ---
+    def _init_icons(self):
+        # Initialize and store volume icons
+        self.volume_icons = {
+            VolumeLevel.HIGH: self.path_to_qicon(HIGH_VOLUME_ICON_PATH),
+            VolumeLevel.MEDIUM: self.path_to_qicon(MEDIUM_VOLUME_ICON_PATH),
+            VolumeLevel.LOW: self.path_to_qicon(LOW_VOLUME_ICON_PATH),
+            VolumeLevel.MUTE: self.path_to_qicon(MUTED_VOLUME_ICON_PATH),
+        }
 
 
 # ----- Volume label -----
@@ -453,9 +458,10 @@ class VolumeLabel(QLabel):
 
         self._configure_properties()
 
+    # --- Protected/internal methods ---
     def _configure_properties(self):
-        """Configure instance's properties."""
-        # This fixes the weird behaviour when the text is '0'.
+        # Set the instance width to the length of "100" + 4 character spaces
+        # to center the text and avoid the weird behaviour when the text is "0".
         label_width = self.fontMetrics().horizontalAdvance("100") + 4
 
         self.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)

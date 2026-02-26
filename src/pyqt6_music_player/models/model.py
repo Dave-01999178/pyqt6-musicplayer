@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class PlaybackState:
     current_track: Track | None = None
     track_index: int | None = None
-    playback_status: PlaybackStatus | None = None  # TODO: Sync value to audio player on startup
+    playback_status: PlaybackStatus | None = None  # TODO: Sync value on startup
 
 
 # --- Playlist model ---
@@ -37,65 +37,18 @@ class Playlist:
         self._track_paths: set[Path] = set()
         self._selected_index: int = -1  # -1 means no selection
 
-    def set_selected_index(self, index: int) -> int | None:
-        """Set the selected track index.
+    # --- Properties ---
+    @property
+    def track_count(self) -> int:
+        """Return the number of tracks in the playlist."""
+        return len(self._tracks)
 
-        Args:
-            index: The row index to select.
-
-        Returns:
-            The updated index, or None if invalid or unchanged.
-
-        """
-        if index < -1 or index >= len(self._tracks):
-            return None
-
-        if self._selected_index == index:
-            return None
-
-        self._selected_index = index
-
+    @property
+    def selected_index(self) -> int:
+        """Return the currently selected track index."""
         return self._selected_index
 
-    def get_track_by_index(self, index: int) -> Track | None:
-        """Get track at the specified index.
-
-        Args:
-            index: The track index.
-
-        Returns:
-            The track at index, or None if invalid.
-
-        """
-        if not (0 <= index < len(self._tracks)):
-            return None
-
-        return self._tracks[index]
-
-    def has_track(self, track_path: Path) -> bool:
-        """Check if playlist contains a track with the given path.
-
-        Args:
-            track_path: Path to check.
-
-        Returns:
-            True if track exists in playlist; Otherwise, False.
-
-        """
-        return Path(track_path) in self._track_paths
-
-    def is_valid_index(self, index: int) -> bool:
-        """Check if index is within playlist bounds.
-
-        Args:
-            index: Index to validate.
-
-        Returns:
-            True if index is valid; Otherwise, False
-
-        """
-        return 0 <= index < len(self._tracks)
-
+    # --- Public methods ---
     def add_tracks(self, tracks: Sequence[Track]) -> int:
         """Add tracks to the playlist.
 
@@ -127,8 +80,6 @@ class Playlist:
 
         return add_count
 
-    # --- Properties ---
-    @property
     def get_all_tracks(self) -> list[Track]:
         """Return all tracks in the playlist.
 
@@ -138,25 +89,64 @@ class Playlist:
         """
         return self._tracks.copy()
 
-    @property
-    def track_count(self) -> int:
-        """Return the number of tracks in the playlist.
+    def get_track_by_index(self, index: int) -> Track | None:
+        """Get track at the specified index.
+
+        Args:
+            index: The track index.
 
         Returns:
-            The number of tracks in playlist.
+            The track at given index, or None if invalid.
 
         """
-        return len(self._tracks)
+        if not (0 <= index < len(self._tracks)):
+            return None
 
-    @property
-    def selected_index(self) -> int:
-        """Return the currently selected track index.
+        return self._tracks[index]
+
+    def set_selected_index(self, index: int) -> int | None:
+        """Set the selected track index.
+
+        Args:
+            index: The row index to select.
 
         Returns:
-            The selected track index or -1 if none.
+            The updated index, or None if invalid or unchanged.
 
         """
+        if index < -1 or index >= len(self._tracks):
+            return None
+
+        if self._selected_index == index:
+            return None
+
+        self._selected_index = index
+
         return self._selected_index
+
+    def has_track(self, track_path: Path) -> bool:
+        """Check if playlist contains a track with the given path.
+
+        Args:
+            track_path: Path to check.
+
+        Returns:
+            True if track exists in playlist; Otherwise, False.
+
+        """
+        return Path(track_path) in self._track_paths
+
+    def is_valid_index(self, index: int) -> bool:
+        """Check if index is within playlist bounds.
+
+        Args:
+            index: Index to validate.
+
+        Returns:
+            True if index is valid; Otherwise, False
+
+        """
+        return 0 <= index < len(self._tracks)
 
 
 # --- Volume model ---
@@ -173,28 +163,17 @@ class VolumeModel(QObject):
     mute_changed = pyqtSignal(bool)
 
     def __init__(self):
-        """Initialize VolumeModel instance."""
+        """Initialize VolumeModel."""
         super().__init__()
         self._current_volume: int = 100
         self._previous_volume: int | None = None
         self._is_muted: bool = False
 
-    # --- Private methods ---
-    def _update_mute_state(self, new_volume: int) -> None:
-        """Update the model mute state based on the new volume.
-
-        Set the mute state to True if the new volume is 0; otherwise, False.
-
-        Args:
-            new_volume: The new volume.
-
-        """
-        curr_mute_state = (new_volume == 0)
-
-        if curr_mute_state != self._is_muted:
-            self.mute_changed.emit(curr_mute_state)  # type: ignore
-
-            self._is_muted = curr_mute_state
+    # --- Properties ---
+    @property
+    def current_volume(self) -> int:
+        """Return the current volume."""
+        return self._current_volume
 
     # --- Public methods ---
     def set_volume(self, new_volume: int) -> None:
@@ -217,7 +196,13 @@ class VolumeModel(QObject):
         self._current_volume = new_volume
 
         self.volume_changed.emit(new_volume)  # type: ignore
-        self._update_mute_state(new_volume)
+
+        curr_mute_state = (new_volume == 0)
+
+        if curr_mute_state != self._is_muted:
+            self.mute_changed.emit(curr_mute_state)  # type: ignore
+
+            self._is_muted = curr_mute_state
 
     def set_muted(self, muted: bool) -> None:
         """Set the current mute state based on the given new state.
@@ -229,9 +214,3 @@ class VolumeModel(QObject):
         volume_to_use = 0 if muted else self._previous_volume
 
         self.set_volume(volume_to_use)
-
-    # --- Properties ---
-    @property
-    def current_volume(self) -> int:
-        """Return the current volume."""
-        return self._current_volume
