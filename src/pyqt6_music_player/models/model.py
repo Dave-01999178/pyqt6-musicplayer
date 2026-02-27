@@ -15,17 +15,9 @@ from pyqt6_music_player.models import Track
 logger = logging.getLogger(__name__)
 
 # ================================================================================
-# APP STATE/MODELS
+# APP MODELS
 # ================================================================================
 #
-# --- Playback state ---
-@dataclass
-class PlaybackState:
-    current_track: Track | None = None
-    track_index: int | None = None
-    playback_status: PlaybackStatus | None = None  # TODO: Sync value on startup
-
-
 # --- Playlist model ---
 class Playlist:
     """Manages playlist tracks and selection state."""
