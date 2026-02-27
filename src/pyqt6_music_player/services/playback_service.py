@@ -1,7 +1,8 @@
 import logging
 
 from pyqt6_music_player.core import PlaybackStatus, Signal
-from pyqt6_music_player.models import PlaybackState, Track, AudioPCM
+from pyqt6_music_player.core.constants import RESTART_THRESHOLD_SEC
+from pyqt6_music_player.models import Track, AudioPCM
 from pyqt6_music_player.audio import AudioPlayerService
 from pyqt6_music_player.services import PlaylistService
 
@@ -17,7 +18,6 @@ class PlaybackService:
     def __init__(
             self,
             audio_player: AudioPlayerService,
-            playback_state: PlaybackState,
             playlist_service: PlaylistService,
     ):
         """Initialize PlaybackService."""
@@ -27,12 +27,11 @@ class PlaybackService:
         # Model
         self._playlist = playlist_service
 
-        # State
-        self._state = playback_state
-
-        # Cache
-        self._selected_track: Track | None = None
+        # Playback state
+        self._current_track: Track | None = None
         self._track_index: int | None = None
+        self._playback_status: PlaybackStatus | None = None
+        self._current_position_sec: int = 0
 
         # Signals
         self.track_loaded = Signal()
@@ -46,14 +45,12 @@ class PlaybackService:
     # --- Public methods ---
     def toggle_playback(self) -> None:
         """Start new, pause, and resume playback based on the current player state."""
-        playback_status = self._state.playback_status
-
         # Resume
-        if playback_status == PlaybackStatus.PAUSED:
+        if self._playback_status == PlaybackStatus.PAUSED:
             self.resume()
 
         # Pause
-        elif playback_status == PlaybackStatus.PLAYING:
+        elif self._playback_status == PlaybackStatus.PLAYING:
             self.pause()
 
         # Start new playback
@@ -68,33 +65,43 @@ class PlaybackService:
 
     def pause(self) -> None:
         """Pause the current playback only if it is playing."""
-        if self._state.playback_status != PlaybackStatus.PLAYING:
+        if self._playback_status != PlaybackStatus.PLAYING:
             return
 
         self._audio_player.pause_playback()
 
     def resume(self) -> None:
         """Resume the playback only if it is paused."""
-        if self._state.playback_status != PlaybackStatus.PAUSED:
+        if self._playback_status != PlaybackStatus.PAUSED:
             return
 
         self._audio_player.resume_playback()
 
     def play_next_track(self) -> None:
         """Play next track."""
-        next_index = self._state.track_index + 1
+        next_index = self._track_index + 1
         new_selected_index = self._playlist.set_selected_index(next_index)
 
         if new_selected_index is not None:
             self._play_track_at_index(new_selected_index)
 
     def play_previous_track(self) -> None:
-        """Play previous track."""
-        prev_index = self._state.track_index - 1
-        new_selected_index = self._playlist.set_selected_index(prev_index)
+        """Play the previous track or restart the current one.
 
-        if new_selected_index is not None:
-            self._play_track_at_index(new_selected_index)
+        Restarts the current track if the playback position exceeds
+        threshold seconds, otherwise plays the previous track.
+        """
+        if self._current_position_sec < RESTART_THRESHOLD_SEC:
+            self.seek(0)
+            if self._playback_status == PlaybackStatus.PLAYING:
+                self._audio_player.resume_playback()
+
+        else:
+            prev_index = self._track_index - 1
+            new_selected_index = self._playlist.set_selected_index(prev_index)
+
+            if new_selected_index is not None:
+                self._play_track_at_index(new_selected_index)
 
     def seek(self, new_position_in_ms: int) -> None:
         """Seek to a specific position.
@@ -107,7 +114,7 @@ class PlaybackService:
 
     def get_playback_status(self) -> PlaybackStatus:
         """Returns the current playback status."""
-        return self._state.playback_status
+        return self._playback_status
 
     # --- Protected/internal methods ---
     def _connect_signals(self) -> None:
@@ -125,7 +132,7 @@ class PlaybackService:
         track = self._playlist.get_track_by_index(index)
 
         if track is not None:
-            self._selected_track = track
+            self._current_track = track
             self._track_index = index
 
             logger.info(
@@ -140,28 +147,24 @@ class PlaybackService:
 
     def _on_player_audio_loaded(self) -> None:
         # Emit loaded track then start playback
-        self.track_loaded.emit(self._selected_track)
+        self.track_loaded.emit(self._current_track)
 
         self._audio_player.start_playback()
 
     def _on_playback_started(self) -> None:
         # Store the current track and its index
-        logger.info("Now playing: %s", self._selected_track.title)
-
-        self._state.current_track = self._selected_track
-        self._state.track_index = self._track_index
-
-        self._selected_track = None
-        self._track_index = None
+        logger.info("Now playing: %s", self._current_track.title)
 
     def _on_playback_position_changed(self, elapsed_time: float) -> None:
+        self._current_position_sec = elapsed_time
+
         # Emit position update with elapsed and remaining time
-        time_remaining = self._state.current_track.duration - elapsed_time
+        time_remaining = self._current_track.duration - elapsed_time
 
         self.playback_position_changed.emit(elapsed_time, time_remaining)
 
     def _on_player_state_changed(self, new_status: PlaybackStatus):
         # Store and emit new playback status
-        self._state.playback_status = new_status
+        self._playback_status = new_status
 
         self.player_state_changed.emit(new_status)
