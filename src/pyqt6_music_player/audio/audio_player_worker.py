@@ -367,7 +367,6 @@ class AudioPlayerWorker(QObject):
             self._stream = None
 
     def _release_pyaudio(self) -> None:
-        # Release PyAudio instance
         if self._pa is not None:
             try:
                 self._pa.terminate()
@@ -383,7 +382,6 @@ class AudioPlayerWorker(QObject):
 
     @pyqtSlot()
     def _on_playback_started(self) -> None:
-        # Update playback status and emit playback started signal
         self._set_status(PlaybackStatus.PLAYING)
 
         self.playback_started.emit()
@@ -392,7 +390,6 @@ class AudioPlayerWorker(QObject):
 
     @pyqtSlot()
     def _on_playback_finished(self) -> None:
-        # Release stream and emit completion signal when playback ends.
         self.playback_finished.emit()
 
         self._set_status(PlaybackStatus.STOPPED)

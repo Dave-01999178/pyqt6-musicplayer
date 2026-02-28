@@ -1,7 +1,6 @@
 import logging
 
-from pyqt6_music_player.core import PlaybackStatus, Signal
-from pyqt6_music_player.core.constants import RESTART_THRESHOLD_SEC
+from pyqt6_music_player.core import RESTART_THRESHOLD_SEC, PlaybackStatus, Signal
 from pyqt6_music_player.models import Track, AudioPCM
 from pyqt6_music_player.audio import AudioPlayerService
 from pyqt6_music_player.services import PlaylistService
@@ -91,7 +90,7 @@ class PlaybackService:
         Restarts the current track if the playback position exceeds
         threshold seconds, otherwise plays the previous track.
         """
-        if self._current_position_sec < RESTART_THRESHOLD_SEC:
+        if self._current_position_sec >= RESTART_THRESHOLD_SEC:
             self.seek(0)
             if self._playback_status == PlaybackStatus.PLAYING:
                 self._audio_player.resume_playback()

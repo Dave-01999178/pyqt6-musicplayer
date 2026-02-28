@@ -109,9 +109,6 @@ class Playlist:
         if index < -1 or index >= len(self._tracks):
             return None
 
-        if self._selected_index == index:
-            return None
-
         self._selected_index = index
 
         return self._selected_index
