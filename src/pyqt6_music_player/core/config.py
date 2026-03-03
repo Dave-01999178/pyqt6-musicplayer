@@ -31,7 +31,8 @@ REMOVE_ICON_PATH = ASSETS_PATH / "remove_icon.svg"
 LOAD_FOLDER_ICON_PATH = ASSETS_PATH / "load_folder_icon.svg"
 
 # ----- Playback control icons -----
-REPLAY_ICON_PATH = ASSETS_PATH / "replay_icon.svg"
+SHUFFLE_DISABLED_ICON_PATH = ASSETS_PATH / "shuffle_icon_disabled.svg"
+SHUFFLE_ENABLED_ICON_PATH = ASSETS_PATH / "shuffle_icon.svg"
 PREV_ICON_PATH = ASSETS_PATH / "prev_icon.svg"
 PREV_ICON_PRESSED_PATH = ASSETS_PATH / "prev_icon_pressed.svg"
 PLAY_ICON_PATH = ASSETS_PATH / "play_icon.svg"

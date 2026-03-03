@@ -100,6 +100,9 @@ class PlaybackViewModel(QObject):
         """Command for setting the playback position."""
         self._playback_service.seek(new_position_in_ms)
 
+    def toggle_shuffle(self, enable: bool):
+        self._playback_service.toggle_shuffle(enable)
+
     def get_playback_status(self) -> PlaybackStatus:
         """Returns the current playback status."""
         return self._playback_service.get_playback_status()

@@ -23,8 +23,8 @@ from pyqt6_music_player.core import (
     PREV_ICON_PATH,
     REMOVE_ICON_PATH,
     REPEAT_ICON_PATH,
-    REPLAY_ICON_PATH,
-    PlaybackStatus,
+    SHUFFLE_ENABLED_ICON_PATH,
+    PlaybackStatus, SHUFFLE_DISABLED_ICON_PATH,
 )
 from pyqt6_music_player.models import DEFAULT_TRACK, DefaultTrackInfo
 from pyqt6_music_player.view_models import (
@@ -38,7 +38,7 @@ from pyqt6_music_player.views import (
     MarqueeLabel,
     PlaylistWidget,
     VolumeButton,
-    VolumeLabel,
+    VolumeLabel, ShuffleButton,
 )
 
 
@@ -288,7 +288,7 @@ class PlaybackControlsPanel(QWidget):
         self._viewmodel = playback_viewmodel
 
         # Widget
-        self.replay_button = IconButton(REPLAY_ICON_PATH)
+        self.shuffle_button = ShuffleButton()
         self.previous_button = IconButton(PREV_ICON_PATH)
         self.play_pause_button = IconButton(
             PLAY_ICON_PATH,
@@ -306,8 +306,8 @@ class PlaybackControlsPanel(QWidget):
     def _init_ui(self):
         main_layout_horizontal = QHBoxLayout()
 
-        # Left widgets: Replay, and previous button
-        main_layout_horizontal.addWidget(self.replay_button)
+        # Left widgets: Shuffle, and previous button
+        main_layout_horizontal.addWidget(self.shuffle_button)
         main_layout_horizontal.addWidget(self.previous_button)
 
         # Middle widget: Play-pause button
@@ -326,6 +326,7 @@ class PlaybackControlsPanel(QWidget):
         # Establish PlaybackControlsPanel-PlaybackViewModel connection.
         #
         # PlaybackControlsPanel -> PlaybackViewModel
+        self.shuffle_button.toggled.connect(self._on_shuffle_button_toggled)
         self.play_pause_button.clicked.connect(self._on_play_pause_button_clicked)
         self.next_button.clicked.connect(self._on_next_button_clicked)
         self.previous_button.clicked.connect(self._on_previous_button_clicked)
@@ -334,11 +335,15 @@ class PlaybackControlsPanel(QWidget):
         self._viewmodel.initial_track_added.connect(self._on_initial_track_add)
         self._viewmodel.player_state_changed.connect(self._on_player_state_changed)
 
-    @pyqtSlot()
-    def _on_initial_track_add(self):
-        # Enable the panel on initial track add to allow playback operations.
-        # Note: The panel is disabled by default on app start.
-        self.setEnabled(True)
+    @pyqtSlot(bool)
+    def _on_shuffle_button_toggled(self, enable: bool) -> None:
+        icon_to_use = (
+            SHUFFLE_ENABLED_ICON_PATH if enable else SHUFFLE_DISABLED_ICON_PATH
+        )
+
+        self._viewmodel.toggle_shuffle(enable)
+
+        self.shuffle_button.setIcon(QIcon(str(icon_to_use)))
 
     @pyqtSlot()
     def _on_play_pause_button_clicked(self) -> None:
@@ -355,13 +360,21 @@ class PlaybackControlsPanel(QWidget):
         # Call viewmodel previous-track command.
         self._viewmodel.previous_track()
 
+    @pyqtSlot()
+    def _on_initial_track_add(self):
+        # Enable the panel on initial track add to allow playback operations.
+        # Note: The panel is disabled by default on app start.
+        self.setEnabled(True)
+
     @pyqtSlot(PlaybackStatus)
     def _on_player_state_changed(self, player_state: PlaybackStatus):
         # Update play-pause button icon to reflect the current playback state.
-        if player_state is PlaybackStatus.PLAYING:
-            self.play_pause_button.setIcon(QIcon(str(PAUSE_ICON_PATH)))
-        else:
-            self.play_pause_button.setIcon(QIcon(str(PLAY_ICON_PATH)))
+        icon_to_use = (
+            PAUSE_ICON_PATH
+            if player_state == PlaybackStatus.PLAYING
+            else PLAY_ICON_PATH
+        )
+        self.play_pause_button.setIcon(QIcon(str(icon_to_use)))
 
 
 # ================================================================================
