@@ -3,6 +3,7 @@ from .widgets import (
     IconButton,
     MarqueeLabel,
     PlaylistWidget,
+    ShuffleButton,
     VolumeButton,
     VolumeLabel,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "IconButton",
     "MarqueeLabel",
     "PlaylistWidget",
+    "ShuffleButton",
     "VolumeButton",
     "VolumeLabel",
 

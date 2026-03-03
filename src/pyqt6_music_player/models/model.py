@@ -1,6 +1,5 @@
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -8,17 +7,17 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from pyqt6_music_player.core import (
     MAX_VOLUME,
     MIN_VOLUME,
-    PlaybackStatus,
 )
 from pyqt6_music_player.models import Track
 
 logger = logging.getLogger(__name__)
 
+
 # ================================================================================
 # APP MODELS
 # ================================================================================
 #
-# --- Playlist model ---
+# ----- Playlist model -----
 class Playlist:
     """Manages playlist tracks and selection state."""
 
@@ -27,7 +26,7 @@ class Playlist:
         super().__init__()
         self._tracks: list[Track] = []  # TODO: Consider replacing list.
         self._track_paths: set[Path] = set()
-        self._selected_index: int = -1  # -1 means no selection
+        self._selected_index: int | None = None
 
     # --- Properties ---
     @property
@@ -36,7 +35,7 @@ class Playlist:
         return len(self._tracks)
 
     @property
-    def selected_index(self) -> int:
+    def selected_index(self) -> int | None:
         """Return the currently selected track index."""
         return self._selected_index
 
@@ -106,7 +105,7 @@ class Playlist:
             The updated index, or None if invalid or unchanged.
 
         """
-        if index < -1 or index >= len(self._tracks):
+        if not (0 <= index < len(self._tracks)):
             return None
 
         self._selected_index = index
@@ -125,6 +124,7 @@ class Playlist:
         """
         return Path(track_path) in self._track_paths
 
+    # TODO: Unused
     def is_valid_index(self, index: int) -> bool:
         """Check if index is within playlist bounds.
 

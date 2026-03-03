@@ -24,6 +24,13 @@ MAX_VOLUME = 100
 # Enums
 # ================================================================================
 # TODO: Move out later.
+class PlaybackMode(Enum):
+    NORMAL = auto()
+    REPEAT_ONE = auto()
+    REPEAT_ALL = auto()
+    SHUFFLE = auto()
+
+
 class PlaybackStatus(Enum):
     IDLE = auto()  # Default state on startup
     PLAYING = auto()

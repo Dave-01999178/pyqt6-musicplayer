@@ -90,7 +90,7 @@ class PlaylistService:
         """
         return self._playlist.get_track_by_index(index)
 
-    def get_selected_index(self) -> int:
+    def get_selected_index(self) -> int | None:
         """Return the currently selected track index."""
         return self._playlist.selected_index
 

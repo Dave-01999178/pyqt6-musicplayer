@@ -13,6 +13,10 @@ QPushButton::pressed {
     background-color: #222222;
 }
 
+QPushButton::checked {
+    background-color: #2A2A2A;
+}
+
 /* --- Play/Pause button --- */
 #playPauseBtn {
     background-color: #1DB954;

@@ -41,6 +41,7 @@ from pyqt6_music_player.core import (
     SMALL_BUTTON,
     SMALL_ICON,
     VolumeLevel,
+    SHUFFLE_DISABLED_ICON_PATH,
 )
 
 
@@ -93,35 +94,19 @@ class IconButton(QPushButton):
         self._configure_properties()
 
     # --- Public methods ---
-    @staticmethod
-    def path_to_qicon(icon_path: str | Path) -> QIcon:
-        """Convert an icon image into QIcon instance.
-
-        Args:
-            icon_path: Path to the icon file.
-
-        Returns:
-            QIcon: A QIcon instance.
-
-        """
-        try:
-            return QIcon(str(icon_path))
-        except Exception as e:
-            logging.error("Icon path: %s not found, %s", icon_path, e)
-
-            return QIcon()
-
-    # --- Protected/internal methods ---
     def _configure_properties(self):
-        icon = self.path_to_qicon(self._icon_path)
+        if not self._icon_path.exists():
+            logging.warning("Icon path not found: %s", self._icon_path)
 
-        self.setIcon(icon)
+        qicon = QIcon(str(self._icon_path))
+
+        self.setIcon(qicon)
         self.setIconSize(QSize(*self._icon_size))
-
         self.setFixedSize(*self._widget_size)
 
         if self._object_name:
             self.setObjectName(self._object_name)
+
 
 
 # ================================================================================
@@ -383,6 +368,14 @@ class PlaylistWidget(QTableView):
         self.entered.connect(lambda idx: self._hover_delegate.setHoverRow(idx.row()))
 
 
+# ----- Shuffle button -----
+class ShuffleButton(IconButton):
+    """Button for playing tracks in random order."""
+    def __init__(self, icon_path: Path = SHUFFLE_DISABLED_ICON_PATH):
+        super().__init__(icon_path=icon_path)
+        self.setCheckable(True)
+
+
 # ----- Volume button -----
 class VolumeButton(IconButton):
     """Button for controlling and displaying volume state.
@@ -404,6 +397,7 @@ class VolumeButton(IconButton):
         """
         super().__init__(icon_path=icon_path)
         self.volume_icons: dict[VolumeLevel, QIcon] = {}
+        self._current_icon = icon_path
 
         self._init_icons()
         self.setCheckable(True)
@@ -429,19 +423,21 @@ class VolumeButton(IconButton):
             icon = self.volume_icons[VolumeLevel.MUTE]
 
         # Update icon only if it is new
-        if icon.cacheKey() == self.icon().cacheKey():
+        if icon == self._current_icon:
             return
 
-        self.setIcon(icon)
+        self.setIcon(QIcon(str(icon)))
+
+        self._current_icon = icon
 
     # --- Protected/internal methods ---
     def _init_icons(self):
         # Initialize and store volume icons
         self.volume_icons = {
-            VolumeLevel.HIGH: self.path_to_qicon(HIGH_VOLUME_ICON_PATH),
-            VolumeLevel.MEDIUM: self.path_to_qicon(MEDIUM_VOLUME_ICON_PATH),
-            VolumeLevel.LOW: self.path_to_qicon(LOW_VOLUME_ICON_PATH),
-            VolumeLevel.MUTE: self.path_to_qicon(MUTED_VOLUME_ICON_PATH),
+            VolumeLevel.HIGH: HIGH_VOLUME_ICON_PATH,
+            VolumeLevel.MEDIUM: MEDIUM_VOLUME_ICON_PATH,
+            VolumeLevel.LOW: LOW_VOLUME_ICON_PATH,
+            VolumeLevel.MUTE: MUTED_VOLUME_ICON_PATH,
         }
 
 
