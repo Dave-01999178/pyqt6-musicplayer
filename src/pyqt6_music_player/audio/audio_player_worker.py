@@ -29,8 +29,8 @@ class AudioPlayerWorker(QObject):
 
     Manages PyAudio stream lifecycle, audio buffer processing, and playback state.
     Must run in a worker thread, not the main thread.
-
     """
+
     audio_loaded = pyqtSignal()
     playback_started = pyqtSignal()
     playback_finished = pyqtSignal()
@@ -71,6 +71,7 @@ class AudioPlayerWorker(QObject):
 
         Args:
             audio_pcm: Track audio data to load for playback.
+
         """
         self._ensure_thread()
 
@@ -223,13 +224,7 @@ class AudioPlayerWorker(QObject):
             _time_info,
             _status_flags,
     ) -> tuple[bytes | None, int]:
-        """Callback for playing audio bytes, used by PyAudio stream.
-
-        Returns:
-            Audio bytes or ``None``, and PortAudio callback return code in tuple
-            (bytes | None, return code).
-
-        """
+        # Callback for playing audio bytes, used by PyAudio stream.
         if self._audio_pcm is None or self._audio_bytes is None:
             return None, paComplete
 

@@ -1,12 +1,20 @@
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from pyqt6_music_player.core import SUPPORTED_AUDIO_FORMAT, Signal
 from pyqt6_music_player.models import Playlist, Track
 
 
 class PlaylistService:
+    """Manage playlist operations.
+
+    Acts as the application layer between the Playlist model and its consumers,
+    handling validation, deduplication, and signal emission.
+
+    """
+
     def __init__(self, playlist_model: Playlist):
+        """Initialize PlaylistService."""
         # Model
         self._playlist = playlist_model
 
@@ -24,7 +32,6 @@ class PlaylistService:
             paths: A sequence of paths as strings.
 
         """
-
         if not paths:
             return
 
@@ -52,10 +59,10 @@ class PlaylistService:
         add_count = self._playlist.add_tracks(valid_tracks)
 
         if add_count > 0:
-            # Emit add count, and the new track count.
-            self.tracks_added.emit(add_count, self._playlist.track_count)
+            # Emit new track indices
+            new_track_idx = list(range(self.track_count - add_count, self.track_count))
 
-        return
+            self.tracks_added.emit(new_track_idx)
 
     def set_selected_index(self, index: int) -> int | None:
         """Model selected index setter.
@@ -74,7 +81,8 @@ class PlaylistService:
 
         return new_index
 
-    def get_track_count(self) -> int:
+    @property
+    def track_count(self) -> int:
         """Return the number of tracks in the playlist."""
         return self._playlist.track_count
 

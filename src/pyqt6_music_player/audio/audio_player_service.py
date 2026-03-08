@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
+from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
 from pyqt6_music_player.audio import AudioPlayerWorker
 from pyqt6_music_player.core import PlaybackStatus
@@ -65,7 +65,7 @@ class AudioPlayerService(QObject):
         self.pause_playback_requested.emit()
 
     def resume_playback(self) -> None:
-        """Request playback resume"""
+        """Request playback resume."""
         self.resume_playback_requested.emit()
 
     def seek(self, new_position_in_ms: int) -> None:
@@ -85,12 +85,13 @@ class AudioPlayerService(QObject):
 
         Returns:
             True if there is a running thread; Else, False.
+
         """
         return self._worker_thread is not None and self._worker_thread.isRunning()
 
     # --- Protected/internal methods ---
     def _connect_signals(self) -> None:
-        """Establish signal–slot connections between the service and worker."""
+        """Establish signal-slot connections between the service and worker."""
         if self._worker is None:
             return
 

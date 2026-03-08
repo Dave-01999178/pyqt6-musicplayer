@@ -1,9 +1,3 @@
-from enum import Enum, auto
-
-# ================================================================================
-# CONSTANTS
-# ================================================================================
-#
 # --- AUDIO FORMATS ---
 FILE_DIALOG_FILTER = "Audio files (*.mp3 *.wav *.flac *.ogg)"
 SUPPORTED_AUDIO_FORMAT = {".mp3", ".wav", ".flac", ".ogg"}
@@ -17,30 +11,3 @@ SUPPORTED_BYTES = {1, 2, 4}
 # --- VOLUME ---
 MIN_VOLUME = 0
 MAX_VOLUME = 100
-
-
-
-# ================================================================================
-# Enums
-# ================================================================================
-# TODO: Move out later.
-class PlaybackMode(Enum):
-    NORMAL = auto()
-    REPEAT_ONE = auto()
-    REPEAT_ALL = auto()
-    SHUFFLE = auto()
-
-
-class PlaybackStatus(Enum):
-    IDLE = auto()  # Default state on startup
-    PLAYING = auto()
-    PAUSED = auto()
-    STOPPED = auto()  # Playback interrupted (normally or due to an error)
-    ERROR = auto()
-
-
-class VolumeLevel(Enum):
-    MUTE = auto()
-    LOW = auto()
-    MEDIUM = auto()
-    HIGH = auto()

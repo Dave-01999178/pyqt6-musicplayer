@@ -38,10 +38,10 @@ from pyqt6_music_player.core import (
     METADATA_LABEL_SIZE,
     MIN_VOLUME,
     MUTED_VOLUME_ICON_PATH,
+    SHUFFLE_DISABLED_ICON_PATH,
     SMALL_BUTTON,
     SMALL_ICON,
     VolumeLevel,
-    SHUFFLE_DISABLED_ICON_PATH,
 )
 
 
@@ -314,7 +314,6 @@ class PlaylistWidget(QTableView):
 
     # --- Public method (QTableView) ---
     def leaveEvent(self, e):
-        """QTableView leave event."""
         self._hover_delegate.setHoverRow(-1)  # Reset the highlighted row
         super().leaveEvent(e)
 
@@ -371,7 +370,9 @@ class PlaylistWidget(QTableView):
 # ----- Shuffle button -----
 class ShuffleButton(IconButton):
     """Button for playing tracks in random order."""
+
     def __init__(self, icon_path: Path = SHUFFLE_DISABLED_ICON_PATH):
+        """Initialize ShuffleButton."""
         super().__init__(icon_path=icon_path)
         self.setCheckable(True)
 
