@@ -1,6 +1,5 @@
 import logging
 import os
-import random
 import sys
 import traceback
 from pathlib import Path
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def exception_hook(exc_type, value, tb):
-    """Custom exception hook for handling uncaught exceptions."""
+    """Handle uncaught exceptions."""
     traceback.print_exception(exc_type, value, tb)
     sys.exit(1)
 
@@ -29,7 +28,7 @@ def load_stylesheet(path: str | Path) -> str | None:
         return None
 
     try:
-        with open(path, "r", encoding="utf-8") as file:
+        with open(path, encoding="utf-8") as file:
             return file.read()
     except (OSError, UnicodeDecodeError) as e:
         logger.error("Failed to load stylesheet: %s", e)

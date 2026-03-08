@@ -18,6 +18,8 @@ class AudioMetadataFallback:
 
 
 class AudioInfoDict(TypedDict):
+    """Typed structure for track metadata extracted from an audio file."""
+
     title: str
     artist: str
     album: str

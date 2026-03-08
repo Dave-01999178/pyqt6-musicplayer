@@ -1,15 +1,16 @@
 import weakref
-from typing import Callable
+from collections.abc import Callable
 
 
 class Signal:
-    """Framework-agnostic signal similar to PyQt's Signal"""
+    """Framework-agnostic signal similar to PyQt's Signal."""
 
     def __init__(self):
+        """Initialize Signal."""
         self._slots: list[Callable] = []
 
     def connect(self, slot: Callable) -> None:
-        """Connect a callback function to this signal"""
+        """Connect a callback function to this signal."""
         if slot in self._slots:
             return
 
@@ -19,11 +20,11 @@ class Signal:
             self._slots.append(
                 weakref.WeakMethod(slot)
                 if instance is not None
-                else slot
+                else slot,
             )
 
     def emit(self, *args, **kwargs):
-        """Call all connected callback functions with the given arguments"""
+        """Call all connected callback functions with the given arguments."""
         for slot in self._slots.copy():
             if isinstance(slot, weakref.WeakMethod):
                 func = slot()

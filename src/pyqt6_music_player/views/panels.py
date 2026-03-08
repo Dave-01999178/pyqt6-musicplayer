@@ -23,8 +23,10 @@ from pyqt6_music_player.core import (
     PREV_ICON_PATH,
     REMOVE_ICON_PATH,
     REPEAT_ICON_PATH,
+    SHUFFLE_DISABLED_ICON_PATH,
     SHUFFLE_ENABLED_ICON_PATH,
-    PlaybackStatus, SHUFFLE_DISABLED_ICON_PATH,
+    PlaybackMode,
+    PlaybackStatus,
 )
 from pyqt6_music_player.models import DEFAULT_TRACK, DefaultTrackInfo
 from pyqt6_music_player.view_models import (
@@ -37,8 +39,9 @@ from pyqt6_music_player.views import (
     IconButton,
     MarqueeLabel,
     PlaylistWidget,
+    ShuffleButton,
     VolumeButton,
-    VolumeLabel, ShuffleButton,
+    VolumeLabel,
 )
 
 
@@ -104,7 +107,7 @@ class PlaylistManagerPanel(QWidget):
         main_layout_horizontal.addWidget(self._load_folder_btn)
 
         main_layout_horizontal.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter,
         )
 
         self.setLayout(main_layout_horizontal)
@@ -179,7 +182,7 @@ class PlaylistDisplayPanel(QWidget):
 
         # PlaylistViewModel -> PlaylistDisplayPanel
         self._playlist_viewmodel.selected_index_changed.connect(
-            self._on_model_index_changed
+            self._on_model_index_changed,
         )
 
     @pyqtSlot(QModelIndex, QModelIndex)
@@ -336,13 +339,16 @@ class PlaybackControlsPanel(QWidget):
         self._viewmodel.player_state_changed.connect(self._on_player_state_changed)
 
     @pyqtSlot(bool)
-    def _on_shuffle_button_toggled(self, enable: bool) -> None:
+    def _on_shuffle_button_toggled(self, checked: bool) -> None:
         icon_to_use = (
-            SHUFFLE_ENABLED_ICON_PATH if enable else SHUFFLE_DISABLED_ICON_PATH
+            SHUFFLE_ENABLED_ICON_PATH if checked else SHUFFLE_DISABLED_ICON_PATH
         )
 
-        self._viewmodel.toggle_shuffle(enable)
+        self._viewmodel.change_playback_mode(
+            PlaybackMode.SHUFFLE if checked else PlaybackMode.NORMAL,
+        )
 
+        # TODO: Should only update on successful playback mode change.
         self.shuffle_button.setIcon(QIcon(str(icon_to_use)))
 
     @pyqtSlot()

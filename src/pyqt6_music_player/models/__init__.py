@@ -1,14 +1,12 @@
-from .track import DefaultTrackInfo, AudioPCM, Track, DEFAULT_TRACK
-from .model import (
-    Playlist,
-    VolumeModel,
-)
+from .track import DEFAULT_TRACK, AudioPCM, DefaultTrackInfo, Track
+from .playlist import Playlist
+from. volume import VolumeModel
 
 __all__ = [
-    "DefaultTrackInfo",
-    "AudioPCM",
-    "Track",
     "DEFAULT_TRACK",
+    "AudioPCM",
+    "DefaultTrackInfo",
+    "Track",
     "Playlist",
     "VolumeModel",
 ]

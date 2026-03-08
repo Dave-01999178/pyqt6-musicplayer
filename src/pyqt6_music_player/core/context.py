@@ -43,7 +43,7 @@ def build_context():
     # --- Viewmodels ---
     playback_viewmodel = PlaybackViewModel(playlist_service, playback_service)
     playlist_viewmodel = PlaylistViewModel(playlist_service)
-    volume_viewmodel = VolumeViewModel(volume_model, audio_player)
+    volume_viewmodel = VolumeViewModel(volume_model)
 
     return AppContext(
         audio_player=audio_player,
@@ -52,5 +52,5 @@ def build_context():
         playback_service=playback_service,
         playback_viewmodel=playback_viewmodel,
         playlist_viewmodel=playlist_viewmodel,
-        volume_viewmodel=volume_viewmodel
+        volume_viewmodel=volume_viewmodel,
     )

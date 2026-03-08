@@ -97,6 +97,7 @@ class AudioPCM:
         orig_scale: Value used to adjust, or transform data to a common scale or range.
 
     """
+
     # Format parameters
     channels: int
     sample_rate: int
@@ -139,9 +140,11 @@ class AudioPCM:
 
         # 'sample_width = 3' or '24-bit' is not included since PyDub automatically
         # converts it into 32-bit due to limitations.
-        if sample_width == 1:
+        one_byte = 1
+        two_bytes = 2
+        if sample_width == one_byte:
             orig_dtype = np.uint8
-        elif sample_width == 2:
+        elif sample_width == two_bytes:
             orig_dtype = np.int16
         else:
             orig_dtype = np.int32

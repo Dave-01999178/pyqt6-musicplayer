@@ -1,5 +1,4 @@
 import logging
-import random
 
 from pyqt6_music_player.audio import AudioPlayerService
 from pyqt6_music_player.core import (
@@ -9,7 +8,13 @@ from pyqt6_music_player.core import (
     Signal,
 )
 from pyqt6_music_player.models import AudioPCM, Track
-from pyqt6_music_player.services import PlaylistService
+from pyqt6_music_player.services import (
+    EndBoundary,
+    NoTrackLoaded,
+    PlaylistService,
+    StartBoundary,
+    TrackNavigator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +23,8 @@ class PlaybackService:
     """Orchestrate playback operations and coordinates between player and playlist.
 
     Manages track selection, playback control, and state synchronization.
-
     """
+
     def __init__(
             self,
             audio_player: AudioPlayerService,
@@ -28,20 +33,13 @@ class PlaybackService:
         """Initialize PlaybackService."""
         # Service
         self._audio_player = audio_player
-
-        # Model
         self._playlist = playlist_service
+        self._track_navigator = TrackNavigator(self._playlist)
 
         # Playback state
         self._current_track: Track | None = None
-        self._track_index: int | None = None
         self._current_position_sec: int = 0
-        self._playback_mode: PlaybackMode = PlaybackMode.NORMAL
         self._playback_status: PlaybackStatus = PlaybackStatus.IDLE
-
-        # Shuffle state
-        self._shuffle_order: list[int] = []
-        self._shuffle_pos: int | None = None
 
         # Signals
         self.track_loaded = Signal()
@@ -58,15 +56,11 @@ class PlaybackService:
         selected_index = self._playlist.get_selected_index()
         track_index = selected_index or 0  # Default to first track if none is selected
 
-        # Set the selection index to 0 when defaulted to first track.
+        # Sync playlist selection when defaulting to first track
         if selected_index is None and track_index == 0:
             self._playlist.set_selected_index(track_index)
 
         self._play_track_at_index(track_index)
-
-        # Track the shuffle position so playback follows the shuffle order
-        if self._playback_mode == PlaybackMode.SHUFFLE:
-            self._shuffle_pos = self._shuffle_order.index(track_index)
 
     def pause(self) -> None:
         """Pause the current playback only if it is playing."""
@@ -97,76 +91,45 @@ class PlaybackService:
             self.play()
 
     def play_next_track(self) -> None:
-        """Play next track."""
-        if self._track_index is None:
+        """Play the next track in the playback order.
+
+        Has no effect if there is no track loaded or the end of the
+        playback order is reached.
+        """
+        outcome = self._track_navigator.get_next_track_index()
+
+        if isinstance(outcome, NoTrackLoaded | EndBoundary):
             return
 
-        if self._playback_mode == PlaybackMode.SHUFFLE:
-            if self._shuffle_pos >= len(self._shuffle_order) - 1:
-                return
-
-            self._shuffle_pos += 1
-
-            next_track_index = self._shuffle_order[self._shuffle_pos]
-        else:
-            if self._track_index >= self._playlist.get_track_count():
-                return
-
-            next_track_index = self._track_index + 1
-
-        new_selected_index = self._playlist.set_selected_index(next_track_index)
-
+        next_track_idx = outcome.index
+        new_selected_index = self._playlist.set_selected_index(next_track_idx)
         if new_selected_index is not None:
             self._play_track_at_index(new_selected_index)
 
     def play_previous_track(self) -> None:
         """Play the previous track or restart the current one.
 
-        Restarts the current track if the playback position exceeds
-        the threshold, otherwise navigates to the previous track.
+        Restarts the current track if the playback position exceeds the
+        restart threshold, or if the start of the playback order is reached.
         Has no effect if there is no track loaded.
         """
-        if self._track_index is None:
+        is_past_restart_threshold = self._current_position_sec >= RESTART_THRESHOLD_SEC
+        if is_past_restart_threshold:
+            self._restart_current_track()
             return
 
-        is_past_restart_threshold = self._current_position_sec >= RESTART_THRESHOLD_SEC
+        outcome = self._track_navigator.get_previous_track_index()
+        if isinstance(outcome, NoTrackLoaded):
+            return
 
-        if self._playback_mode == PlaybackMode.SHUFFLE:
-            if self._shuffle_pos is None:
-                return
+        if isinstance(outcome, StartBoundary):
+            self._restart_current_track()
+            return
 
-            # Restart if past threshold or at the beginning of shuffle order
-            if self._shuffle_pos == 0 or is_past_restart_threshold:
-                self._restart_current_track()
-                return
-
-            self._shuffle_pos -= 1
-
-            prev_track_index = self._shuffle_order[self._shuffle_pos]
-
-        else:
-            if self._track_index == 0 or is_past_restart_threshold:
-                self._restart_current_track()
-                return
-
-            prev_track_index = self._track_index - 1
-
-        new_selected_index = self._playlist.set_selected_index(prev_track_index)
-
+        prev_track_idx = outcome.index
+        new_selected_index = self._playlist.set_selected_index(prev_track_idx)
         if new_selected_index is not None:
             self._play_track_at_index(new_selected_index)
-
-    def toggle_shuffle(self, enable: bool):
-        if enable:
-            self._playback_mode = PlaybackMode.SHUFFLE
-
-            self._build_shuffle_order()
-
-            logger.info("Shuffle: On.")
-        else:
-            self._playback_mode = PlaybackMode.NORMAL
-
-            logger.info("Shuffle: Off.")
 
     def seek(self, new_position_in_ms: int) -> None:
         """Seek to a specific position.
@@ -176,6 +139,10 @@ class PlaybackService:
 
         """
         self._audio_player.seek(new_position_in_ms)
+
+    def change_playback_mode(self, playback_mode: PlaybackMode) -> None:
+        """Change the current playback mode."""
+        self._track_navigator.set_playback_mode(playback_mode)
 
     def get_playback_status(self) -> PlaybackStatus:
         """Return the current playback status."""
@@ -193,12 +160,13 @@ class PlaybackService:
         self._audio_player.playback_status_changed.connect(self._on_player_state_changed)
 
     def _play_track_at_index(self, index: int) -> None:
-        # Play specific track based on the given index
+        # Fetch, load, and play the track at the given playlist index
         track = self._playlist.get_track_by_index(index)
 
         if track is not None:
             self._current_track = track
-            self._track_index = index
+
+            self._track_navigator.set_playback_order_position(index)
 
             logger.info(
                 "Playback requested for new selected track: '%s'",
@@ -210,33 +178,10 @@ class PlaybackService:
                 # Triggers 'playback start' on successful load.
                 self._audio_player.load_track_audio(audio)
 
-    def _build_shuffle_order(self):
-        """Build a shuffled playback order."""
-        track_count = self._playlist.get_track_count()
-
-        if not track_count:
-            return
-
-        # Shuffle all tracks except the current one
-        remaining_tracks = [x for x in range(track_count) if x != self._track_index]
-        random.shuffle(remaining_tracks)
-
-        if self._track_index is None:
-            # No current track means all tracks are shuffled
-            self._shuffle_order = remaining_tracks
-            self._shuffle_pos = 0
-        else:
-            # Place the current track first, followed by the shuffled remainder
-            self._shuffle_order = [self._track_index]
-            self._shuffle_order.extend(remaining_tracks)
-
-            self._shuffle_pos = self._shuffle_order.index(self._track_index)
-
-        print(self._shuffle_order)
-
     def _restart_current_track(self):
-        """Seek to the beginning and resume playback if currently playing."""
+        # Seek to the beginning and resume playback if currently playing.
         self.seek(0)
+
         if self._playback_status == PlaybackStatus.PLAYING:
             self._audio_player.resume_playback()
 
@@ -247,13 +192,12 @@ class PlaybackService:
         self._audio_player.start_playback()
 
     def _on_playback_started(self) -> None:
-        # Store the current track and its index
         logger.info("Now playing: %s", self._current_track.title)
 
     def _on_playback_position_changed(self, elapsed_time: float) -> None:
         self._current_position_sec = elapsed_time
 
-        # Emit position update with elapsed and remaining time
+        # Emit elapsed and remaining time
         time_remaining = self._current_track.duration - elapsed_time
 
         self.playback_position_changed.emit(elapsed_time, time_remaining)
