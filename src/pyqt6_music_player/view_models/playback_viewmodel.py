@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.core import PlaybackMode, PlaybackStatus
+from pyqt6_music_player.core import PlaybackStatus, RepeatMode, ShuffleMode
 from pyqt6_music_player.models import Track
 from pyqt6_music_player.services import PlaybackService, PlaylistService
 from pyqt6_music_player.utils import format_duration
@@ -64,9 +64,11 @@ class PlaybackViewModel(QObject):
         """Command for setting the playback position."""
         self._playback_service.seek(new_position_in_ms)
 
-    def change_playback_mode(self, playback_mode: PlaybackMode):
-        """Command for changing the current playback mode."""
-        self._playback_service.change_playback_mode(playback_mode)
+    def set_repeat_mode(self, repeat_mode: RepeatMode) -> None:
+        self._playback_service.set_repeat_mode(repeat_mode)
+
+    def set_shuffle_mode(self, shuffle_mode: ShuffleMode) -> None:
+        self._playback_service.set_shuffle_mode(shuffle_mode)
 
     def get_playback_status(self) -> PlaybackStatus:
         """Return the current playback status."""

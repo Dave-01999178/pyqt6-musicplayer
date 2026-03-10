@@ -25,6 +25,7 @@ class AudioPlayerService(QObject):
     # AudioPlayerService signals
     load_audio_requested = pyqtSignal(AudioPCM)
     start_playback_requested = pyqtSignal()
+    repeat_playback_requested = pyqtSignal()
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
     seek_requested = pyqtSignal(int)
@@ -59,6 +60,9 @@ class AudioPlayerService(QObject):
     def start_playback(self) -> None:
         """Request playback start."""
         self.start_playback_requested.emit()
+
+    def repeat_playback(self):
+        self.repeat_playback_requested.emit()
 
     def pause_playback(self) -> None:
         """Request playback pause."""
@@ -98,6 +102,7 @@ class AudioPlayerService(QObject):
         # Connect service signals to worker.
         self.load_audio_requested.connect(self._worker.load_track_audio)
         self.start_playback_requested.connect(self._worker.start_playback)
+        self.repeat_playback_requested.connect(self._worker.repeat_playback)
         self.pause_playback_requested.connect(self._worker.pause_playback)
         self.resume_playback_requested.connect(self._worker.resume_playback)
         self.seek_requested.connect(self._worker.seek)

@@ -7,7 +7,7 @@ preconfigured, stateless widgets with consistent sizing and styling.
 import logging
 from pathlib import Path
 
-from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
@@ -41,7 +41,7 @@ from pyqt6_music_player.core import (
     SHUFFLE_DISABLED_ICON_PATH,
     SMALL_BUTTON,
     SMALL_ICON,
-    VolumeLevel,
+    VolumeLevel, REPEAT_ICON_PATH, RepeatMode, ShuffleMode,
 )
 
 
@@ -371,10 +371,36 @@ class PlaylistWidget(QTableView):
 class ShuffleButton(IconButton):
     """Button for playing tracks in random order."""
 
+    mode_change_request = pyqtSignal(ShuffleMode)
     def __init__(self, icon_path: Path = SHUFFLE_DISABLED_ICON_PATH):
         """Initialize ShuffleButton."""
         super().__init__(icon_path=icon_path)
         self.setCheckable(True)
+
+        self.toggled.connect(self.toggle_mode)
+
+    def toggle_mode(self, checked: bool) -> None:
+        self.mode_change_request.emit(ShuffleMode.ON if checked else ShuffleMode.OFF)
+
+
+# ----- Repeat button -----
+class RepeatButton(IconButton):
+    mode_change_request = pyqtSignal(RepeatMode)
+    MODES = list(RepeatMode)
+    def __init__(self, icon_path: Path = REPEAT_ICON_PATH):
+        super().__init__(icon_path=icon_path)
+        self._mode_idx = 0
+
+        self.clicked.connect(self._cycle_mode)
+
+    def _cycle_mode(self):
+        self._mode_idx = (self._mode_idx + 1) % len(self.MODES)
+
+        self.mode_change_request.emit(self.MODES[self._mode_idx])
+
+    # TODO: Update icon after playback mode change
+    def update_icon(self):
+        pass
 
 
 # ----- Volume button -----
@@ -463,3 +489,4 @@ class VolumeLabel(QLabel):
 
         self.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
         self.setFixedWidth(label_width)
+

@@ -40,7 +40,7 @@ from .constants import (
     SUPPORTED_BYTES,
 )
 
-from .enums import PlaybackMode, PlaybackStatus, VolumeLevel
+from .enums import PlaybackStatus, RepeatMode, ShuffleMode, VolumeLevel
 
 from .signals import Signal
 from .context import AppContext, build_context
@@ -88,8 +88,9 @@ __all__ = [
     "SUPPORTED_BYTES",
 
     # enums.py
-    "PlaybackMode",
     "PlaybackStatus",
+    "RepeatMode",
+    "ShuffleMode",
     "VolumeLevel",
 
     # signals.py

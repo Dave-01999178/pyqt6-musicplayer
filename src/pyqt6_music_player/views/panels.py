@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QSlider,
     QVBoxLayout,
-    QWidget,
+    QWidget, QCheckBox,
 )
 
 from pyqt6_music_player.core import (
@@ -25,8 +25,7 @@ from pyqt6_music_player.core import (
     REPEAT_ICON_PATH,
     SHUFFLE_DISABLED_ICON_PATH,
     SHUFFLE_ENABLED_ICON_PATH,
-    PlaybackMode,
-    PlaybackStatus,
+    PlaybackStatus, RepeatMode, ShuffleMode,
 )
 from pyqt6_music_player.models import DEFAULT_TRACK, DefaultTrackInfo
 from pyqt6_music_player.view_models import (
@@ -43,6 +42,7 @@ from pyqt6_music_player.views import (
     VolumeButton,
     VolumeLabel,
 )
+from pyqt6_music_player.views.widgets import RepeatButton
 
 
 # ================================================================================
@@ -300,7 +300,7 @@ class PlaybackControlsPanel(QWidget):
             object_name="playPauseBtn",
         )
         self.next_button = IconButton(NEXT_ICON_PATH)
-        self.repeat_button = IconButton(REPEAT_ICON_PATH)
+        self.repeat_button = RepeatButton(REPEAT_ICON_PATH)
 
         # Setup
         self._init_ui()
@@ -329,27 +329,30 @@ class PlaybackControlsPanel(QWidget):
         # Establish PlaybackControlsPanel-PlaybackViewModel connection.
         #
         # PlaybackControlsPanel -> PlaybackViewModel
-        self.shuffle_button.toggled.connect(self._on_shuffle_button_toggled)
+        self.shuffle_button.mode_change_request.connect(self._on_shuffle_mode_change_request)
         self.play_pause_button.clicked.connect(self._on_play_pause_button_clicked)
         self.next_button.clicked.connect(self._on_next_button_clicked)
         self.previous_button.clicked.connect(self._on_previous_button_clicked)
+        self.repeat_button.mode_change_request.connect(self._on_repeat_mode_change_request)
 
         # PlaybackViewModel -> PlaybackControlsPanel
         self._viewmodel.initial_track_added.connect(self._on_initial_track_add)
         self._viewmodel.player_state_changed.connect(self._on_player_state_changed)
 
-    @pyqtSlot(bool)
-    def _on_shuffle_button_toggled(self, checked: bool) -> None:
-        icon_to_use = (
-            SHUFFLE_ENABLED_ICON_PATH if checked else SHUFFLE_DISABLED_ICON_PATH
-        )
-
-        self._viewmodel.change_playback_mode(
-            PlaybackMode.SHUFFLE if checked else PlaybackMode.NORMAL,
-        )
-
+    @pyqtSlot(ShuffleMode)
+    def _on_shuffle_mode_change_request(self, shuffle_mode: ShuffleMode) -> None:
         # TODO: Should only update on successful playback mode change.
-        self.shuffle_button.setIcon(QIcon(str(icon_to_use)))
+        # icon_to_use = (
+        #     SHUFFLE_ENABLED_ICON_PATH if checked else SHUFFLE_DISABLED_ICON_PATH
+        # )
+        # self.shuffle_button.setIcon(QIcon(str(icon_to_use)))
+
+        self._viewmodel.set_shuffle_mode(shuffle_mode)
+
+    @pyqtSlot()
+    def _on_previous_button_clicked(self) -> None:
+        # Call viewmodel previous-track command.
+        self._viewmodel.previous_track()
 
     @pyqtSlot()
     def _on_play_pause_button_clicked(self) -> None:
@@ -361,10 +364,9 @@ class PlaybackControlsPanel(QWidget):
         # Call viewmodel next-track command.
         self._viewmodel.next_track()
 
-    @pyqtSlot()
-    def _on_previous_button_clicked(self) -> None:
-        # Call viewmodel previous-track command.
-        self._viewmodel.previous_track()
+    @pyqtSlot(RepeatMode)
+    def _on_repeat_mode_change_request(self, repeat_mode: RepeatMode) -> None:
+        self._viewmodel.set_repeat_mode(repeat_mode)
 
     @pyqtSlot()
     def _on_initial_track_add(self):
