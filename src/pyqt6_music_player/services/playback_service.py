@@ -3,8 +3,9 @@ import logging
 from pyqt6_music_player.audio import AudioPlayerService
 from pyqt6_music_player.core import (
     RESTART_THRESHOLD_SEC,
-    PlaybackMode,
     PlaybackStatus,
+    RepeatMode,
+    ShuffleMode,
     Signal,
 )
 from pyqt6_music_player.models import AudioPCM, Track
@@ -15,6 +16,7 @@ from pyqt6_music_player.services import (
     StartBoundary,
     TrackNavigator,
 )
+from pyqt6_music_player.services.track_navigator import RepeatCurrent
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,20 @@ class PlaybackService:
         self._connect_signals()
 
     # --- Public methods ---
+    def toggle_playback(self) -> None:
+        """Start new, pause, and resume playback based on the current player state."""
+        # Resume
+        if self._playback_status == PlaybackStatus.PAUSED:
+            self.resume()
+
+        # Pause
+        elif self._playback_status == PlaybackStatus.PLAYING:
+            self.pause()
+
+        # Start new playback
+        else:
+            self.play()
+
     def play(self) -> None:
         """Play the selected track, or the first track if none is selected."""
         selected_index = self._playlist.get_selected_index()
@@ -76,20 +92,6 @@ class PlaybackService:
 
         self._audio_player.resume_playback()
 
-    def toggle_playback(self) -> None:
-        """Start new, pause, and resume playback based on the current player state."""
-        # Resume
-        if self._playback_status == PlaybackStatus.PAUSED:
-            self.resume()
-
-        # Pause
-        elif self._playback_status == PlaybackStatus.PLAYING:
-            self.pause()
-
-        # Start new playback
-        else:
-            self.play()
-
     def play_next_track(self) -> None:
         """Play the next track in the playback order.
 
@@ -101,8 +103,7 @@ class PlaybackService:
         if isinstance(outcome, NoTrackLoaded | EndBoundary):
             return
 
-        next_track_idx = outcome.index
-        new_selected_index = self._playlist.set_selected_index(next_track_idx)
+        new_selected_index = self._playlist.set_selected_index(outcome.index)
         if new_selected_index is not None:
             self._play_track_at_index(new_selected_index)
 
@@ -126,8 +127,7 @@ class PlaybackService:
             self._restart_current_track()
             return
 
-        prev_track_idx = outcome.index
-        new_selected_index = self._playlist.set_selected_index(prev_track_idx)
+        new_selected_index = self._playlist.set_selected_index(outcome.index)
         if new_selected_index is not None:
             self._play_track_at_index(new_selected_index)
 
@@ -140,9 +140,11 @@ class PlaybackService:
         """
         self._audio_player.seek(new_position_in_ms)
 
-    def change_playback_mode(self, playback_mode: PlaybackMode) -> None:
-        """Change the current playback mode."""
-        self._track_navigator.set_playback_mode(playback_mode)
+    def set_repeat_mode(self, repeat_mode: RepeatMode) -> None:
+        self._track_navigator.set_repeat_mode(repeat_mode)
+
+    def set_shuffle_mode(self, shuffle_mode: ShuffleMode) -> None:
+        self._track_navigator.set_shuffle_mode(shuffle_mode)
 
     def get_playback_status(self) -> PlaybackStatus:
         """Return the current playback status."""
@@ -156,7 +158,7 @@ class PlaybackService:
         self._audio_player.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
-        self._audio_player.playback_finished.connect(self.play_next_track)
+        self._audio_player.playback_finished.connect(self._auto_advance)
         self._audio_player.playback_status_changed.connect(self._on_player_state_changed)
 
     def _play_track_at_index(self, index: int) -> None:
@@ -184,6 +186,20 @@ class PlaybackService:
 
         if self._playback_status == PlaybackStatus.PLAYING:
             self._audio_player.resume_playback()
+
+    def _auto_advance(self):
+        outcome = self._track_navigator.get_auto_advance_index()
+
+        if isinstance(outcome, EndBoundary):
+            return
+
+        if isinstance(outcome, RepeatCurrent):
+            self._audio_player.repeat_playback()
+            return
+
+        new_selected_index = self._playlist.set_selected_index(outcome.index)
+        if new_selected_index is not None:
+            self._play_track_at_index(new_selected_index)
 
     def _on_player_audio_loaded(self) -> None:
         # Emit loaded track then start playback

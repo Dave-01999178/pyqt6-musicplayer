@@ -1,7 +1,7 @@
 import random
 from dataclasses import dataclass
 
-from pyqt6_music_player.core import PlaybackMode
+from pyqt6_music_player.core import RepeatMode, ShuffleMode
 from pyqt6_music_player.services import PlaylistService
 
 
@@ -33,9 +33,15 @@ class EndBoundary:
 
     pass
 
+@dataclass
+class RepeatCurrent:
+    pass
+
 
 # ----- TYPE ALIAS -----
-type NavigationOutcome = NoTrackLoaded | TrackIndex | StartBoundary | EndBoundary
+type NavigationOutcome = (
+        NoTrackLoaded | TrackIndex | StartBoundary | EndBoundary | RepeatCurrent
+)
 
 
 # ================================================================================
@@ -49,20 +55,42 @@ class TrackNavigator:
         self._playlist_service = playlist_service
         self._playback_order: list[int] = []  # Ordered list of track indices
         self._position: int | None = None  # Current position in playback order
-        self._playback_mode: PlaybackMode = PlaybackMode.NORMAL
+        self._repeat_mode: RepeatMode = RepeatMode.OFF
+        self._shuffle_mode: ShuffleMode = ShuffleMode.OFF
 
         self._playlist_service.tracks_added.connect(self._on_track_added)
 
     # --- Public methods ---
+    def get_auto_advance_index(self):
+        if not self._playback_order or self._position is None:
+            return NoTrackLoaded()
+
+        is_end_boundary = self._position >= len(self._playback_order) - 1
+        if self._repeat_mode == RepeatMode.OFF:
+            if is_end_boundary:
+                return EndBoundary()
+
+            self._position += 1
+
+            return TrackIndex(self._playback_order[self._position])
+
+        if self._repeat_mode == RepeatMode.ONE:
+            return RepeatCurrent()
+
+        self._position = (self._position + 1) % len(self._playback_order)
+
+        return TrackIndex(self._playback_order[self._position])
+
     def get_next_track_index(self) -> NavigationOutcome:
         """Return the next track index, or a navigation outcome."""
         if not self._playback_order or self._position is None:
             return NoTrackLoaded()
 
-        if self._position >= len(self._playback_order) - 1:
+        is_end_boundary = self._position >= len(self._playback_order) - 1
+        if self._repeat_mode in {RepeatMode.OFF, RepeatMode.ONE} and is_end_boundary:
             return EndBoundary()
 
-        self._position += 1
+        self._position = (self._position + 1) % len(self._playback_order)
 
         return TrackIndex(self._playback_order[self._position])
 
@@ -77,6 +105,18 @@ class TrackNavigator:
         self._position -= 1
 
         return TrackIndex(self._playback_order[self._position])
+
+    def set_repeat_mode(self, repeat_mode: RepeatMode) -> None:
+        print(f"Set repeat mode to: {RepeatMode.ONE.name}")
+        self._repeat_mode = repeat_mode
+
+    def set_shuffle_mode(self, shuffle_mode: ShuffleMode) -> None:
+        if shuffle_mode == ShuffleMode.ON:
+            self._shuffle_playback_order()
+        else:
+            self._reset_playback_order()
+
+        self._shuffle_mode = shuffle_mode
 
     def set_playback_order_position(self, index: int) -> None:
         """Sync the position pointer to the given track index.
@@ -102,24 +142,9 @@ class TrackNavigator:
             self._position,  # Retain current position if track index is not found
         )
 
-    def set_playback_mode(self, playback_mode: PlaybackMode) -> None:
-        """Switch playback mode and rebuild the playback order.
-
-        Args:
-            playback_mode: The new playback mode to set.
-
-        """
-        if playback_mode == PlaybackMode.SHUFFLE:
-            self._shuffle_playback_order()
-
-        else:
-            self._reset_playback_order()
-
-        self._playback_mode = playback_mode
-
     # --- Protected/Internal methods ---
     def _reset_playback_order(self) -> None:
-        if not self._playback_order:
+        if not self._playback_order or self._position is None:
             return
 
         # Restore sequential playback order and realign the position pointer
@@ -151,10 +176,14 @@ class TrackNavigator:
                 idx for idx in self._playback_order if idx != track_index
             ]
 
+            random.shuffle(remaining_tracks)
+
             # Pin current track at front so playback continues from it
             self._playback_order = [track_index, *remaining_tracks]
 
         self._position = 0
+
+        print(self._playback_order)
 
     def _on_track_added(self, new_track_idx: list[int]) -> None:
         # Update the playback order when tracks are added to the playlist.

@@ -104,6 +104,30 @@ class AudioPlayerWorker(QObject):
             self._set_status(PlaybackStatus.ERROR)
 
     @pyqtSlot()
+    def repeat_playback(self):
+        try:
+            self._ensure_thread()
+
+            self._stream.stop_stream()
+
+            self._set_byte_position(0, self._track_id)
+
+            print(f"Byte position: {self._byte_position}")
+            print(f"Current playback status: {self._status}")
+            print(f"PCM is None: {self._audio_pcm is None}")
+            print(f"PyAudio is None: {self._pa is None}")
+            print(f"PyAudio stream is None: {self._stream is None}")
+            print(f"Stream is inactive: {not self._stream.is_active()}")
+
+            self._stream.start_stream()
+
+        except Exception as e:
+            logger.error("Failed to start playback. %s", e)
+
+            self._set_status(PlaybackStatus.ERROR)
+
+
+    @pyqtSlot()
     def pause_playback(self) -> None:
         """Pause current playback."""
         self._ensure_thread()
