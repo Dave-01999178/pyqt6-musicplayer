@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 
-from pyqt6_music_player.core import STYLESHEET, build_context, RepeatMode
+from pyqt6_music_player.core import STYLESHEET, build_context
 from pyqt6_music_player.utils import setup_logging
 from pyqt6_music_player.views import MusicPlayerView
 
@@ -35,9 +35,7 @@ def load_stylesheet(path: str | Path) -> str | None:
         return None
 
 
-# ================================================================================
-# MAIN
-# ================================================================================
+# ==================== MAIN ====================
 def main() -> None:
     """Application entry point.
 

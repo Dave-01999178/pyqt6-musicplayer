@@ -2,9 +2,10 @@ from .playlist_service import PlaylistService
 from .track_navigator import (
     EndBoundary,
     NoTrackLoaded,
+    RepeatCurrent,
+    StartBoundary,
     TrackIndex,
     TrackNavigator,
-    StartBoundary,
 )
 from .playback_service import PlaybackService
 
@@ -15,9 +16,10 @@ __all__ = [
     # track_navigator.py
     "EndBoundary",
     "NoTrackLoaded",
+    "RepeatCurrent",
+    "StartBoundary",
     "TrackIndex",
     "TrackNavigator",
-    "StartBoundary",
 
     # playback_service.py
     "PlaybackService",

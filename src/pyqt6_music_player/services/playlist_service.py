@@ -14,7 +14,12 @@ class PlaylistService:
     """
 
     def __init__(self, playlist_model: Playlist):
-        """Initialize PlaylistService."""
+        """Initialize PlaylistService.
+
+        Args:
+            playlist_model: The playlist model.
+
+        """
         # Model
         self._playlist = playlist_model
 
@@ -22,11 +27,20 @@ class PlaylistService:
         self.tracks_added = Signal()
         self.selection_index_changed = Signal()
 
-    # --- Public methods ---
-    def add_tracks(self, paths: Sequence[str]) -> None:
-        """Command for adding tracks to the playlist.
+    # -- Properties --
+    @property
+    def track_count(self) -> int:
+        """Return the number of tracks in the playlist."""
+        return self._playlist.track_count
 
-        Supported extensions: .mp3, .wav, .flac, .ogg
+    @property
+    def selected_row(self) -> int | None:
+        """Return the currently selected track index."""
+        return self._playlist.selected_row
+
+    # -- Public methods --
+    def add_tracks(self, paths: Sequence[str]) -> None:
+        """Add tracks to the playlist.
 
         Args:
             paths: A sequence of paths as strings.
@@ -64,27 +78,22 @@ class PlaylistService:
 
             self.tracks_added.emit(new_track_idx)
 
-    def set_selected_index(self, index: int) -> int | None:
-        """Model selected index setter.
+    def set_selected_row(self, index: int) -> int | None:
+        """Set the selected row index.
 
         Args:
-            index: The selected row index in playlist.
+            index: The row index to select.
 
         Returns:
-            The updated index or None if the given index is invalid.
+            The updated index, or None if invalid or unchanged.
 
         """
-        new_index = self._playlist.set_selected_index(index)
+        new_index = self._playlist.set_selected_row(index)
 
         if new_index is not None:
             self.selection_index_changed.emit(new_index)
 
         return new_index
-
-    @property
-    def track_count(self) -> int:
-        """Return the number of tracks in the playlist."""
-        return self._playlist.track_count
 
     def get_track_by_index(self, index: int) -> Track | None:
         """Get track at the specified index.
@@ -98,11 +107,7 @@ class PlaylistService:
         """
         return self._playlist.get_track_by_index(index)
 
-    def get_selected_index(self) -> int | None:
-        """Return the currently selected track index."""
-        return self._playlist.selected_index
-
-    # --- Protected/internal methods ---
+    # -- Protected/internal methods --
     @staticmethod
     def _normalize_to_path(paths: Sequence[str]) -> list[Path]:
         """Convert valid path string input into a Path object.

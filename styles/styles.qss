@@ -58,33 +58,33 @@ QHeaderView::section {
 }
 
 /* --- Manage playlist buttons --- */
-#addSongBtn {
+#addTrackBtn {
     background-color: #1DB954;
     color: #cccccc;
     font-weight: 500;
     padding: 4px 8px;
 }
 
-#addSongBtn:hover {
+#addTrackBtn:hover {
     background-color: #1ED760;
 }
 
-#addSongBtn:pressed {
+#addTrackBtn:pressed {
     background-color: #1AA34A;
 }
 
-#removeSongBtn {
+#removeTrackBtn {
     background-color: #34495E;
     color: #cccccc;
     font-weight: 500;
     padding: 4px 8px;
 }
 
-#removeSongBtn:hover {
+#removeTrackBtn:hover {
     background-color: #4B77BE;
 }
 
-#removeSongBtn:pressed {
+#removeTrackBtn:pressed {
     background-color: #2C3E50;
 }
 

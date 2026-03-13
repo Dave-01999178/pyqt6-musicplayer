@@ -5,9 +5,6 @@ from mutagen import FileType
 from mutagen.mp3 import MP3
 
 
-# ================================================================================
-# DATACLASS AND TYPED DICT
-# ================================================================================
 @dataclass(frozen=True)
 class AudioMetadataFallback:
     """Fallback values for audio metadata."""
@@ -26,9 +23,7 @@ class AudioInfoDict(TypedDict):
     duration: float
 
 
-# ================================================================================
-# METADATA EXTRACTOR FUNCTIONS
-# ================================================================================
+# ==================== METADATA EXTRACTOR ====================
 def extract_id3_tags(
         mp3_audio: MP3,
         defaults: type[AudioMetadataFallback] = AudioMetadataFallback,

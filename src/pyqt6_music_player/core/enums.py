@@ -1,8 +1,8 @@
 from enum import Enum, auto
 
 
-class PlaybackStatus(Enum):
-    """Represents the current state of the audio player."""
+class PlaybackState(Enum):
+    """Represents the current playback state."""
 
     IDLE = auto()  # Default state on startup
     PLAYING = auto()
@@ -20,12 +20,3 @@ class RepeatMode(Enum):
 class ShuffleMode(Enum):
     ON = auto()
     OFF = auto()
-
-
-class VolumeLevel(Enum):
-    """Categorizes volume into discrete display levels for the volume icon."""
-
-    MUTE = auto()
-    LOW = auto()
-    MEDIUM = auto()
-    HIGH = auto()

@@ -8,14 +8,14 @@ logger = logging.getLogger(__name__)
 
 
 class Playlist:
-    """Manages playlist tracks and selection state."""
+    """Manages playlist tracks."""
 
     def __init__(self) -> None:
         """Initialize PlaylistModel."""
         super().__init__()
         self._tracks: list[Track] = []
         self._track_paths: set[Path] = set()
-        self._selected_index: int | None = None
+        self._selected_row: int | None = None  # Current position in playlist
 
     # --- Properties ---
     @property
@@ -24,9 +24,9 @@ class Playlist:
         return len(self._tracks)
 
     @property
-    def selected_index(self) -> int | None:
-        """Return the currently selected track index."""
-        return self._selected_index
+    def selected_row(self) -> int | None:
+        """Return the currently selected row index."""
+        return self._selected_row
 
     # --- Public methods ---
     def add_tracks(self, tracks: Sequence[Track]) -> int:
@@ -84,8 +84,8 @@ class Playlist:
 
         return self._tracks[index]
 
-    def set_selected_index(self, index: int) -> int | None:
-        """Set the selected track index.
+    def set_selected_row(self, index: int) -> int | None:
+        """Set the selected row index.
 
         Args:
             index: The row index to select.
@@ -97,9 +97,9 @@ class Playlist:
         if not (0 <= index < len(self._tracks)):
             return None
 
-        self._selected_index = index
+        self._selected_row = index
 
-        return self._selected_index
+        return self._selected_row
 
     def has_track(self, track_path: Path) -> bool:
         """Check if playlist contains a track with the given path.

@@ -22,11 +22,9 @@ class DefaultTrackInfo:
     duration = "00:00:00"
 
 
-# ================================================================================
-# TRACK
-# ================================================================================
+# ==================== TRACK ====================
 #
-# ----- Track file path, and metadata -----
+# --- Track file path, and metadata ---
 @dataclass(frozen=True, eq=True)
 class Track:
     """Represent an audio track with metadata.
@@ -58,7 +56,7 @@ class Track:
             or None if the file cannot be read or contains invalid audio data.
 
         """
-        # Load the audio file
+        # -- LOAD --
         try:
             audio = mutagen.File(path)
 
@@ -70,6 +68,7 @@ class Track:
             logging.error("Unexpected error while reading %s: %s", path, e)
             return None
 
+        # -- EXTRACT --
         else:
             # Extract the metadata from audio file
             metadata = get_metadata(audio)
@@ -83,8 +82,8 @@ class Track:
         )
 
 
-# ----- Audio PCM -----
-@dataclass(frozen=True, eq=True)
+# --- Audio PCM ---
+@dataclass(frozen=True)
 class AudioPCM:
     """Represents PCM audio samples normalized to [-1.0, 1.0].
 
@@ -125,14 +124,14 @@ class AudioPCM:
             path: The filesystem path to the audio file.
 
         """
-        # --- Load and decode audio file. ---
+        # -- DECODE AUDIO FILE --
         try:
             audio_segment = AudioSegment.from_file(path)
         except Exception as e:
             logging.error("Failed to decode file: %s, %s.", path, e)
             return None
 
-        # --- Parse raw data from AudioSegment. ---
+        # -- PARSE AUDIO SEGMENT --
         sample_width = audio_segment.sample_width
         if sample_width not in SUPPORTED_BYTES:
             logging.error("Invalid/Unsupported sample width: %d", sample_width)
@@ -156,7 +155,7 @@ class AudioPCM:
 
         info = np.iinfo(orig_dtype)
 
-        # --- Normalize samples to [-1.0, 1.0] range. ---
+        # -- NORMALIZE SAMPLES (range: [-1.0, 1.0]) --
         if np.issubdtype(orig_dtype, np.unsignedinteger):
             # For unsigned: subtract mid-point, then divide by float mid-point.
             mid_point = (1 << (info.bits - 1))
@@ -167,7 +166,7 @@ class AudioPCM:
             scale = float(info.max)
             samples_normalized = samples / scale
 
-        # --- Reshape samples array: (frames, channels). ---
+        # -- RESHAPE SAMPLES (shape: (frames, channels)) --
         # '-1' is a numpy trick to automatically calculate a row, or column size
         samples_normalized = samples_normalized.reshape(-1, audio_segment.channels)
 

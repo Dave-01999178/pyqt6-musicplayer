@@ -1,6 +1,7 @@
+# TODO: Add module docstring
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.core import PlaybackStatus, RepeatMode, ShuffleMode
+from pyqt6_music_player.core import PlaybackState, RepeatMode, ShuffleMode
 from pyqt6_music_player.models import Track
 from pyqt6_music_player.services import PlaybackService, PlaylistService
 from pyqt6_music_player.utils import format_duration
@@ -13,14 +14,14 @@ class PlaybackViewModel(QObject):
     track_loaded = pyqtSignal(str, str, int, str)
     playback_position_changed = pyqtSignal(int, str, str)
     initial_track_added = pyqtSignal()
-    player_state_changed = pyqtSignal(PlaybackStatus)
+    playback_state_changed = pyqtSignal(PlaybackState)
 
     def __init__(
             self,
             playlist_service: PlaylistService,
             playback_service: PlaybackService,
     ):
-        """Initialize PlaybackViewModel.
+        """Initialize PlaybackViewModel and connect to service signals..
 
         Args:
             playlist_service: Service managing playlist state and operations.
@@ -32,49 +33,73 @@ class PlaybackViewModel(QObject):
         self._playlist_service = playlist_service
         self._playback_service = playback_service
 
+        # Pre-seek playback state tracker.
+        self._pre_seek_playback_state: PlaybackState | None = None
+
         # Setup
         self._connect_signals()
 
-    # --- Public methods (Commands). ---
+    # -- Public methods --
+    #
+    # Playback commands
     def toggle_playback(self) -> None:
-        """Command for toggling playback state, used by play-pause button."""
+        """Toggle between playing and paused state."""
         self._playback_service.toggle_playback()
 
     def play(self):
-        """Command for starting playback."""
+        """Start playback."""
         self._playback_service.play()
 
     def pause(self):
-        """Command for pausing playback."""
+        """Pause playback."""
         self._playback_service.pause()
 
     def resume(self):
-        """Command for resuming paused playback."""
+        """Resume paused playback."""
         self._playback_service.resume()
 
+    # Track navigation commands
     def next_track(self) -> None:
-        """Command for playing next track."""
-        self._playback_service.play_next_track()
+        """Skip to the next track."""
+        self._playback_service.next_track()
 
     def previous_track(self) -> None:
-        """Command for playing previous track."""
-        self._playback_service.play_previous_track()
+        """Skip to the previous track."""
+        self._playback_service.previous_track()
 
-    def seek(self, new_position_in_ms: int) -> None:
-        """Command for setting the playback position."""
-        self._playback_service.seek(new_position_in_ms)
+    # Seek commands
+    def begin_seek(self) -> None:
+        """Begin seek operation, pausing playback if currently playing."""
+        status = self._playback_service.get_playback_state()
 
-    def set_repeat_mode(self, repeat_mode: RepeatMode) -> None:
-        self._playback_service.set_repeat_mode(repeat_mode)
+        self._pre_seek_playback_state = status
 
+        if status == PlaybackState.PLAYING:
+            self._playback_service.pause()
+
+    def seek(self, new_pos_in_ms: int) -> None:
+        """Seek to the given position during an active seek operation."""
+        self._playback_service.seek(new_pos_in_ms)
+
+    def end_seek(self, final_pos_in_ms: int) -> None:
+        """End seek operation, resuming playback if it was playing before seeking."""
+        self._playback_service.seek(final_pos_in_ms)
+
+        if self._pre_seek_playback_state == PlaybackState.PLAYING:
+            self._playback_service.resume()
+
+        self._pre_seek_playback_state = None
+
+    # Playback mode commands
     def set_shuffle_mode(self, shuffle_mode: ShuffleMode) -> None:
+        """Set the shuffle mode."""
         self._playback_service.set_shuffle_mode(shuffle_mode)
 
-    def get_playback_status(self) -> PlaybackStatus:
-        """Return the current playback status."""
-        return self._playback_service.get_playback_status()
+    def set_repeat_mode(self, repeat_mode: RepeatMode) -> None:
+        """Set the repeat mode."""
+        self._playback_service.set_repeat_mode(repeat_mode)
 
-    # --- Protected/internal methods ---
+    # -- Protected/internal methods --
     def _connect_signals(self) -> None:
         # Wire service signals to PlaybackViewModel slots.
         #
@@ -86,8 +111,8 @@ class PlaybackViewModel(QObject):
         self._playback_service.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
-        self._playback_service.player_state_changed.connect(
-            self._on_player_state_changed,
+        self._playback_service.playback_state_changed.connect(
+            self._on_playback_state_changed,
         )
 
     def _on_track_added(self, new_track_idx: list[int]) -> None:
@@ -124,6 +149,5 @@ class PlaybackViewModel(QObject):
             formatted_time_remaining,
         )
 
-    def _on_player_state_changed(self, player_state: PlaybackStatus):
-        # Forward playback status changes
-        self.player_state_changed.emit(player_state)
+    def _on_playback_state_changed(self, new_state: PlaybackState) -> None:
+        self.playback_state_changed.emit(new_state)

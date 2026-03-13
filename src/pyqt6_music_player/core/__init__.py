@@ -9,26 +9,25 @@ from .config import (
     HIGH_VOLUME_ICON_PATH,
     LOAD_FOLDER_ICON_PATH,
     LOW_VOLUME_ICON_PATH,
-    MEDIUM_BUTTON,
-    MEDIUM_ICON,
+    PLAY_PAUSE_BTN_SIZE,
+    PLAY_PAUSE_BTN_ICON_SIZE,
     MEDIUM_VOLUME_ICON_PATH,
-    METADATA_LABEL_SIZE,
+    TRACK_METADATA_LABEL_SIZE,
     MUSIC_PLAYER_ICON_PATH,
     MUTED_VOLUME_ICON_PATH,
     NEXT_ICON_PATH,
-    NEXT_ICON_PRESSED_PATH,
     PAUSE_ICON_PATH,
     PLAY_ICON_PATH,
     PLAYLIST_MANAGER_BTN_SIZE,
     PREV_ICON_PATH,
-    PREV_ICON_PRESSED_PATH,
+    REPEAT_DISABLED_ICON_PATH,
     REMOVE_ICON_PATH,
     REPEAT_ICON_PATH,
-    REPEAT_ICON_PRESSED_PATH,
+    REPEAT_ONE_ICON_PATH,
     SHUFFLE_DISABLED_ICON_PATH,
-    SHUFFLE_ENABLED_ICON_PATH,
-    SMALL_BUTTON,
-    SMALL_ICON,
+    SHUFFLE_ICON_PATH,
+    DEFAULT_BTN_SIZE,
+    DEFAULT_BTN_ICON_SIZE,
     STYLESHEET,
 )
 from .constants import (
@@ -40,7 +39,7 @@ from .constants import (
     SUPPORTED_BYTES,
 )
 
-from .enums import PlaybackStatus, RepeatMode, ShuffleMode, VolumeLevel
+from .enums import PlaybackState, RepeatMode, ShuffleMode
 
 from .signals import Signal
 from .context import AppContext, build_context
@@ -57,26 +56,25 @@ __all__ = [
     "HIGH_VOLUME_ICON_PATH",
     "LOAD_FOLDER_ICON_PATH",
     "LOW_VOLUME_ICON_PATH",
-    "MEDIUM_BUTTON",
-    "MEDIUM_ICON",
+    "PLAY_PAUSE_BTN_SIZE",
+    "PLAY_PAUSE_BTN_ICON_SIZE",
     "MEDIUM_VOLUME_ICON_PATH",
-    "METADATA_LABEL_SIZE",
+    "TRACK_METADATA_LABEL_SIZE",
     "MUSIC_PLAYER_ICON_PATH",
     "MUTED_VOLUME_ICON_PATH",
     "NEXT_ICON_PATH",
-    "NEXT_ICON_PRESSED_PATH",
     "PAUSE_ICON_PATH",
     "PLAY_ICON_PATH",
     "PLAYLIST_MANAGER_BTN_SIZE",
     "PREV_ICON_PATH",
-    "PREV_ICON_PRESSED_PATH",
+    "REPEAT_DISABLED_ICON_PATH",
     "REMOVE_ICON_PATH",
     "REPEAT_ICON_PATH",
-    "REPEAT_ICON_PRESSED_PATH",
+    "REPEAT_ONE_ICON_PATH",
     "SHUFFLE_DISABLED_ICON_PATH",
-    "SHUFFLE_ENABLED_ICON_PATH",
-    "SMALL_BUTTON",
-    "SMALL_ICON",
+    "SHUFFLE_ICON_PATH",
+    "DEFAULT_BTN_SIZE",
+    "DEFAULT_BTN_ICON_SIZE",
     "STYLESHEET",
 
     # constants.py
@@ -88,10 +86,9 @@ __all__ = [
     "SUPPORTED_BYTES",
 
     # enums.py
-    "PlaybackStatus",
+    "PlaybackState",
     "RepeatMode",
     "ShuffleMode",
-    "VolumeLevel",
 
     # signals.py
     "Signal",
