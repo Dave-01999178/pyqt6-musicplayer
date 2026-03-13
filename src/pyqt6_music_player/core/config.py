@@ -32,15 +32,14 @@ LOAD_FOLDER_ICON_PATH = ASSETS_PATH / "load_folder_icon.svg"
 
 # ----- Playback control icons -----
 SHUFFLE_DISABLED_ICON_PATH = ASSETS_PATH / "shuffle_icon_disabled.svg"
-SHUFFLE_ENABLED_ICON_PATH = ASSETS_PATH / "shuffle_icon.svg"
+SHUFFLE_ICON_PATH = ASSETS_PATH / "shuffle_icon.svg"
 PREV_ICON_PATH = ASSETS_PATH / "prev_icon.svg"
-PREV_ICON_PRESSED_PATH = ASSETS_PATH / "prev_icon_pressed.svg"
 PLAY_ICON_PATH = ASSETS_PATH / "play_icon.svg"
 PAUSE_ICON_PATH = ASSETS_PATH / "pause_icon.svg"
 NEXT_ICON_PATH = ASSETS_PATH / "next_icon.svg"
-NEXT_ICON_PRESSED_PATH = ASSETS_PATH / "next_icon_pressed.svg"
+REPEAT_DISABLED_ICON_PATH = ASSETS_PATH / "repeat_icon_disabled.svg"
 REPEAT_ICON_PATH = ASSETS_PATH / "repeat_icon.svg"
-REPEAT_ICON_PRESSED_PATH = ASSETS_PATH / "repeat_icon_pressed.svg"
+REPEAT_ONE_ICON_PATH = ASSETS_PATH / "repeat_one_icon.svg"
 
 # ----- Volume button icons -----
 HIGH_VOLUME_ICON_PATH = ASSETS_PATH / "volume_high.svg"
@@ -62,15 +61,15 @@ APP_DEFAULT_SIZE = (750, 750)
 # ================================================================================
 #
 # ----- Buttons -----
-SMALL_BUTTON = (30, 30)
-SMALL_ICON = (15, 15)
+DEFAULT_BTN_SIZE = (30, 30)
+DEFAULT_BTN_ICON_SIZE = (15, 15)
 
-MEDIUM_BUTTON = (40, 40)
-MEDIUM_ICON = (20, 20)
+PLAY_PAUSE_BTN_SIZE = (40, 40)
+PLAY_PAUSE_BTN_ICON_SIZE = (20, 20)
 
 PLAYLIST_MANAGER_BTN_SIZE = (120, 40)
 
-METADATA_LABEL_SIZE = (100, 25)
+TRACK_METADATA_LABEL_SIZE = (100, 25)
 
 # --- Slider ---
 DEFAULT_SLIDER_RANGE = (0, 100)  # Explicit range since QSlider default range is (0-99)

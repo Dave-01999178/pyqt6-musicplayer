@@ -1,3 +1,4 @@
+# TODO: Add module docstring
 from PyQt6.QtCore import QModelIndex, Qt, pyqtSlot
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
@@ -6,7 +7,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QSlider,
     QVBoxLayout,
-    QWidget, QCheckBox,
+    QWidget,
 )
 
 from pyqt6_music_player.core import (
@@ -14,18 +15,17 @@ from pyqt6_music_player.core import (
     DEFAULT_SLIDER_RANGE,
     FILE_DIALOG_FILTER,
     LOAD_FOLDER_ICON_PATH,
-    MEDIUM_BUTTON,
-    MEDIUM_ICON,
     NEXT_ICON_PATH,
     PAUSE_ICON_PATH,
     PLAY_ICON_PATH,
+    PLAY_PAUSE_BTN_ICON_SIZE,
+    PLAY_PAUSE_BTN_SIZE,
     PLAYLIST_MANAGER_BTN_SIZE,
     PREV_ICON_PATH,
     REMOVE_ICON_PATH,
-    REPEAT_ICON_PATH,
-    SHUFFLE_DISABLED_ICON_PATH,
-    SHUFFLE_ENABLED_ICON_PATH,
-    PlaybackStatus, RepeatMode, ShuffleMode,
+    PlaybackState,
+    RepeatMode,
+    ShuffleMode,
 )
 from pyqt6_music_player.models import DEFAULT_TRACK, DefaultTrackInfo
 from pyqt6_music_player.view_models import (
@@ -38,23 +38,23 @@ from pyqt6_music_player.views import (
     IconButton,
     MarqueeLabel,
     PlaylistWidget,
+    RepeatButton,
     ShuffleButton,
     VolumeButton,
     VolumeLabel,
 )
-from pyqt6_music_player.views.widgets import RepeatButton
 
 
-# ================================================================================
-# PLAYLIST MANAGER
-# ================================================================================
+# ==================== PANELS ====================
+#
+# --- PLAYLIST MANAGER ---
 class PlaylistManagerPanel(QWidget):
-    """QWidget container for grouping playlist manager widgets.
+    """QWidget container for grouping playlist-manager widgets.
 
     This container also acts as the main view layer for the playlist manager,
     and is responsible for:
      - Organizing and displaying playlist manager widgets.
-     - Handling playlist manager widget events by calling the appropriate viewmodel
+     - Handling playlist-manager widget events by calling the appropriate viewmodel
        commands (View -> ViewModel).
     """
 
@@ -73,14 +73,14 @@ class PlaylistManagerPanel(QWidget):
         self._add_track_btn = IconButton(
             ADD_ICON_PATH,
             widget_size=PLAYLIST_MANAGER_BTN_SIZE,
-            button_text="Add song(s)",
-            object_name="addSongBtn",
+            button_text="Add track(s)",
+            object_name="addTrackBtn",
         )
         self._remove_track_btn = IconButton(
             REMOVE_ICON_PATH,
             widget_size=PLAYLIST_MANAGER_BTN_SIZE,
-            button_text="Remove",
-            object_name="removeSongBtn",
+            button_text="Remove track(s)",
+            object_name="removeTrackBtn",
         )
         self._load_folder_btn = IconButton(
             LOAD_FOLDER_ICON_PATH,
@@ -93,8 +93,9 @@ class PlaylistManagerPanel(QWidget):
         self._init_ui()
         self._connect_signals()
 
-    # --- Protected/internal methods ---
-    def _init_ui(self):
+    # -- Protected/internal methods --
+    def _init_ui(self) -> None:
+        # Setup instance widgets and layout
         main_layout_horizontal = QHBoxLayout()
 
         # Left widget: Add track button
@@ -112,8 +113,8 @@ class PlaylistManagerPanel(QWidget):
 
         self.setLayout(main_layout_horizontal)
 
-    def _connect_signals(self):
-        # Wire PlaylistManagerPanel signals to slots.
+    def _connect_signals(self) -> None:
+        # Wire PlaylistManagerPanel signals to their slots
         self._add_track_btn.clicked.connect(self._on_add_track_button_clicked)
 
     @pyqtSlot()
@@ -127,22 +128,19 @@ class PlaylistManagerPanel(QWidget):
         if not file_paths:
             return
 
-        # Add the selected audio files to the playlist.
+        # Add the selected audio files to the playlist
         self._playlist_viewmodel.add_tracks(file_paths)
 
 
-# ================================================================================
-# PLAYLIST
-# ================================================================================
+# --- PLAYLIST ---
 class PlaylistDisplayPanel(QWidget):
     """QWidget container for the main playlist widget.
 
     This container also acts as the main view layer for playlist widget,
     and is responsible for:
-     - Organizing and displaying playlist widgets.
-     - Handling playlist widget events by calling the appropriate viewmodel
+     - Organizing and displaying playlist table.
+     - Handling playlist table events by calling the appropriate viewmodel
        commands (View -> ViewModel).
-
     """
 
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
@@ -156,7 +154,7 @@ class PlaylistDisplayPanel(QWidget):
         # Viewmodel
         self._playlist_viewmodel = playlist_viewmodel
 
-        # Widget
+        # Widgets
         self._playlist_widget = PlaylistWidget()
         self._playlist_widget.setModel(self._playlist_viewmodel)
 
@@ -166,16 +164,17 @@ class PlaylistDisplayPanel(QWidget):
         self._init_ui()
         self._connect_signals()
 
-    # --- Protected/internal methods ---
-    def _init_ui(self):
+    # -- Protected/internal methods --
+    def _init_ui(self) -> None:
+        # Setup instance widgets and layout
         instance_layout = QVBoxLayout()
 
         instance_layout.addWidget(self._playlist_widget)
 
         self.setLayout(instance_layout)
 
-    def _connect_signals(self):
-        # Establish PlaylistDisplayPanel-PlaylistViewModel connection.
+    def _connect_signals(self) -> None:
+        # Establish PlaylistDisplayPanel-PlaylistViewModel connection
         #
         # PlaylistDisplayPanel -> PlaylistViewModel
         self.selection_model.currentRowChanged.connect(self._on_row_changed)
@@ -186,42 +185,44 @@ class PlaylistDisplayPanel(QWidget):
         )
 
     @pyqtSlot(QModelIndex, QModelIndex)
-    def _on_row_changed(self, current_index: QModelIndex, previous_index: QModelIndex):
-        # Store the index of the selected row in playlist widget.
+    def _on_row_changed(self, current_index: QModelIndex, _: QModelIndex) -> None:
+        # Store the index of the selected row in playlist widget
         if not current_index.isValid():
             return
 
         row_index = current_index.row()
 
-        self._playlist_viewmodel.set_selected_index(row_index)
+        self._playlist_viewmodel.set_selected_row(row_index)
 
     @pyqtSlot(int)
     def _on_model_index_changed(self, new_index: int) -> None:
-        # Set the selected row in playlist to the new index.
+        # Set the playlist row selection to the given index if it's new
         if new_index != self._playlist_widget.currentIndex().row():
             self._playlist_widget.selectRow(new_index)
 
 
-# ================================================================================
-# NOW PLAYING
-# ================================================================================
+# --- NOW-PLAYING ---
 class NowPlayingPanel(QWidget):
-    """QWidget container for grouping widgets that displays current song information.
+    """QWidget container for grouping widgets that displays current track information.
 
-    This container also acts as the main view layer for 'now playing' widgets,
+    This container also acts as the main view layer for now-playing widgets,
     and is responsible for:
-     - Organizing and displaying 'now playing' widgets.
-     - Displaying current track information.
-
+     - Organizing and displaying now-playing widgets.
+     - Displaying current track metadata and album art.
     """
 
     def __init__(self, playback_viewmodel: PlaybackViewModel):
-        """Initialize NowPlayingPanel."""
+        """Initialize NowPlayingPanel.
+
+        Args:
+            playback_viewmodel: The playback viewmodel.
+
+        """
         super().__init__()
         # Viewmodel
         self._viewmodel = playback_viewmodel
 
-        # Widget
+        # Widgets
         self.album_art = AlbumArtLabel()
         self.title_label = MarqueeLabel(
             DEFAULT_TRACK.title,
@@ -235,10 +236,11 @@ class NowPlayingPanel(QWidget):
         # Setup
         self._init_ui()
 
-        self._connect_signals()
+        self._viewmodel.track_loaded.connect(self._on_track_loaded)
 
-    # --- Protected/internal methods ---
-    def _init_ui(self):
+    # -- Protected/internal methods --
+    def _init_ui(self) -> None:
+        # Setup instance widgets and layout
         main_layout_horizontal = QHBoxLayout()
 
         # Left widget: Album art
@@ -254,59 +256,54 @@ class NowPlayingPanel(QWidget):
 
         self.setLayout(main_layout_horizontal)
 
-    def _connect_signals(self):
-        # Wire ViewModel signals to NowPlayingPanel slots.
-        self._viewmodel.track_loaded.connect(self._on_track_loaded)
-
     @pyqtSlot(str, str, int, str)
     def _on_track_loaded(self, track_title: str, track_artist: str, *_) -> None:
-        # Display loaded track metadata in UI.
+        # Display loaded track metadata in UI
         self.title_label.setText(track_title)
         self.artist_label.setText(track_artist)
 
 
-# ================================================================================
-# PLAYBACK CONTROLS
-# ================================================================================
+# --- PLAYBACK CONTROLS ---
 class PlaybackControlsPanel(QWidget):
-    """QWidget container for grouping playback control, and track navigation widgets.
+    """QWidget container for grouping playback control widgets.
 
     This container also acts as the main view layer for playback control,
     and is responsible for:
      - Organizing and displaying playback control widgets.
-     - Handling playback control widget events by calling the appropriate viewmodel
+     - Handling playback-control widget events by calling the appropriate viewmodel
        commands (View -> ViewModel).
-
     """
 
     def __init__(self, playback_viewmodel: PlaybackViewModel) -> None:
         """Initialize PlaybackControlsPanel.
 
         Args:
-            playback_viewmodel: The playback control viewmodel.
+            playback_viewmodel: The playback viewmodel.
 
         """
         super().__init__()
         # Viewmodel
         self._viewmodel = playback_viewmodel
 
-        # Widget
+        # Widgets
         self.shuffle_button = ShuffleButton()
         self.previous_button = IconButton(PREV_ICON_PATH)
         self.play_pause_button = IconButton(
             PLAY_ICON_PATH,
-            icon_size=MEDIUM_ICON,
-            widget_size=MEDIUM_BUTTON,
+            icon_size=PLAY_PAUSE_BTN_ICON_SIZE,
+            widget_size=PLAY_PAUSE_BTN_SIZE,
             object_name="playPauseBtn",
         )
         self.next_button = IconButton(NEXT_ICON_PATH)
-        self.repeat_button = RepeatButton(REPEAT_ICON_PATH)
+        self.repeat_button = RepeatButton()
 
         # Setup
         self._init_ui()
         self._connect_signals()
 
-    def _init_ui(self):
+    # -- Protected/internal methods --
+    def _init_ui(self) -> None:
+        # Setup instance widgets and layout
         main_layout_horizontal = QHBoxLayout()
 
         # Left widgets: Shuffle, and previous button
@@ -325,69 +322,67 @@ class PlaybackControlsPanel(QWidget):
         self.setLayout(main_layout_horizontal)
         self.setDisabled(True)
 
-    def _connect_signals(self):
+    def _connect_signals(self) -> None:
         # Establish PlaybackControlsPanel-PlaybackViewModel connection.
         #
         # PlaybackControlsPanel -> PlaybackViewModel
-        self.shuffle_button.mode_change_request.connect(self._on_shuffle_mode_change_request)
+        self.shuffle_button.change_shuffle_mode_request.connect(
+            self._on_shuffle_mode_change_requested,
+        )
+        self.previous_button.clicked.connect(self._on_previous_button_clicked)
         self.play_pause_button.clicked.connect(self._on_play_pause_button_clicked)
         self.next_button.clicked.connect(self._on_next_button_clicked)
-        self.previous_button.clicked.connect(self._on_previous_button_clicked)
-        self.repeat_button.mode_change_request.connect(self._on_repeat_mode_change_request)
+        self.repeat_button.change_repeat_mode_request.connect(
+            self._on_repeat_mode_change_request,
+        )
 
         # PlaybackViewModel -> PlaybackControlsPanel
         self._viewmodel.initial_track_added.connect(self._on_initial_track_add)
-        self._viewmodel.player_state_changed.connect(self._on_player_state_changed)
+        self._viewmodel.playback_state_changed.connect(self._on_player_state_changed)
 
     @pyqtSlot(ShuffleMode)
-    def _on_shuffle_mode_change_request(self, shuffle_mode: ShuffleMode) -> None:
-        # TODO: Should only update on successful playback mode change.
-        # icon_to_use = (
-        #     SHUFFLE_ENABLED_ICON_PATH if checked else SHUFFLE_DISABLED_ICON_PATH
-        # )
-        # self.shuffle_button.setIcon(QIcon(str(icon_to_use)))
-
+    def _on_shuffle_mode_change_requested(self, shuffle_mode: ShuffleMode) -> None:
+        # Call viewmodel set shuffle mode command
         self._viewmodel.set_shuffle_mode(shuffle_mode)
 
     @pyqtSlot()
     def _on_previous_button_clicked(self) -> None:
-        # Call viewmodel previous-track command.
+        # Call viewmodel previous-track command
         self._viewmodel.previous_track()
 
     @pyqtSlot()
     def _on_play_pause_button_clicked(self) -> None:
-        # Call viewmodel toggle-playback command.
+        # Call viewmodel toggle-playback command
         self._viewmodel.toggle_playback()
 
     @pyqtSlot()
     def _on_next_button_clicked(self) -> None:
-        # Call viewmodel next-track command.
+        # Call viewmodel next-track command
         self._viewmodel.next_track()
 
     @pyqtSlot(RepeatMode)
     def _on_repeat_mode_change_request(self, repeat_mode: RepeatMode) -> None:
+        # Call viewmodel set repeat mode command
         self._viewmodel.set_repeat_mode(repeat_mode)
 
     @pyqtSlot()
-    def _on_initial_track_add(self):
+    def _on_initial_track_add(self) -> None:
         # Enable the panel on initial track add to allow playback operations.
         # Note: The panel is disabled by default on app start.
         self.setEnabled(True)
 
-    @pyqtSlot(PlaybackStatus)
-    def _on_player_state_changed(self, player_state: PlaybackStatus):
+    @pyqtSlot(PlaybackState)
+    def _on_player_state_changed(self, player_state: PlaybackState) -> None:
         # Update play-pause button icon to reflect the current playback state.
-        icon_to_use = (
+        icon = (
             PAUSE_ICON_PATH
-            if player_state == PlaybackStatus.PLAYING
+            if player_state == PlaybackState.PLAYING
             else PLAY_ICON_PATH
         )
-        self.play_pause_button.setIcon(QIcon(str(icon_to_use)))
+        self.play_pause_button.setIcon(QIcon(str(icon)))
 
 
-# ================================================================================
-# PLAYBACK PROGRESS
-# ================================================================================
+# --- PLAYBACK PROGRESS ---
 class PlaybackProgressPanel(QWidget):
     """QWidget container for grouping playback progress widgets.
 
@@ -397,7 +392,6 @@ class PlaybackProgressPanel(QWidget):
      - Handling progress bar seek event by calling the appropriate viewmodel
        command (View -> ViewModel).
      - Displaying playback progress.
-
     """
 
     def __init__(self, playback_viewmodel: PlaybackViewModel):
@@ -416,15 +410,13 @@ class PlaybackProgressPanel(QWidget):
         self.seek_bar = QSlider()
         self.time_remaining = QLabel(DefaultTrackInfo.duration)
 
-        # Pre-seek playback state tracker.
-        self._pre_seek_playback_state: PlaybackStatus | None = None
-
         # Setup
         self._init_ui()
         self._connect_signals()
 
-    # --- Private methods ---
-    def _init_ui(self):
+    # -- Protected/internal methods --
+    def _init_ui(self) -> None:
+        # Setup instance widgets and layout
         main_layout_horizontal = QHBoxLayout()
 
         # Left widget: Elapsed time label
@@ -444,7 +436,7 @@ class PlaybackProgressPanel(QWidget):
         self.setLayout(main_layout_horizontal)
         self.setDisabled(True)
 
-    def _connect_signals(self):
+    def _connect_signals(self) -> None:
         # Establish PlaybackProgressPanel-PlaybackViewModel connection.
         #
         # PlaybackProgressPanel -> PlaybackViewModel
@@ -457,29 +449,21 @@ class PlaybackProgressPanel(QWidget):
         self._playback_viewmodel.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
-        self._playback_viewmodel.initial_track_added.connect(self._on_initial_track_added)
+        self._playback_viewmodel.initial_track_added.connect(
+            self._on_initial_track_added,
+        )
 
     @pyqtSlot()
-    def _on_slider_pressed(self):
-        curr_playback_status = self._playback_viewmodel.get_playback_status()
-
-        self._pre_seek_playback_state = curr_playback_status
-
-        if curr_playback_status == PlaybackStatus.PLAYING:
-            self._playback_viewmodel.pause()
+    def _on_slider_pressed(self) -> None:
+        self._playback_viewmodel.begin_seek()
 
     @pyqtSlot()
-    def _on_slider_moved(self):
+    def _on_slider_moved(self) -> None:
         self._playback_viewmodel.seek(self.seek_bar.value())
 
     @pyqtSlot()
-    def _on_slider_released(self):
-        self._playback_viewmodel.seek(self.seek_bar.value())
-
-        if self._pre_seek_playback_state == PlaybackStatus.PLAYING:
-            self._playback_viewmodel.resume()
-
-            self._pre_seek_playback_state = None
+    def _on_slider_released(self) -> None:
+        self._playback_viewmodel.end_seek(self.seek_bar.value())
 
     @pyqtSlot(str, str, int, str)
     def _on_track_loaded(
@@ -503,7 +487,7 @@ class PlaybackProgressPanel(QWidget):
             elapsed_time_in_ms: int,
             formatted_elapsed_time: str,
             formatted_time_remaining: str,
-    ):
+    ) -> None:
         # Keep the slider position and time displays in sync with the
         # actual playback position so the UI accurately reflects playback progress.
         self.seek_bar.blockSignals(True)
@@ -523,9 +507,7 @@ class PlaybackProgressPanel(QWidget):
             self.setEnabled(True)
 
 
-# ================================================================================
-# VOLUME CONTROLS
-# ================================================================================
+# --- VOLUME CONTROLS ---
 class VolumeControlsPanel(QWidget):
     """A QWidget container for grouping volume widgets.
 
@@ -557,7 +539,9 @@ class VolumeControlsPanel(QWidget):
         self._init_ui()
         self._connect_signals()
 
-    def _init_ui(self):
+    # -- Protected/internal methods --
+    def _init_ui(self) -> None:
+        # Setup instance widgets and layout
         main_layout_horizontal = QHBoxLayout()
 
         # Left widget: Volume button
@@ -592,7 +576,6 @@ class VolumeControlsPanel(QWidget):
         # Refresh/re-emit to set UI initial state on startup.
         self._viewmodel.refresh()
 
-    # --- Slots ---
     @pyqtSlot(int)
     def _on_model_volume_changed(self, new_volume: int) -> None:
         # Update volume button icon.

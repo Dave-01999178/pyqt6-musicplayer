@@ -1,3 +1,4 @@
+# TODO: Add module docstring
 from collections.abc import Sequence
 from typing import ClassVar
 
@@ -10,6 +11,7 @@ from pyqt6_music_player.utils import format_duration
 class PlaylistViewModel(QAbstractTableModel):
     """Expose playlist tracks as a table model for the playlist view."""
 
+    selected_index_changed = pyqtSignal(int)
     DEFAULT_COLUMNS: ClassVar[tuple[tuple[str, str]]] = (
         ("title", "Title"),
         ("artist", "Artist"),
@@ -17,10 +19,8 @@ class PlaylistViewModel(QAbstractTableModel):
         ("duration", "Duration"),
     )  # Field_name, Field_label
 
-    selected_index_changed = pyqtSignal(int)
-
     def __init__(self, playlist_service: PlaylistService):
-        """Initialize viewmodel and connect to service signals.
+        """Initialize PlaylistViewModel and connect to PlaylistService signals.
 
         Args:
             playlist_service: Service managing playlist state and operations.
@@ -33,11 +33,11 @@ class PlaylistViewModel(QAbstractTableModel):
         # Setup
         self._connect_signals()
 
-    # --- Public methods ---
+    # -- Public methods --
     #
-    # Commands
+    # Instance methods
     def add_tracks(self, paths: Sequence[str]) -> None:
-        """Command for adding tracks to the playlist.
+        """Add tracks to the playlist.
 
         Args:
             paths: A sequence of path-like objects.
@@ -45,26 +45,26 @@ class PlaylistViewModel(QAbstractTableModel):
         """
         self._playlist_service.add_tracks(paths)
 
-    def set_selected_index(self, index: int) -> None:
-        """Model selected index setter.
+    def set_selected_row(self, index: int) -> None:
+        """Store the row index from playlist.
 
         Args:
             index: The selected row index in playlist.
 
         """
-        self._playlist_service.set_selected_index(index)
+        self._playlist_service.set_selected_row(index)
 
-    # QAbstractTableModel
+    # QAbstractTableModel methods
     def rowCount(self, parent=None):
-        """Set the number of row based on the number of tracks in playlist."""
+        # Returns the number of tracks in the playlist.
         return self._playlist_service.track_count
 
     def columnCount(self, parent=None):
-        """Set the number of column based on the number of track metadata."""
+        # Returns the number of track metadata columns.
         return len(self.DEFAULT_COLUMNS)
 
     def data(self, index, role=...):
-        """Render body row data."""
+        # Provides cell data for display and alignment roles.
         if not index.isValid():
             return None
 
@@ -84,7 +84,7 @@ class PlaylistViewModel(QAbstractTableModel):
         return None
 
     def headerData(self, section, orientation, role=...):
-        """Render header row data."""
+        # Provides header label and alignment for horizontal headers.
         field_label = self.DEFAULT_COLUMNS[section][1]
         is_header_field = (
                 role == Qt.ItemDataRole.DisplayRole
@@ -103,7 +103,7 @@ class PlaylistViewModel(QAbstractTableModel):
 
         return None
 
-    # --- Protected/internal methods ---
+    # -- Protected/internal methods --
     def _connect_signals(self) -> None:
         # Wire PlaylistService signals to PlaylistViewModel slots.
         self._playlist_service.tracks_added.connect(self._on_track_added)
@@ -120,5 +120,4 @@ class PlaylistViewModel(QAbstractTableModel):
         self.endInsertRows()
 
     def _on_selected_index_changed(self, new_index) -> None:
-        # Forward the new selection index
         self.selected_index_changed.emit(new_index)  # type: ignore

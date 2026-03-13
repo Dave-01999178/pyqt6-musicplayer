@@ -12,44 +12,49 @@ from pyqt6_music_player.view_models import (
 
 @dataclass
 class AppContext:
-    # --- Player engine ---
+    """Holds all application-level dependencies."""
+
+    # -- Audio --
     audio_player: AudioPlayerService
 
-    # --- Models ---
+    # -- Models --
     playlist_model: Playlist
     volume_model: VolumeModel
 
-    # --- Service ---
+    # -- Services --
+    playlist_service: PlaylistService
     playback_service: PlaybackService
 
-    # --- ViewModels ---
+    # -- ViewModels --
     playback_viewmodel: PlaybackViewModel
     playlist_viewmodel: PlaylistViewModel
     volume_viewmodel: VolumeViewModel
 
 
 def build_context():
-    # --- Player engine ---
+    """Construct and wire all application dependencies."""
+    # -- Audio --
     audio_player = AudioPlayerService()
 
-    # --- Models ---
+    # -- Models --
     playlist_model = Playlist()
     volume_model = VolumeModel()
 
-    # -- Service ---
+    # -- Services --
     playlist_service = PlaylistService(playlist_model)
     playback_service = PlaybackService(audio_player, playlist_service)
 
-    # --- Viewmodels ---
+    # -- ViewModels --
     playback_viewmodel = PlaybackViewModel(playlist_service, playback_service)
     playlist_viewmodel = PlaylistViewModel(playlist_service)
     volume_viewmodel = VolumeViewModel(volume_model)
 
     return AppContext(
-        audio_player=audio_player,
         playlist_model=playlist_model,
         volume_model=volume_model,
+        playlist_service=playlist_service,
         playback_service=playback_service,
+        audio_player=audio_player,
         playback_viewmodel=playback_viewmodel,
         playlist_viewmodel=playlist_viewmodel,
         volume_viewmodel=volume_viewmodel,

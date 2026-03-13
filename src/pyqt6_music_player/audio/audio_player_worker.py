@@ -7,22 +7,16 @@ from PyQt6.QtCore import (
     QMetaObject,
     QObject,
     Qt,
-    QThread,
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtWidgets import QApplication
 
-from pyqt6_music_player.core import PlaybackStatus
+from pyqt6_music_player.core import PlaybackState
 from pyqt6_music_player.models import AudioPCM
 
 logger = logging.getLogger(__name__)
 
 
-# ================================================================================
-# AUDIO PLAYER WORKER
-# ================================================================================
-#
 # noinspection PyUnresolvedReferences
 class AudioPlayerWorker(QObject):
     """Handles low-level audio playback operations in a separate thread.
@@ -34,8 +28,8 @@ class AudioPlayerWorker(QObject):
     audio_loaded = pyqtSignal()
     playback_started = pyqtSignal()
     playback_finished = pyqtSignal()
-    byte_position_changed = pyqtSignal(float)
-    status_changed = pyqtSignal(PlaybackStatus)
+    playback_position_changed = pyqtSignal(float)
+    status_changed = pyqtSignal(PlaybackState)
     resources_released = pyqtSignal()
 
     def __init__(self) -> None:
@@ -53,7 +47,7 @@ class AudioPlayerWorker(QObject):
 
         # Playback state
         self._byte_position: int = 0
-        self._status: PlaybackStatus = PlaybackStatus.IDLE
+        self._status: PlaybackState = PlaybackState.IDLE
 
         # Not an actual track ID, used to detect stale byte position updates
         self._track_id = 0
@@ -73,15 +67,13 @@ class AudioPlayerWorker(QObject):
             audio_pcm: Track audio data to load for playback.
 
         """
-        self._ensure_thread()
-
         # PyAudio streams are session-specific and hold native audio resources.
         # They cannot be reused safely across different tracks, so we close the
         # previous stream before creating a new one.
         self._release_stream()
 
-        self._byte_position = 0  # Reset playback position
         self._audio_pcm = audio_pcm
+        self._byte_position = 0  # Reset playback position
 
         # Increment track ID to invalidate any queued position updates from
         # the previous track's audio callback
@@ -91,9 +83,8 @@ class AudioPlayerWorker(QObject):
 
     @pyqtSlot()
     def start_playback(self) -> None:
-        """Initialize PyAudio, prepare audio bytes and begin audio playback."""
+        """Prepare audio bytes, initialize PyAudio, and begin audio playback."""
         try:
-            self._ensure_thread()
             self._prepare_audio_bytes()
             self._initialize_pyaudio()
             self._stream.start_stream()
@@ -101,53 +92,39 @@ class AudioPlayerWorker(QObject):
         except Exception as e:
             logger.error("Failed to start playback. %s", e)
 
-            self._set_status(PlaybackStatus.ERROR)
+            self._set_status(PlaybackState.ERROR)
 
     @pyqtSlot()
     def repeat_playback(self):
         try:
-            self._ensure_thread()
-
             self._stream.stop_stream()
 
             self._set_byte_position(0, self._track_id)
-
-            print(f"Byte position: {self._byte_position}")
-            print(f"Current playback status: {self._status}")
-            print(f"PCM is None: {self._audio_pcm is None}")
-            print(f"PyAudio is None: {self._pa is None}")
-            print(f"PyAudio stream is None: {self._stream is None}")
-            print(f"Stream is inactive: {not self._stream.is_active()}")
 
             self._stream.start_stream()
 
         except Exception as e:
             logger.error("Failed to start playback. %s", e)
 
-            self._set_status(PlaybackStatus.ERROR)
-
+            self._set_status(PlaybackState.ERROR)
 
     @pyqtSlot()
     def pause_playback(self) -> None:
         """Pause current playback."""
-        self._ensure_thread()
-
-        self._set_status(PlaybackStatus.PAUSED)
+        self._set_status(PlaybackState.PAUSED)
 
         logger.info("Playback paused.")
 
     @pyqtSlot()
     def resume_playback(self) -> None:
         """Resume paused playback from current position."""
-        self._ensure_thread()
-
-        self._set_status(PlaybackStatus.PLAYING)
+        self._set_status(PlaybackState.PLAYING)
 
         logger.info("Playback unpaused.")
 
     @pyqtSlot(int)
     def seek(self, new_position_in_ms: int):
-        """Seek to a specific position.
+        """Seek to the given position.
 
         Pauses playback if currently playing and snaps to the nearest
         frame boundary to prevent audio artifacts.
@@ -156,15 +133,21 @@ class AudioPlayerWorker(QObject):
             new_position_in_ms: Target position in milliseconds.
 
         """
-        if self._status is PlaybackStatus.PLAYING:
-            self._set_status(PlaybackStatus.PAUSED, notify=False)
+        # Guard against seek attempt when no track is loaded
+        if self._audio_pcm is None or self._audio_bytes is None:
+            return
+
+        # Guard against audio artifacts when seeking to a specific position
+        # while playback is active
+        if self._status is PlaybackState.PLAYING:
+            self._set_status(PlaybackState.PAUSED, notify=False)
 
         # Convert milliseconds to byte position
         bytes_per_second = self._audio_pcm.sample_rate * self._bytes_per_frame
         byte_pos = int((new_position_in_ms / 1000) * bytes_per_second)
 
         # Snap to the nearest frame boundary to avoid mid-frame reads
-        # that causes static noise.
+        # that causes audio artifacts
         byte_pos -= byte_pos % self._bytes_per_frame
 
         self._set_byte_position(byte_pos, self._track_id)
@@ -172,7 +155,6 @@ class AudioPlayerWorker(QObject):
     @pyqtSlot()
     def release_resources(self) -> None:
         """Release PyAudio stream and instance, freeing audio resources."""
-        self._ensure_thread()
         self._release_stream()
         self._release_pyaudio()
 
@@ -181,15 +163,6 @@ class AudioPlayerWorker(QObject):
         logger.info("Worker resources released.")
 
     # --- Protected/internal methods ---
-    def _ensure_thread(self) -> None:
-        main_thread = QApplication.instance().thread()
-        worker_thread = QThread.currentThread()
-
-        if worker_thread == main_thread:
-            raise RuntimeError(
-                f"{self.__class__.__name__} must be called from a worker thread.",
-            )
-
     def _initialize_pyaudio(self) -> None:
         """Initialize PyAudio instance and stream."""
         if self._pa is None:
@@ -257,7 +230,7 @@ class AudioPlayerWorker(QObject):
         start = self._byte_position
 
         # Handle playback start
-        if start == 0 and status in {PlaybackStatus.IDLE, PlaybackStatus.STOPPED}:
+        if start == 0 and status in {PlaybackState.IDLE, PlaybackState.STOPPED}:
             QMetaObject.invokeMethod(
                 self,
                 "_on_playback_started",
@@ -270,11 +243,11 @@ class AudioPlayerWorker(QObject):
         # - Continuing to read from old track's buffer after stream closure
         # - Position updates from wrong track causing UI jumps
         # - Static noise from reading audio at incorrect byte positions
-        if start > 0 and status in {PlaybackStatus.ERROR, PlaybackStatus.STOPPED}:
+        if start > 0 and status in {PlaybackState.ERROR, PlaybackState.STOPPED}:
             return None, paComplete
 
         # Handle pause by outputting silence.
-        if status is PlaybackStatus.PAUSED:
+        if status is PlaybackState.PAUSED:
             return self._silence_bytes, paContinue
 
         # Actual playback
@@ -343,13 +316,13 @@ class AudioPlayerWorker(QObject):
 
         byte_pos_as_sec = byte_pos / bytes_per_second
 
-        self.byte_position_changed.emit(byte_pos_as_sec)
+        self.playback_position_changed.emit(byte_pos_as_sec)
 
-    def _set_status(self, status: PlaybackStatus, notify=True) -> None:
+    def _set_status(self, status: PlaybackState, notify=True) -> None:
         if self._status == status:
             return
 
-        # Update and emit new playback status with optional notification.
+        # Update and emit new playback state with optional notification.
         self._status = status
 
         if notify:
@@ -363,8 +336,8 @@ class AudioPlayerWorker(QObject):
         #
         # Stop the audio callback before releasing the stream
         # This prevents the callback from accessing the stream during closure
-        if self._status in {PlaybackStatus.PLAYING, PlaybackStatus.PAUSED}:
-            self._set_status(PlaybackStatus.STOPPED)
+        if self._status in {PlaybackState.PLAYING, PlaybackState.PAUSED}:
+            self._set_status(PlaybackState.STOPPED)
 
             logger.info("Playback stopped.")
 
@@ -401,7 +374,7 @@ class AudioPlayerWorker(QObject):
 
     @pyqtSlot()
     def _on_playback_started(self) -> None:
-        self._set_status(PlaybackStatus.PLAYING)
+        self._set_status(PlaybackState.PLAYING)
 
         self.playback_started.emit()
 
@@ -411,6 +384,6 @@ class AudioPlayerWorker(QObject):
     def _on_playback_finished(self) -> None:
         self.playback_finished.emit()
 
-        self._set_status(PlaybackStatus.STOPPED)
+        self._set_status(PlaybackState.STOPPED)
 
         logger.info("Playback finished.")

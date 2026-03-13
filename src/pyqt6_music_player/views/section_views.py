@@ -15,6 +15,9 @@ from pyqt6_music_player.views import (
 )
 
 
+# ==================== SECTION VIEWS ====================
+#
+# --- PlaylistManager ---
 class PlaylistManagerView(QFrame):
     """A customizable frame container for playlist manager panel."""
 
@@ -27,25 +30,27 @@ class PlaylistManagerView(QFrame):
         """
         super().__init__()
         # Panel
-        self._playlist_manager = PlaylistManagerPanel(playlist_viewmodel)
+        self._playlist_manager_panel = PlaylistManagerPanel(playlist_viewmodel)
 
         # Setup
         self._configure_properties()
         self._init_ui()
 
-    # --- Protected/internal methods ---
-    def _configure_properties(self):
+    # -- Protected/internal methods --
+    def _configure_properties(self) -> None:
         self.setFrameStyle(QFrame.Shape.StyledPanel)
         self.setObjectName("playlistManagerFrame")
 
-    def _init_ui(self):
+    def _init_ui(self) -> None:
+        # Setup instance widgets and layout
         instance_layout = QVBoxLayout()
 
-        instance_layout.addWidget(self._playlist_manager)
+        instance_layout.addWidget(self._playlist_manager_panel)
 
         self.setLayout(instance_layout)
 
 
+# --- Playlist ---
 class PlaylistView(QFrame):
     """A customizable frame container for playlist display panel."""
 
@@ -63,8 +68,9 @@ class PlaylistView(QFrame):
         # Setup
         self._init_ui()
 
-    # --- Protected/internal methods ---
-    def _init_ui(self):
+    # -- Protected/internal methods --
+    def _init_ui(self) -> None:
+        # Setup instance widgets and layout
         instance_layout = QVBoxLayout()
 
         instance_layout.addWidget(self._playlist_display)
@@ -75,6 +81,7 @@ class PlaylistView(QFrame):
         self.setLayout(instance_layout)
 
 
+# --- Player bar ---
 class PlayerbarView(QFrame):
     """A customizable frame container for grouping player-related panels.
 
@@ -96,36 +103,37 @@ class PlayerbarView(QFrame):
         """
         super().__init__()
         # Panels
-        self._playback_progress = PlaybackProgressPanel(playback_viewmodel)
-        self._now_playing_display = NowPlayingPanel(playback_viewmodel)
-        self._playback_controls = PlaybackControlsPanel(playback_viewmodel)
-        self._volume_controls = VolumeControlsPanel(volume_viewmodel)
+        self._playback_progress_panel = PlaybackProgressPanel(playback_viewmodel)
+        self._now_playing_panel = NowPlayingPanel(playback_viewmodel)
+        self._playback_controls_panel = PlaybackControlsPanel(playback_viewmodel)
+        self._volume_controls_panel = VolumeControlsPanel(volume_viewmodel)
 
         # Setup
         self._init_ui()
 
-    # --- Protected/internal methods ---
+    # -- Protected/internal methods --
     def _init_ui(self):
+        # Setup instance widgets and layout
         main_layout_vertical = QVBoxLayout()
 
         # Top section: Playback progress panel
         top_layout = QVBoxLayout()
 
-        top_layout.addWidget(self._playback_progress)
+        top_layout.addWidget(self._playback_progress_panel)
 
         # Bottom section: Now playing, playback control, and volume control panels
         bottom_layout_horizontal = QHBoxLayout()
 
         # Bottom section left widget: Now playing panel
-        bottom_layout_horizontal.addWidget(self._now_playing_display, 0)
+        bottom_layout_horizontal.addWidget(self._now_playing_panel, 0)
         bottom_layout_horizontal.addStretch(1)  # Pushes the next layout (add spacing).
 
         # Bottom section middle widget: Playback controls panel
-        bottom_layout_horizontal.addWidget(self._playback_controls, 1)
+        bottom_layout_horizontal.addWidget(self._playback_controls_panel, 1)
         bottom_layout_horizontal.addStretch(1)  # Pushes the next layout (add spacing).
 
         # Bottom section right widget: Volume controls panel
-        bottom_layout_horizontal.addWidget(self._volume_controls, 0)
+        bottom_layout_horizontal.addWidget(self._volume_controls_panel, 0)
 
         bottom_layout_horizontal.setContentsMargins(10, 0, 10, 0)
 

@@ -3,16 +3,12 @@ import logging
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
 from pyqt6_music_player.audio import AudioPlayerWorker
-from pyqt6_music_player.core import PlaybackStatus
+from pyqt6_music_player.core import PlaybackState
 from pyqt6_music_player.models import AudioPCM
 
 logger = logging.getLogger(__name__)
 
 
-# ================================================================================
-# AUDIO PLAYER SERVICE
-# ================================================================================
-#
 # noinspection PyUnresolvedReferences
 class AudioPlayerService(QObject):
     """Manages audio playback worker thread and coordinates signal communication.
@@ -36,7 +32,7 @@ class AudioPlayerService(QObject):
     playback_started = pyqtSignal()
     playback_finished = pyqtSignal()
     playback_position_changed = pyqtSignal(float)
-    playback_status_changed = pyqtSignal(PlaybackStatus)
+    playback_state_changed = pyqtSignal(PlaybackState)
     player_resources_released = pyqtSignal()
 
     def __init__(self):
@@ -50,30 +46,33 @@ class AudioPlayerService(QObject):
         self._init_thread_and_worker()
 
     # --- Public methods ---
-    def load_track_audio(self, audio_pcm: AudioPCM):
-        """Request track audio load to the worker."""
-        if not isinstance(audio_pcm, AudioPCM):
-            return
+    def load_track_audio(self, audio_pcm: AudioPCM) -> None:
+        """Request track audio load to the worker.
 
+        Args:
+            audio_pcm: PCM audio data to load. Must be a valid AudioPCM instance.
+
+        """
         self.load_audio_requested.emit(audio_pcm)
 
     def start_playback(self) -> None:
-        """Request playback start."""
+        """Request playback start to the worker."""
         self.start_playback_requested.emit()
 
     def repeat_playback(self):
+        """Request playback repeat to the worker."""
         self.repeat_playback_requested.emit()
 
     def pause_playback(self) -> None:
-        """Request playback pause."""
+        """Request playback pause to the worker."""
         self.pause_playback_requested.emit()
 
     def resume_playback(self) -> None:
-        """Request playback resume."""
+        """Request playback resume to the worker."""
         self.resume_playback_requested.emit()
 
     def seek(self, new_position_in_ms: int) -> None:
-        """Request playback position update."""
+        """Request playback position update to the worker."""
         self.seek_requested.emit(new_position_in_ms)
 
     def shutdown(self):
@@ -95,7 +94,6 @@ class AudioPlayerService(QObject):
 
     # --- Protected/internal methods ---
     def _connect_signals(self) -> None:
-        """Establish signal-slot connections between the service and worker."""
         if self._worker is None:
             return
 
@@ -111,14 +109,16 @@ class AudioPlayerService(QObject):
         # Connect worker signals to service.
         self._worker.audio_loaded.connect(self._on_audio_load)
         self._worker.playback_started.connect(self._on_playback_started)
-        self._worker.byte_position_changed.connect(self._on_byte_position_changed)
-        self._worker.status_changed.connect(self._on_playback_status_changed)
+        self._worker.playback_position_changed.connect(
+            self._on_playback_position_changed,
+        )
+        self._worker.status_changed.connect(self._on_playback_state_changed)
         self._worker.playback_finished.connect(self._on_playback_finished)
         self._worker.resources_released.connect(self._worker_thread.quit)
         self._worker_thread.finished.connect(self._on_thread_finished)
 
     def _init_thread_and_worker(self) -> None:
-        """Initialize thread and worker then connect signals."""
+        # Initialize thread and worker then connect signals.
         if self._worker_thread is not None:
             return
 
@@ -145,16 +145,16 @@ class AudioPlayerService(QObject):
         self.playback_started.emit()
 
     @pyqtSlot(float)
-    def _on_byte_position_changed(self, byte_pos_as_sec: float) -> None:
+    def _on_playback_position_changed(self, byte_pos_as_sec: float) -> None:
         self.playback_position_changed.emit(byte_pos_as_sec)
 
     @pyqtSlot()
     def _on_playback_finished(self):
         self.playback_finished.emit()
 
-    @pyqtSlot(PlaybackStatus)
-    def _on_playback_status_changed(self, playback_status: PlaybackStatus) -> None:
-        self.playback_status_changed.emit(playback_status)
+    @pyqtSlot(PlaybackState)
+    def _on_playback_state_changed(self, new_state: PlaybackState) -> None:
+        self.playback_state_changed.emit(new_state)
 
     @pyqtSlot()
     def _on_thread_finished(self):
