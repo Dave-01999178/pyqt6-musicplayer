@@ -1,6 +1,6 @@
 from .track import DEFAULT_TRACK, AudioPCM, DefaultTrackInfo, Track
 from .playlist import Playlist
-from. volume import VolumeModel
+from. volume import Volume
 
 __all__ = [
     "DEFAULT_TRACK",
@@ -8,5 +8,5 @@ __all__ = [
     "DefaultTrackInfo",
     "Track",
     "Playlist",
-    "VolumeModel",
+    "Volume",
 ]

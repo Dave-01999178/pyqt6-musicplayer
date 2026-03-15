@@ -8,7 +8,7 @@ from pyqt6_music_player.core import (
     ShuffleMode,
     Signal,
 )
-from pyqt6_music_player.models import AudioPCM, Track
+from pyqt6_music_player.models import AudioPCM, Track, Volume
 from pyqt6_music_player.services import (
     EndBoundary,
     NoTrackLoaded,
@@ -31,6 +31,7 @@ class PlaybackService:
             self,
             audio_player: AudioPlayerService,
             playlist_service: PlaylistService,
+            volume: Volume,
     ):
         """Initialize PlaybackService.
 
@@ -40,9 +41,9 @@ class PlaybackService:
             playlist_service: Service managing playlist state and operations.
 
         """
-        # Service
         self._audio_player = audio_player
         self._playlist = playlist_service
+        self._volume = volume
         self._track_navigator = TrackNavigator(self._playlist)
 
         # Playback state
@@ -194,6 +195,11 @@ class PlaybackService:
         self._audio_player.playback_state_changed.connect(
             self._on_playback_state_changed,
         )
+
+        self._volume.volume_changed.connect(self._on_volume_changed)
+
+    def _on_volume_changed(self, volume: int) -> None:
+        self._audio_player.set_volume(volume / 100)
 
     def _play_track_at_index(self, index: int) -> None:
         # Fetch, load, and play the track at the given playlist index
