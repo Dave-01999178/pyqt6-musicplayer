@@ -3,7 +3,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from pyqt6_music_player.core import MAX_VOLUME, MIN_VOLUME
 
 
-class VolumeModel(QObject):
+class Volume(QObject):
     """Volume model.
 
     This class is responsible for managing volume, and providing volume related data.
@@ -20,7 +20,6 @@ class VolumeModel(QObject):
         super().__init__()
         self._current_volume: int = 100
         self._previous_volume: int | None = None
-        self._is_muted: bool = False
 
     # --- Properties ---
     @property
@@ -49,13 +48,6 @@ class VolumeModel(QObject):
         self._current_volume = new_volume
 
         self.volume_changed.emit(new_volume)  # type: ignore
-
-        curr_mute_state = (new_volume == 0)
-
-        if curr_mute_state != self._is_muted:
-            self.mute_changed.emit(curr_mute_state)  # type: ignore
-
-            self._is_muted = curr_mute_state
 
     def set_muted(self, muted: bool) -> None:
         """Set the current mute state based on the given new state.

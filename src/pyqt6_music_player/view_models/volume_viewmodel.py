@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.models import VolumeModel
+from pyqt6_music_player.models import Volume
 
 
 class VolumeViewModel(QObject):
@@ -9,7 +9,7 @@ class VolumeViewModel(QObject):
     model_volume_changed = pyqtSignal(int)
     model_mute_state_changed = pyqtSignal(bool)
 
-    def __init__(self, volume_model: VolumeModel):
+    def __init__(self, volume_model: Volume):
         """Initialize VolumeViewModel and connect to model signals."""
         super().__init__()
         self._model = volume_model

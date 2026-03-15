@@ -25,6 +25,7 @@ class AudioPlayerService(QObject):
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
     seek_requested = pyqtSignal(int)
+    set_volume_requested = pyqtSignal(float)
     shutdown_requested = pyqtSignal()
 
     # AudioPlayerWorker signals
@@ -75,6 +76,9 @@ class AudioPlayerService(QObject):
         """Request playback position update to the worker."""
         self.seek_requested.emit(new_position_in_ms)
 
+    def set_volume(self, volume: float) -> None:
+        self.set_volume_requested.emit(volume)
+
     def shutdown(self):
         """Request thread shutdown."""
         if self._worker_thread is None:
@@ -104,6 +108,7 @@ class AudioPlayerService(QObject):
         self.pause_playback_requested.connect(self._worker.pause_playback)
         self.resume_playback_requested.connect(self._worker.resume_playback)
         self.seek_requested.connect(self._worker.seek)
+        self.set_volume_requested.connect(self._worker.set_volume)
         self.shutdown_requested.connect(self._worker.release_resources)
 
         # Connect worker signals to service.
@@ -145,8 +150,8 @@ class AudioPlayerService(QObject):
         self.playback_started.emit()
 
     @pyqtSlot(float)
-    def _on_playback_position_changed(self, byte_pos_as_sec: float) -> None:
-        self.playback_position_changed.emit(byte_pos_as_sec)
+    def _on_playback_position_changed(self, frame_pos_as_sec: float) -> None:
+        self.playback_position_changed.emit(frame_pos_as_sec)
 
     @pyqtSlot()
     def _on_playback_finished(self):

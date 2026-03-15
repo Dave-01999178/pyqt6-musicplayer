@@ -35,21 +35,14 @@ class AudioPlayerWorker(QObject):
     def __init__(self) -> None:
         """Initialize AudioPlayerWorker."""
         super().__init__()
-        # Playback data
-        self._audio_pcm: AudioPCM | None = None
-        self._audio_bytes: bytes | None = None  # Actual audio bytes for playback
-        self._silence_bytes: bytes | None = None  # Silence bytes for 'pause' playback
-
-        # Buffer config
+        self._audio_pcm: AudioPCM | None = None  # PCM data and format parameters
         self._frames_per_buffer: int = 1024
-        self._bytes_per_frame: int = 0
-        self._bytes_per_buffer: int = 0
-
-        # Playback state
-        self._byte_position: int = 0
+        self._silence_bytes: bytes | None = None  # Silence bytes for 'pause' playback
+        self._frame_position: int = 0  # Playback position in frames
+        self._volume: float = 1.0
         self._status: PlaybackState = PlaybackState.IDLE
 
-        # Not an actual track ID, used to detect stale byte position updates
+        # Not an actual track ID, used to detect stale frame position updates
         self._track_id = 0
 
         # PyAudio objects
@@ -73,19 +66,25 @@ class AudioPlayerWorker(QObject):
         self._release_stream()
 
         self._audio_pcm = audio_pcm
-        self._byte_position = 0  # Reset playback position
+        self._frame_position = 0  # Reset playback position
 
         # Increment track ID to invalidate any queued position updates from
         # the previous track's audio callback
         self._track_id += 1
 
+        self._prepare_silence_bytes()
+
         self.audio_loaded.emit()
 
     @pyqtSlot()
     def start_playback(self) -> None:
-        """Prepare audio bytes, initialize PyAudio, and begin audio playback."""
+        """Initialize PyAudio, and begin audio playback."""
+
+        if self._audio_pcm is None:
+            logger.warning("Cannot start playback: Audio PCM is not initialized.")
+            return
+
         try:
-            self._prepare_audio_bytes()
             self._initialize_pyaudio()
             self._stream.start_stream()
 
@@ -99,7 +98,7 @@ class AudioPlayerWorker(QObject):
         try:
             self._stream.stop_stream()
 
-            self._set_byte_position(0, self._track_id)
+            self._set_frame_position(0, self._track_id)
 
             self._stream.start_stream()
 
@@ -123,18 +122,17 @@ class AudioPlayerWorker(QObject):
         logger.info("Playback unpaused.")
 
     @pyqtSlot(int)
-    def seek(self, new_position_in_ms: int):
+    def seek(self, position_in_ms: int):
         """Seek to the given position.
 
-        Pauses playback if currently playing and snaps to the nearest
-        frame boundary to prevent audio artifacts.
+        Pauses playback if currently playing to prevent audio artifacts.
 
         Args:
-            new_position_in_ms: Target position in milliseconds.
+            position_in_ms: Target position in milliseconds.
 
         """
         # Guard against seek attempt when no track is loaded
-        if self._audio_pcm is None or self._audio_bytes is None:
+        if self._audio_pcm is None:
             return
 
         # Guard against audio artifacts when seeking to a specific position
@@ -142,15 +140,19 @@ class AudioPlayerWorker(QObject):
         if self._status is PlaybackState.PLAYING:
             self._set_status(PlaybackState.PAUSED, notify=False)
 
-        # Convert milliseconds to byte position
-        bytes_per_second = self._audio_pcm.sample_rate * self._bytes_per_frame
-        byte_pos = int((new_position_in_ms / 1000) * bytes_per_second)
+        frame_position = int((position_in_ms / 1000) * self._audio_pcm.sample_rate)
 
-        # Snap to the nearest frame boundary to avoid mid-frame reads
-        # that causes audio artifacts
-        byte_pos -= byte_pos % self._bytes_per_frame
+        self._set_frame_position(frame_position, self._track_id)
 
-        self._set_byte_position(byte_pos, self._track_id)
+    @pyqtSlot(float)
+    def set_volume(self, volume: float) -> None:
+        """Set the playback volume.
+
+        Args:
+            volume: Volume level in range [0.0, 1.0].
+
+        """
+        self._volume = volume
 
     @pyqtSlot()
     def release_resources(self) -> None:
@@ -178,41 +180,52 @@ class AudioPlayerWorker(QObject):
                 stream_callback=self._audio_callback,
             )
 
-    def _prepare_audio_bytes(self) -> None:
-        # Pre-process buffer sizes and audio bytes for audio callback use.
-        if self._audio_pcm is None:
-            return
+    def _chunk_to_pcm_bytes(self, samples_chunk: np.ndarray, volume: float) -> bytes:
+        """Convert a normalized float sample chunk to PCM bytes with volume applied.
 
-        samples = self._audio_pcm.samples
-        dtype = self._audio_pcm.orig_dtype
+        Args:
+            samples_chunk: Normalized float32 samples of shape (frames, channels).
+            volume: Volume multiplier in range [0.0, 1.0].
+
+        Returns:
+            PCM bytes ready for PyAudio output.
+
+        """
         scale = self._audio_pcm.orig_scale
+        dtype = self._audio_pcm.orig_dtype
 
-        # Convert samples back to integers
+        # Apply volume then clamp to valid normalized range
+        samples_chunk = (samples_chunk * volume).clip(-1.0, 1.0)
+
+        # Denormalize float samples back to original integer range
         if np.issubdtype(dtype, np.unsignedinteger):
-            # Unsigned integers: samples ∈ {0, 2 * scale - 1}
-            samples_int = np.clip(
-                np.round(samples * scale + scale),
-                0,
-                2 * scale - 1,
+            # Unsigned: shift from [-1.0, 1.0] back to [0, 2 * scale - 1]
+            samples_int = (
+                    samples_chunk * scale + scale
+            ).clip(
+                0, 2 * scale - 1,
             ).astype(dtype)
+
         else:
-            # Signed integers: samples ∈ {-scale, scale}
-            samples_int = np.clip(
-                np.round(samples * scale),
+            # Signed: scale from [-1.0, 1.0] back to [-scale, scale]
+            samples_int = (
+                    samples_chunk * scale
+            ).clip(
                 -scale,
                 scale,
             ).astype(dtype)
 
-        # Ensure that the PCM array is contiguous
-        samples_int = np.ascontiguousarray(samples_int)
+        return samples_int.tobytes()
 
-        # Convert samples integer to bytes and pre-compute the buffer sizes in bytes
-        self._audio_bytes = samples_int.tobytes()
-        self._bytes_per_frame = samples_int.strides[0]
-        self._bytes_per_buffer = self._frames_per_buffer * self._bytes_per_frame
+    def _prepare_silence_bytes(self) -> None:
+        if self._audio_pcm is None:
+            return
 
         # Create 'silence' array for 'pause' playback.
-        self._silence_bytes = b"\x00" * self._bytes_per_buffer
+        bytes_per_frame = self._audio_pcm.sample_width * self._audio_pcm.channels
+        bytes_per_buffer = self._frames_per_buffer * bytes_per_frame
+
+        self._silence_bytes = b"\x00" * bytes_per_buffer
 
     def _audio_callback(
             self,
@@ -221,13 +234,10 @@ class AudioPlayerWorker(QObject):
             _time_info,
             _status_flags,
     ) -> tuple[bytes | None, int]:
-        # Callback for playing audio bytes, used by PyAudio stream.
-        if self._audio_pcm is None or self._audio_bytes is None:
-            return None, paComplete
-
-        status = self._status
+        # Callback for playing pcm bytes, used by PyAudio stream.
         current_track_id = self._track_id
-        start = self._byte_position
+        start = self._frame_position
+        status = self._status
 
         # Handle playback start
         if start == 0 and status in {PlaybackState.IDLE, PlaybackState.STOPPED}:
@@ -251,42 +261,47 @@ class AudioPlayerWorker(QObject):
             return self._silence_bytes, paContinue
 
         # Actual playback
-        end = start + self._bytes_per_buffer
-        buffer = self._audio_bytes[start:end]
-        curr_buffer_size = len(buffer)
-        total_bytes = len(self._audio_bytes)
+        end = start + self._frames_per_buffer
+        buffer = self._audio_pcm.samples[start:end]
+        buffer_size = len(buffer)
+        total_frames = len(self._audio_pcm.samples)
+        volume = self._volume
 
-        # If the current buffer size is less than the expected buffer size
-        # (left over), fill up the missing buffer by padding with silence bytes.
-        # PyAudio.Stream expects an exact buffer size.
-        if curr_buffer_size < frame_count:
-            buffer += self._silence_bytes[:frame_count - curr_buffer_size]
+        # Pad the last chunk with silence if it's smaller than the expected buffer size
+        # PyAudio requires an exact frame count on every callback tick
+        if buffer_size < frame_count:
+            padding_size = frame_count - buffer_size
+            silence_padding = np.zeros((padding_size, self._audio_pcm.channels), dtype=np.float32)
+            buffer = np.concatenate((buffer, silence_padding))
 
-        # Update byte position for next buffer.
-        next_byte_pos = min(end, total_bytes)
+        # Prepare chunk before position update so the last chunk is still returned
+        pcm_bytes = self._chunk_to_pcm_bytes(buffer, volume)
 
-        # Queue position update with track ID for validation and keep the UI in sync.
+        # Update frame position for next buffer
+        next_frame_pos = min(end, total_frames)
+
+        # Queue position update with track ID for validation and to keep the UI in sync
         QMetaObject.invokeMethod(
             self,
-            "_set_byte_position",
+            "_set_frame_position",
             Qt.ConnectionType.QueuedConnection,
-            Q_ARG(int, next_byte_pos),
+            Q_ARG(int, next_frame_pos),
             Q_ARG(int, current_track_id),
         )
 
-        # If all bytes are played, end the callback.
-        if next_byte_pos >= total_bytes:
+        # Return last audio chunk so PyAudio plays it fully
+        if next_frame_pos >= total_frames:
             QMetaObject.invokeMethod(
                 self,
                 "_on_playback_finished",
                 Qt.ConnectionType.QueuedConnection,
             )
-            return None, paComplete
+            return pcm_bytes, paComplete
 
-        return buffer, paContinue
+        return pcm_bytes, paContinue
 
     @pyqtSlot(int, int)
-    def _set_byte_position(self, byte_position: int, track_id: int) -> None:
+    def _set_frame_position(self, frame_position: int, track_id: int) -> None:
         """Update playback position with track ID validation.
 
         Discards position updates from previous tracks to prevent race conditions
@@ -294,7 +309,7 @@ class AudioPlayerWorker(QObject):
         that were queued before the stream was released.
 
         Args:
-            byte_position: New byte position in the audio buffer.
+            frame_position: New frame position in the audio buffer.
             track_id: Track ID when this update was queued.
 
         """
@@ -302,21 +317,19 @@ class AudioPlayerWorker(QObject):
         if self._track_id != track_id:
             return
 
-        if self._byte_position == byte_position:
+        if self._frame_position == frame_position:
             return
 
-        # Set and emit new byte position.
-        self._byte_position = byte_position
+        # Set and emit new frame position.
+        self._frame_position = frame_position
 
-        self._on_byte_position_changed(self._byte_position)
+        self._on_frame_position_changed(self._frame_position)
 
-    def _on_byte_position_changed(self, byte_pos: int) -> None:
-        # Convert and emit byte position in seconds
-        bytes_per_second = self._audio_pcm.sample_rate * self._bytes_per_frame
-
-        byte_pos_as_sec = byte_pos / bytes_per_second
-
-        self.playback_position_changed.emit(byte_pos_as_sec)
+    def _on_frame_position_changed(self, frame_position: int) -> None:
+        # Convert and emit frame position in seconds
+        self.playback_position_changed.emit(
+            frame_position / self._audio_pcm.sample_rate,
+        )
 
     def _set_status(self, status: PlaybackState, notify=True) -> None:
         if self._status == status:
