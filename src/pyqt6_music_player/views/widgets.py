@@ -3,14 +3,25 @@ import logging
 from pathlib import Path
 from typing import ClassVar
 
-from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import (
+    QModelIndex,
+    QPointF,
+    QRectF,
+    QSize,
+    Qt,
+    QTimer,
+    pyqtSignal,
+)
 from PyQt6.QtGui import (
     QBrush,
     QColor,
     QIcon,
+    QLinearGradient,
     QPainter,
+    QPainterPath,
     QPaintEvent,
     QPalette,
+    QPen,
     QPixmap,
 )
 from PyQt6.QtWidgets import (
@@ -27,20 +38,22 @@ from PyQt6.QtWidgets import (
 
 from pyqt6_music_player.core import (
     ALBUM_ART_PLACEHOLDER,
-    DEFAULT_BTN_ICON_SIZE,
-    DEFAULT_BTN_SIZE,
-    HIGH_VOLUME_ICON_PATH,
-    LOW_VOLUME_ICON_PATH,
+    HIGH_VOLUME_ICON,
+    LOW_VOLUME_ICON,
     MAX_VOLUME,
-    MEDIUM_VOLUME_ICON_PATH,
+    MEDIUM_VOLUME_ICON,
     MIN_VOLUME,
-    MUTED_VOLUME_ICON_PATH,
-    REPEAT_DISABLED_ICON_PATH,
-    REPEAT_ICON_PATH,
-    REPEAT_ONE_ICON_PATH,
-    SHUFFLE_DISABLED_ICON_PATH,
-    SHUFFLE_ICON_PATH,
+    MUTED_VOLUME_ICON,
+    REPEAT_DISABLED_ICON,
+    REPEAT_ICON,
+    REPEAT_ONE_ICON,
+    SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
+    SECONDARY_PLAYBACK_CONTROL_BTN_OBJ_NAME,
+    SECONDARY_PLAYBACK_CONTROL_BTN_SIZE,
+    SHUFFLE_DISABLED_ICON, SHUFFLE_ICON,
     TRACK_METADATA_LABEL_SIZE,
+    VOLUME_BTN_ICON_SIZE,
+    VOLUME_BTN_SIZE,
     RepeatMode,
     ShuffleMode,
 )
@@ -48,20 +61,14 @@ from pyqt6_music_player.core import (
 
 # ==================== BASE WIDGETS ====================
 class IconButton(QPushButton):
-    """A customizable QPushButton with fixed size, icon, and a configurable properties.
-
-    This class extends the QPushButton widget to provide a consistent,
-    and reusable button with options for a fixed icon and widget size, button text,
-    icon size, and a custom object name for styling for icon-based buttons that
-    require custom behavior or state.
-    """
+    """A reusable QPushButton with a custom icon and fixed dimensions."""
 
     def __init__(
             self,
             icon_path: Path,
+            icon_size: tuple[int, int],
+            widget_size: tuple[int, int],
             *,
-            icon_size: tuple[int, int] = DEFAULT_BTN_ICON_SIZE,
-            widget_size: tuple[int, int] = DEFAULT_BTN_SIZE,
             button_text: str | None = None,
             object_name: str | None = None,
     ) -> None:
@@ -69,10 +76,8 @@ class IconButton(QPushButton):
 
         Args:
             icon_path: Path to the icon file.
-            icon_size: Size of the icon inside the button as
-                       (width, height) in pixels. Defaults to (15, 15).
-            widget_size: Size of the entire button widget as
-                         (width, height) in pixels. Defaults to (30, 30).
+            icon_size: Size of the icon inside the button as (width, height) in pixels.
+            widget_size: Size of the entire button widget as (width, height) in pixels.
             button_text: Optional text for the button. Defaults to ``None``.
             object_name: Qt object name useful for QSS selectors.
                          Defaults to ``None``.
@@ -145,7 +150,7 @@ class AlbumArtLabel(QLabel):
 
 
 class MarqueeLabel(QLabel):
-    """Custom QLabel for displaying track metadata that can handle text spills."""
+    """Custom QLabel for displaying track metadata."""
 
     def __init__(
             self,
@@ -245,51 +250,165 @@ class MarqueeLabel(QLabel):
         self.update()
 
 
-class HoverRowDelegate(QStyledItemDelegate):
-    """Row hover effect delegate for QTableView."""
+class PlaylistItemDelegate(QStyledItemDelegate):
+    """Custom delegate for playlist rows with hover and active row highlighting."""
 
-    def __init__(self, parent=None, hover_color: str="#3a3f4b"):
-        """Set up the delegate with a configurable hover color.
+    def __init__(self, parent: QTableView):
+        """Initialize PlaylistItemDelegate.
 
         Args:
             parent: The parent QTableView.
-            hover_color: Row highlight color on hover. Defaults to '#3a3f4b'.
 
         """
         super().__init__()
         self._parent = parent
-        self._hover_row = -1  # '-1' means no row hovered
-        self._hover_brush = QBrush(QColor(hover_color))
 
-    # -- Public methods (Parent) --
-    def setHoverRow(self, row: int) -> None:
-        # Do work only if the hovered row actually changed
+        # Row state
+        self._active_row = -1
+        self._hover_row = -1
+
+        # Brush
+        self._active_row_brush = QBrush(QColor("#2A3142"))
+        self._active_row_text_brush = QBrush(QColor("#00D9FF"))
+        self._hover_row_brush = QBrush(QColor("#1ABC9C"))
+
+    # - Public methods -
+    #
+    # Instance methods
+    def set_active_row(self, row: int) -> None:
+        if row == self._active_row:
+            self._update_row(row)
+            return
+
+        old_row = self._active_row
+        self._active_row = row
+
+        # Reset old active row by applying Qt default because current != new row
+        self._update_row(old_row)
+
+        # Apply row effect because new row is current row
+        self._update_row(row)
+
+    def set_hover_row(self, row: int) -> None:
         if row != self._hover_row:
+            old_row = self._hover_row
             self._hover_row = row
 
-            # Ask the table (parent) to repaint its viewport (the display area)
-            # so the hover effect is immediately visible
-            #
-            # Without this, Qt wouldn't know it needs to redraw the cells
-            # when the mouse moves
-            if self._parent:
-                self._parent.viewport().update()
+            # Reset old hover row by applying Qt default because old != current row
+            self._update_row(old_row)
 
+            # Apply row effect because new row is current row
+            self._update_row(row)
+
+    # Parent methods
     def paint(self, painter, option, index) -> None:
-        opt = QStyleOptionViewItem(option)
+        opt = QStyleOptionViewItem(option)  # Stores a copy of `option`
+
+        # Remove focus visuals (dotted outline or highlights)
         opt.state &= ~QStyle.StateFlag.State_HasFocus
+        row_index = index.row()
+        selected = opt.state & QStyle.StateFlag.State_Selected
 
-        state_flag = QStyle.StateFlag.State_Selected
-        if index.row() == self._hover_row and not (opt.state & state_flag):
-            opt.palette.setBrush(QPalette.ColorRole.Highlight, self._hover_brush)
+        # Row selected - highest priority (Qt default)
+        if selected:
+            super().paint(painter, opt, index)
+            # Draw border if selected row == active row
+            if row_index == self._active_row:
+                self._draw_active_row_border(painter, option, index)
+            return
+
+        # Hover - second priority
+        if row_index == self._hover_row:
+            self._apply_highlight(opt, self._hover_row_brush)
+            # Apply text color if hover row == active row
+            if row_index == self._active_row:
+                opt.palette.setBrush(
+                    QPalette.ColorRole.Text,
+                    QBrush(QColor(self._active_row_text_brush)),
+                )
+
+        # Active row - lower priority
+        elif row_index == self._active_row:
             opt.palette.setBrush(
-                QPalette.ColorRole.HighlightedText,
-                opt.palette.brush(QPalette.ColorRole.Text),
+                QPalette.ColorRole.Text,
+                QBrush(QColor(self._active_row_text_brush)),
             )
+            self._apply_highlight(opt, self._active_row_brush)
 
-            opt.state |= QStyle.StateFlag.State_Selected
-
+        # Use the default behavior for the rest
         super().paint(painter, opt, index)
+
+        # Draw border to the active row after painting
+        if row_index == self._active_row:
+            self._draw_active_row_border(painter, option, index)
+
+    # - Protected/Internal methods -
+    def _apply_highlight(self, opt, brush):
+        opt.palette.setBrush(QPalette.ColorRole.Highlight, brush)
+        opt.palette.setBrush(
+            QPalette.ColorRole.HighlightedText,
+            opt.palette.brush(QPalette.ColorRole.Text),
+        )
+
+        # Treat as selected to highlight the row
+        opt.state |= QStyle.StateFlag.State_Selected
+
+    def _draw_active_row_border(self, painter, option, index):
+        view = self._parent
+        if view is None:
+            return
+
+        model = view.model()
+        if model is None:
+            return
+
+        row = index.row()
+
+        # Determine row's full span
+        left_index = model.index(row, 0)
+        right_index = model.index(row, model.columnCount() - 1)
+
+        rect = view.visualRect(left_index) | view.visualRect(right_index)
+
+        # Adjust for crisp borders (avoid clipping)
+        rect.adjust(1, 1, -1, -1)
+
+        # Enables antialiasing so curved lines appear smooth instead of jagged
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        painter.save()
+
+        # Create round rectangle path
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(rect), 8, 8)
+
+        # Create gradient effect
+        gradient = QLinearGradient(QPointF(rect.topLeft()), QPointF(rect.topRight()))
+        gradient.setColorAt(0, QColor("#A855F7"))
+        gradient.setColorAt(1, QColor("#00D9FF"))
+
+        # Apply gradient to pen and draw border
+        pen = QPen(QBrush(gradient), 2)
+        painter.setPen(pen)
+        painter.drawPath(path)
+
+        painter.restore()
+
+    def _update_row(self, row: int) -> None:
+        if self._parent is None or row < 0:
+            return
+
+        model = self._parent.model()
+        if model is None:
+            return
+
+        # Get first and last index of the row (entire row)
+        left = model.index(row, 0)
+        right = model.index(row, model.columnCount() - 1)
+
+        rect = self._parent.visualRect(left) | self._parent.visualRect(right)
+
+        self._parent.viewport().update(rect)
 
 
 class PlaylistWidget(QTableView):
@@ -300,12 +419,26 @@ class PlaylistWidget(QTableView):
         super().__init__()
         # Setup
         self._configure_properties()
+        self._connect_signals()
         self._configure_viewport()
-        self._configure_delegate()
+        self._init_delegate()
 
-    # -- Public method (Parent) --
+    # -- Public methods --
+    #
+    # Instance method
+    def set_delegate_active_row(self, row_index: int) -> None:
+        """Set the active row in the playlist.
+
+        Args:
+            row_index: Row index to mark as active.
+
+        """
+        self._playlist_delegate.set_active_row(row_index)
+
+    # Parent method
     def leaveEvent(self, e) -> None:
-        self._hover_delegate.setHoverRow(-1)  # Reset the highlighted row
+        # Reset the hover row index when the cursor leaves the viewport
+        self._playlist_delegate.set_hover_row(-1)
         super().leaveEvent(e)
 
     # -- Protected/internal methods --
@@ -333,7 +466,6 @@ class PlaylistWidget(QTableView):
         # Remove cell focus on click
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
-        self.setAlternatingRowColors(True)
         self.setObjectName("playlistTableView")
         self.setShowGrid(False)
 
@@ -344,18 +476,31 @@ class PlaylistWidget(QTableView):
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
     def _configure_viewport(self) -> None:
-        # Enable widget and viewport (the display area) mouse tracking
+        # Enable mouse tracking inside QTableView (data/content area e.g. cells)
         self._viewport = self.viewport()
         if self._viewport is not None:
             self._viewport.setMouseTracking(True)
 
         self.setMouseTracking(True)
 
-    def _configure_delegate(self) -> None:
-        # Apply the custom row hover effect to instance
-        self._hover_delegate = HoverRowDelegate(self, hover_color="#34495E")
-        self.setItemDelegate(self._hover_delegate)
-        self.entered.connect(lambda idx: self._hover_delegate.setHoverRow(idx.row()))
+    def _connect_signals(self):
+        self.entered.connect(self._on_table_mouse_hover)
+
+    def _on_table_mouse_hover(self, index: QModelIndex) -> None:
+        """Update hover row when mouse enters a new row.
+
+        Args:
+            index: The model index of the hovered row.
+
+        """
+        if not index.isValid():
+            return
+
+        self._playlist_delegate.set_hover_row(index.row())
+
+    def _init_delegate(self) -> None:
+        self._playlist_delegate = PlaylistItemDelegate(self)
+        self.setItemDelegate(self._playlist_delegate)
 
 
 class ShuffleButton(IconButton):
@@ -363,15 +508,31 @@ class ShuffleButton(IconButton):
 
     change_shuffle_mode_request  = pyqtSignal(ShuffleMode)
 
-    def __init__(self, icon_path: Path = SHUFFLE_DISABLED_ICON_PATH):
+    def __init__(
+            self,
+            icon_path: Path = SHUFFLE_DISABLED_ICON,
+            icon_size: tuple[int, int] = SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
+            widget_size: tuple[int, int] = SECONDARY_PLAYBACK_CONTROL_BTN_SIZE,
+            object_name: str | None = SECONDARY_PLAYBACK_CONTROL_BTN_OBJ_NAME,
+    ):
         """Initialize ShuffleButton.
 
         Args:
-            icon_path: Path to the shuffle icon file.
-                       Defaults to 'shuffle disabled' icon.
+            icon_path: Path to the icon file. Defaults to 'shuffle disabled' icon.
+            icon_size: Size of the icon inside the button as
+                       (width, height) in pixels. Defaults to (15, 15).
+            widget_size: Size of the entire button widget as (width, height) in pixels.
+                         Defaults to (30, 30).
+            object_name: Qt object name useful for QSS selectors.
+                         Defaults to 'secondaryPlaybackControlBtn'.
 
         """
-        super().__init__(icon_path=icon_path)
+        super().__init__(
+            icon_path=icon_path,
+            icon_size=icon_size,
+            widget_size=widget_size,
+            object_name=object_name,
+        )
         self.setCheckable(True)
 
         self.toggled.connect(self._on_toggle)
@@ -388,9 +549,9 @@ class ShuffleButton(IconButton):
     def _update_icon(self, shuffle_mode: ShuffleMode) -> None:
         # Update icon based on the current shuffle mode
         icon = (
-            SHUFFLE_DISABLED_ICON_PATH
+            SHUFFLE_DISABLED_ICON
             if shuffle_mode == ShuffleMode.OFF
-            else SHUFFLE_ICON_PATH
+            else SHUFFLE_ICON
         )
         self.setIcon(QIcon(str(icon)))
 
@@ -401,15 +562,31 @@ class RepeatButton(IconButton):
     change_repeat_mode_request  = pyqtSignal(RepeatMode)
     MODES: ClassVar[list[RepeatMode]] = list(RepeatMode)
 
-    def __init__(self, icon_path: Path = REPEAT_DISABLED_ICON_PATH):
+    def __init__(
+            self,
+            icon_path: Path = REPEAT_DISABLED_ICON,
+            icon_size: tuple[int, int] = SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
+            widget_size: tuple[int, int] = SECONDARY_PLAYBACK_CONTROL_BTN_SIZE,
+            object_name: str | None = SECONDARY_PLAYBACK_CONTROL_BTN_OBJ_NAME,
+    ):
         """Initialize RepeatButton.
 
         Args:
-            icon_path: Path to the repeat icon file.
-                       Defaults to 'repeat disabled' icon.
+            icon_path: Path to the icon file. Defaults to 'repeat disabled' icon.
+            icon_size: Size of the icon inside the button as
+                       (width, height) in pixels. Defaults to (15, 15).
+            widget_size: Size of the entire button widget as (width, height) in pixels.
+                         Defaults to (30, 30).
+            object_name: Qt object name useful for QSS selectors.
+                         Defaults to 'secondaryPlaybackControlBtn'.
 
         """
-        super().__init__(icon_path=icon_path)
+        super().__init__(
+            icon_path=icon_path,
+            icon_size=icon_size,
+            widget_size=widget_size,
+            object_name=object_name,
+        )
         self._mode_idx = 0
 
         self.setCheckable(True)
@@ -430,11 +607,11 @@ class RepeatButton(IconButton):
     def _update_icon(self, repeat_mode: RepeatMode) -> None:
         # Update button based on the repeat mode
         if repeat_mode == RepeatMode.OFF:
-            icon = REPEAT_DISABLED_ICON_PATH
+            icon = REPEAT_DISABLED_ICON
         elif repeat_mode == RepeatMode.ONE:
-            icon = REPEAT_ONE_ICON_PATH
+            icon = REPEAT_ONE_ICON
         else:
-            icon = REPEAT_ICON_PATH
+            icon = REPEAT_ICON
 
         self.setIcon(QIcon(str(icon)))
 
@@ -455,14 +632,26 @@ class VolumeButton(IconButton):
     MEDIUM_BOUNDARY = 34
     LOW_BOUNDARY = 1
 
-    def __init__(self, icon_path: Path = HIGH_VOLUME_ICON_PATH):
+    def __init__(
+            self,
+            icon_path: Path = HIGH_VOLUME_ICON,
+            icon_size: tuple[int, int] = VOLUME_BTN_ICON_SIZE,
+            widget_size: tuple[int, int] = VOLUME_BTN_SIZE,
+    ):
         """Initialize VolumeButton.
 
         Args:
             icon_path: Path to the icon file. Defaults to 'high-volume' icon.
-
+            icon_size: Size of the icon inside the button as
+                       (width, height) in pixels. Defaults to (15, 15).
+            widget_size: Size of the entire button widget as (width, height) in pixels.
+                         Defaults to (30, 30).
         """
-        super().__init__(icon_path=icon_path)
+        super().__init__(
+            icon_path=icon_path,
+            icon_size=icon_size,
+            widget_size=widget_size,
+        )
         self._current_icon = icon_path
 
         self.setCheckable(True)
@@ -479,13 +668,13 @@ class VolumeButton(IconButton):
             raise ValueError(f"New volume: {new_volume} is out of range.")
 
         if new_volume >= self.HIGH_BOUNDARY:
-            icon = HIGH_VOLUME_ICON_PATH
+            icon = HIGH_VOLUME_ICON
         elif new_volume >= self.MEDIUM_BOUNDARY:
-            icon = MEDIUM_VOLUME_ICON_PATH
+            icon = MEDIUM_VOLUME_ICON
         elif new_volume >= self.LOW_BOUNDARY:
-            icon = LOW_VOLUME_ICON_PATH
+            icon = LOW_VOLUME_ICON
         else:
-            icon = MUTED_VOLUME_ICON_PATH
+            icon = MUTED_VOLUME_ICON
 
         # Update icon only if it is new
         if icon == self._current_icon:
@@ -512,7 +701,7 @@ class VolumeLabel(QLabel):
     def _configure_properties(self):
         # Set the instance width to the length of "100" + 4 character spaces
         # to center the text and avoid the weird behaviour when the text is "0"
-        label_width = self.fontMetrics().horizontalAdvance("100") + 4
+        label_width = self.fontMetrics().horizontalAdvance("100")
 
         self.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
         self.setFixedWidth(label_width)

@@ -1,7 +1,7 @@
 import random
 from dataclasses import dataclass
 
-from pyqt6_music_player.core import RepeatMode, ShuffleMode
+from pyqt6_music_player.core import RepeatMode, ShuffleMode, Signal
 from pyqt6_music_player.services import PlaylistService
 
 
@@ -62,7 +62,9 @@ class TrackNavigator:
         self._repeat_mode: RepeatMode = RepeatMode.OFF
         self._shuffle_mode: ShuffleMode = ShuffleMode.OFF
 
-        self._playlist_service.tracks_added.connect(self._on_track_added)
+        self.playback_order_changed = Signal()
+
+        self._playlist_service.playlist_changed.connect(self._on_track_added)
 
     # -- Public methods --
     def resolve_initial_track_index(self) -> NavigationOutcome:
@@ -213,7 +215,12 @@ class TrackNavigator:
 
         self._playback_order.sort()
 
+        self.playback_order_changed.emit(self._playback_order)
+
     def _shuffle_playback_order(self) -> None:
+        # TODO: Emit signal to notify playlist and playback view
+        #       (shuffle button state toggling) of playback order shuffle
+        # TODO: Add guard or early-exit for empty or len == 1 playback order
         # Shuffle the playback order.
         if self._position is None:
             # No active track, shuffle everything
@@ -233,15 +240,16 @@ class TrackNavigator:
 
         self._position = 0
 
-        print(self._playback_order)
+        self.playback_order_changed.emit(self._playback_order)
 
-    def _on_track_added(self, new_track_idx: list[int]) -> None:
+    def _on_track_added(self) -> None:
+        playback_order = list(range(self._playlist_service.track_count))
         # Update the playback order when tracks are added to the playlist.
         #
-        # Build the playback order list on first insert
+        # Build the playback order on first insert
         if not self._playback_order:
-            self._playback_order = new_track_idx
+            self._playback_order = playback_order
 
         # Append new indices to the end of the existing order (temporary approach)
         else:
-            self._playback_order.extend(new_track_idx)
+            self._playback_order.extend(playback_order)

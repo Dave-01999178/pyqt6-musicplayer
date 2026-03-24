@@ -1,75 +1,74 @@
 from pathlib import Path
 
-# ================================================================================
-# PATH CONFIGURATION
-# ================================================================================
+# ==================== PATH CONFIGURATION ====================
 #
-# ----- Base directories -----
+# --- Base directories ---
 BASE_DIR = Path(__file__).resolve().parents[3]
 ASSETS_PATH = BASE_DIR / "assets"
 
-# ================================================================================
-# STYLES
-# ================================================================================
+# ==================== STYLES ====================
 #
-# ----- QSS path -----
+# --- QSS path ---
 STYLESHEET = BASE_DIR / "styles" / "styles.qss"
 
-# ================================================================================
-# ICONS PATH
-# ================================================================================
+# ==================== ICON PATH ====================
 #
-# ----- Album art -----
+# --- Album art ---
 ALBUM_ART_PLACEHOLDER = ASSETS_PATH / "default_art.png"
 
-# ----- App icon -----
-MUSIC_PLAYER_ICON_PATH = ASSETS_PATH / "mp_icon.svg"
+# --- App icon ---
+MUSIC_PLAYER_ICON = ASSETS_PATH / "mp_icon.svg"
 
-# ----- Playlist manager icons -----
-ADD_ICON_PATH = ASSETS_PATH / "add_icon.svg"
-REMOVE_ICON_PATH = ASSETS_PATH / "remove_icon.svg"
-LOAD_FOLDER_ICON_PATH = ASSETS_PATH / "load_folder_icon.svg"
+# --- Playlist manager icons ---
+ADD_ICON = ASSETS_PATH / "add_icon.svg"
+REMOVE_ICON = ASSETS_PATH / "remove_icon.svg"
+LOAD_FOLDER_ICON = ASSETS_PATH / "load_folder_icon.svg"
 
-# ----- Playback control icons -----
-SHUFFLE_DISABLED_ICON_PATH = ASSETS_PATH / "shuffle_icon_disabled.svg"
-SHUFFLE_ICON_PATH = ASSETS_PATH / "shuffle_icon.svg"
-PREV_ICON_PATH = ASSETS_PATH / "prev_icon.svg"
-PLAY_ICON_PATH = ASSETS_PATH / "play_icon.svg"
-PAUSE_ICON_PATH = ASSETS_PATH / "pause_icon.svg"
-NEXT_ICON_PATH = ASSETS_PATH / "next_icon.svg"
-REPEAT_DISABLED_ICON_PATH = ASSETS_PATH / "repeat_icon_disabled.svg"
-REPEAT_ICON_PATH = ASSETS_PATH / "repeat_icon.svg"
-REPEAT_ONE_ICON_PATH = ASSETS_PATH / "repeat_one_icon.svg"
+# --- Playback control icons ---
+SHUFFLE_DISABLED_ICON = ASSETS_PATH / "shuffle_icon_disabled.svg"
+SHUFFLE_ICON = ASSETS_PATH / "shuffle_icon.svg"
+PREV_ICON = ASSETS_PATH / "prev_icon.svg"
+PLAY_ICON = ASSETS_PATH / "play_icon.svg"
+PAUSE_ICON = ASSETS_PATH / "pause_icon.svg"
+NEXT_ICON = ASSETS_PATH / "next_icon.svg"
+REPEAT_DISABLED_ICON = ASSETS_PATH / "repeat_icon_disabled.svg"
+REPEAT_ICON = ASSETS_PATH / "repeat_icon.svg"
+REPEAT_ONE_ICON = ASSETS_PATH / "repeat_one_icon.svg"
 
-# ----- Volume button icons -----
-HIGH_VOLUME_ICON_PATH = ASSETS_PATH / "volume_high.svg"
-MEDIUM_VOLUME_ICON_PATH = ASSETS_PATH / "volume_medium.svg"
-LOW_VOLUME_ICON_PATH = ASSETS_PATH / "volume_low.svg"
-MUTED_VOLUME_ICON_PATH = ASSETS_PATH / "volume_muted.svg"
+# --- Volume button icons ---
+HIGH_VOLUME_ICON = ASSETS_PATH / "volume_high.svg"
+MEDIUM_VOLUME_ICON = ASSETS_PATH / "volume_medium.svg"
+LOW_VOLUME_ICON = ASSETS_PATH / "volume_low.svg"
+MUTED_VOLUME_ICON = ASSETS_PATH / "volume_muted.svg"
 
 
-# ================================================================================
-# APPLICATION CONFIGURATION
-# ================================================================================
+# ==================== APPLICATION CONFIGURATION ====================
 APP_TITLE = "Music Player"
 APP_MIN_SIZE = (325, 475)
 APP_DEFAULT_SIZE = (750, 750)
 
 
-# ================================================================================
-# WIDGET CONFIGURATION
-# ================================================================================
+# ==================== WIDGET CONFIGURATION ====================
 #
-# ----- Buttons -----
-DEFAULT_BTN_SIZE = (30, 30)
-DEFAULT_BTN_ICON_SIZE = (15, 15)
+# --- Buttons ---
+PRIMARY_PLAYBACK_CONTROL_BTN_SIZE = (40, 40)
+PRIMARY_PLAYBACK_CONTROL_BTN_ICON_SIZE = (20, 20)
+PRIMARY_PLAYBACK_CONTROL_BTN_OBJ_NAME = "primaryPlaybackControlBtn"
 
-PLAY_PAUSE_BTN_SIZE = (40, 40)
-PLAY_PAUSE_BTN_ICON_SIZE = (20, 20)
+SECONDARY_PLAYBACK_CONTROL_BTN_SIZE = (30, 30)
+SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE = (15, 15)
+SECONDARY_PLAYBACK_CONTROL_BTN_OBJ_NAME = "secondaryPlaybackControlBtn"
+
+VOLUME_BTN_SIZE = (30, 30)
+VOLUME_BTN_ICON_SIZE = (15, 15)
 
 PLAYLIST_MANAGER_BTN_SIZE = (120, 40)
+PLAYLIST_MANAGER_BTN_ICON_SIZE = (20, 20)
 
 TRACK_METADATA_LABEL_SIZE = (100, 25)
 
 # --- Slider ---
 DEFAULT_SLIDER_RANGE = (0, 100)  # Explicit range since QSlider default range is (0-99)
+
+# --- Playlist ---
+PLAYLIST_ACTIVE_ROW_TEXT_COLOR = "#2ECC71"

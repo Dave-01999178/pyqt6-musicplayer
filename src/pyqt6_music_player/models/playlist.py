@@ -2,6 +2,7 @@ import logging
 from collections.abc import Sequence
 from pathlib import Path
 
+from pyqt6_music_player.core import Signal
 from pyqt6_music_player.models import Track
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,10 @@ class Playlist:
         super().__init__()
         self._tracks: list[Track] = []
         self._track_paths: set[Path] = set()
-        self._selected_row: int | None = None  # Current position in playlist
+
+        self._playlist_position: int | None = None
+
+        self.playlist_changed = Signal()
 
     # --- Properties ---
     @property
@@ -26,10 +30,10 @@ class Playlist:
     @property
     def selected_row(self) -> int | None:
         """Return the currently selected row index."""
-        return self._selected_row
+        return self._playlist_position
 
     # --- Public methods ---
-    def add_tracks(self, tracks: Sequence[Track]) -> int:
+    def add_tracks(self, tracks: Sequence[Track]) -> None:
         """Add tracks to the playlist.
 
         Args:
@@ -58,7 +62,7 @@ class Playlist:
         else:
             logger.info("Added %d tracks to playlist.", add_count)
 
-        return add_count
+        self.playlist_changed.emit()
 
     def get_all_tracks(self) -> list[Track]:
         """Return all tracks in the playlist.
@@ -84,22 +88,35 @@ class Playlist:
 
         return self._tracks[index]
 
-    def set_selected_row(self, index: int) -> int | None:
-        """Set the selected row index.
+    def set_position(self, index: int) -> int:
+        """Set current playlist position.
 
         Args:
-            index: The row index to select.
+            index: New position index.
 
         Returns:
-            The updated index, or None if invalid or unchanged.
+            Updated playlist position.
 
         """
-        if not (0 <= index < len(self._tracks)):
-            return None
+        self._playlist_position = index
 
-        self._selected_row = index
+        return self._playlist_position
 
-        return self._selected_row
+    def sync_position(self, index: int) -> None:
+        """Sync position without triggering updates (internal use only).
+
+        Silently updates the internal position state. Used internally
+        when the view selection changes to keep the model in sync
+        without emitting signals (prevents feedback loops).
+
+        Args:
+            index: Position index to sync.
+
+        """
+        if index == self._playlist_position:
+            return
+
+        self._playlist_position = index
 
     def has_track(self, track_path: Path) -> bool:
         """Check if playlist contains a track with the given path.
@@ -112,16 +129,3 @@ class Playlist:
 
         """
         return Path(track_path) in self._track_paths
-
-    # TODO: Unused
-    def is_valid_index(self, index: int) -> bool:
-        """Check if index is within playlist bounds.
-
-        Args:
-            index: Index to validate.
-
-        Returns:
-            True if index is valid; Otherwise, False
-
-        """
-        return 0 <= index < len(self._tracks)
