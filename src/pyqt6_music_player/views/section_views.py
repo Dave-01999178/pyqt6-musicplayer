@@ -18,11 +18,11 @@ from pyqt6_music_player.views import (
 # ==================== SECTION VIEWS ====================
 #
 # --- PlaylistManager ---
-class PlaylistManagerView(QFrame):
+class PlaylistManagerSection(QFrame):
     """A customizable frame container for playlist manager panel."""
 
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
-        """Initialize PlaylistManagerView.
+        """Initialize PlaylistManagerSection.
 
         Args:
             playlist_viewmodel: The playlist viewmodel.
@@ -39,7 +39,7 @@ class PlaylistManagerView(QFrame):
     # -- Protected/internal methods --
     def _configure_properties(self) -> None:
         self.setFrameStyle(QFrame.Shape.StyledPanel)
-        self.setObjectName("playlistManagerFrame")
+        self.setObjectName("playlistManagerSection")
 
     def _init_ui(self) -> None:
         # Setup instance widgets and layout
@@ -51,11 +51,11 @@ class PlaylistManagerView(QFrame):
 
 
 # --- Playlist ---
-class PlaylistView(QFrame):
+class PlaylistSection(QFrame):
     """A customizable frame container for playlist display panel."""
 
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
-        """Initialize PlaylistView.
+        """Initialize PlaylistSection.
 
         Args:
             playlist_viewmodel: The playlist viewmodel.
@@ -76,16 +76,16 @@ class PlaylistView(QFrame):
         instance_layout.addWidget(self._playlist_display)
 
         self.setFrameStyle(QFrame.Shape.StyledPanel)
-        self.setObjectName("playlistFrame")
+        self.setObjectName("playlistSection")
 
         self.setLayout(instance_layout)
 
 
-# --- Player bar ---
-class PlayerbarView(QFrame):
+# --- Playerbar ---
+class PlayerbarSection(QFrame):
     """A customizable frame container for grouping player-related panels.
 
-    This includes playback progress, now playing display, playback control,
+    This includes playback progress, now-playing display, playback control,
     and volume control panels.
     """
 
@@ -94,7 +94,7 @@ class PlayerbarView(QFrame):
             playback_viewmodel: PlaybackViewModel,
             volume_viewmodel: VolumeViewModel,
     ):
-        """Initialize PlayerbarView.
+        """Initialize PlayerbarSection.
 
         Args:
             playback_viewmodel: The playback viewmodel.
@@ -126,11 +126,11 @@ class PlayerbarView(QFrame):
 
         # Bottom section left widget: Now playing panel
         bottom_layout_horizontal.addWidget(self._now_playing_panel, 0)
-        bottom_layout_horizontal.addStretch(1)  # Pushes the next layout (add spacing).
+        bottom_layout_horizontal.addStretch(1)  # Pushes the next layout (adds spacing)
 
         # Bottom section middle widget: Playback controls panel
         bottom_layout_horizontal.addWidget(self._playback_controls_panel, 1)
-        bottom_layout_horizontal.addStretch(1)  # Pushes the next layout (add spacing).
+        bottom_layout_horizontal.addStretch(1)  # Pushes the next layout (adds spacing)
 
         # Bottom section right widget: Volume controls panel
         bottom_layout_horizontal.addWidget(self._volume_controls_panel, 0)
@@ -141,6 +141,6 @@ class PlayerbarView(QFrame):
         main_layout_vertical.addLayout(bottom_layout_horizontal)
 
         self.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Raised)
-        self.setObjectName("playerBarFrame")
+        self.setObjectName("playerBarSection")
 
         self.setLayout(main_layout_vertical)

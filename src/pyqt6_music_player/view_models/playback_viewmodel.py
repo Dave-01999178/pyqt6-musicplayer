@@ -40,8 +40,6 @@ class PlaybackViewModel(QObject):
         self._connect_signals()
 
     # -- Public methods --
-    #
-    # Playback commands
     def toggle_playback(self) -> None:
         """Toggle between playing and paused state."""
         self._playback_service.toggle_playback()
@@ -58,7 +56,6 @@ class PlaybackViewModel(QObject):
         """Resume paused playback."""
         self._playback_service.resume()
 
-    # Track navigation commands
     def next_track(self) -> None:
         """Skip to the next track."""
         self._playback_service.next_track()
@@ -67,7 +64,6 @@ class PlaybackViewModel(QObject):
         """Skip to the previous track."""
         self._playback_service.previous_track()
 
-    # Seek commands
     def begin_seek(self) -> None:
         """Begin seek operation, pausing playback if currently playing."""
         status = self._playback_service.get_playback_state()
@@ -90,13 +86,22 @@ class PlaybackViewModel(QObject):
 
         self._pre_seek_playback_state = None
 
-    # Playback mode commands
     def set_shuffle_mode(self, shuffle_mode: ShuffleMode) -> None:
-        """Set the shuffle mode."""
+        """Set the shuffle mode.
+
+        Args:
+            shuffle_mode: The shuffle mode to apply (ON or OFF).
+
+        """
         self._playback_service.set_shuffle_mode(shuffle_mode)
 
     def set_repeat_mode(self, repeat_mode: RepeatMode) -> None:
-        """Set the repeat mode."""
+        """Set the repeat mode.
+
+        Args:
+            repeat_mode: The repeat mode to apply (OFF, ONE, or ALL).
+
+        """
         self._playback_service.set_repeat_mode(repeat_mode)
 
     # -- Protected/internal methods --
@@ -104,7 +109,7 @@ class PlaybackViewModel(QObject):
         # Wire service signals to PlaybackViewModel slots.
         #
         # PlaylistService -> PlaybackViewModel
-        self._playlist_service.tracks_added.connect(self._on_track_added)
+        self._playlist_service.playlist_changed.connect(self._on_track_added)
 
         # PlaybackService -> PlaybackViewModel
         self._playback_service.track_loaded.connect(self._on_track_loaded)
@@ -115,11 +120,10 @@ class PlaybackViewModel(QObject):
             self._on_playback_state_changed,
         )
 
-    def _on_track_added(self, new_track_idx: list[int]) -> None:
+    # TODO: Change
+    def _on_track_added(self) -> None:
         # Emit `initial_track_added` signal on first insert
-        initial_track_add = (new_track_idx[0] == 0)
-        if initial_track_add:
-            self.initial_track_added.emit()
+        self.initial_track_added.emit()
 
     def _on_track_loaded(self, current_track: Track) -> None:
         # Emit track duration in milliseconds and formatted strings

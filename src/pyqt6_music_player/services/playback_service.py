@@ -39,6 +39,7 @@ class PlaybackService:
             audio_player: Service managing audio playback and worker thread
                           communication.
             playlist_service: Service managing playlist state and operations.
+            volume: Model managing volume state and operations.
 
         """
         self._audio_player = audio_player
@@ -56,6 +57,8 @@ class PlaybackService:
         self.playback_started = Signal()
         self.playback_position_changed = Signal()
         self.playback_state_changed = Signal()
+
+        self.playback_order_changed = Signal()
 
         # Setup
         self._connect_signals()
@@ -87,9 +90,7 @@ class PlaybackService:
 
         # Sync playlist selection when defaulting to first track
         track_index = outcome.index
-        if self._playlist.selected_row is None and track_index == 0:
-            self._playlist.set_selected_row(track_index)
-
+        self._playlist.set_playlist_position(track_index)
         self._play_track_at_index(track_index)
 
     def pause(self) -> None:
@@ -124,7 +125,7 @@ class PlaybackService:
         if isinstance(outcome, NoTrackLoaded | EndBoundary):
             return
 
-        new_selected_index = self._playlist.set_selected_row(outcome.index)
+        new_selected_index = self._playlist.set_playlist_position(outcome.index)
         if new_selected_index is not None:
             self._play_track_at_index(new_selected_index)
 
@@ -148,7 +149,7 @@ class PlaybackService:
             self._restart_current_track()
             return
 
-        new_selected_index = self._playlist.set_selected_row(outcome.index)
+        new_selected_index = self._playlist.set_playlist_position(outcome.index)
         if new_selected_index is not None:
             self._play_track_at_index(new_selected_index)
 
@@ -185,7 +186,7 @@ class PlaybackService:
 
     # -- Protected/internal methods --
     def _connect_signals(self) -> None:
-        # Wire AudioPlayerService signals to PlaybackService slots
+        # Wire signals to PlaybackService slots
         self._audio_player.audio_loaded.connect(self._on_player_audio_loaded)
         self._audio_player.playback_started.connect(self._on_playback_started)
         self._audio_player.playback_position_changed.connect(
@@ -196,7 +197,12 @@ class PlaybackService:
             self._on_playback_state_changed,
         )
 
+        self._track_navigator.playback_order_changed.connect(self._on_playback_order_changed)
+
         self._volume.volume_changed.connect(self._on_volume_changed)
+
+    def _on_playback_order_changed(self, playback_order: list[int]) -> None:
+        self.playback_order_changed.emit(playback_order)
 
     def _on_volume_changed(self, volume: int) -> None:
         self._audio_player.set_volume(volume / 100)
@@ -243,7 +249,7 @@ class PlaybackService:
             self._audio_player.repeat_playback()
             return
 
-        new_selected_index = self._playlist.set_selected_row(outcome.index)
+        new_selected_index = self._playlist.set_playlist_position(outcome.index)
         if new_selected_index is not None:
             self._play_track_at_index(new_selected_index)
 

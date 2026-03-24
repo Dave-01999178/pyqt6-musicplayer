@@ -4,7 +4,6 @@ This module defines the `MusicPlayerView`, the central container widget
 that holds all major UI components (playlist, player bar, controls).
 """
 import logging
-import sys
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QColor, QIcon, QPalette
@@ -13,13 +12,13 @@ from PyQt6.QtWidgets import QVBoxLayout, QWidget
 from pyqt6_music_player.core import (
     APP_DEFAULT_SIZE,
     APP_TITLE,
-    MUSIC_PLAYER_ICON_PATH,
+    MUSIC_PLAYER_ICON,
     AppContext,
 )
 from pyqt6_music_player.views import (
-    PlayerbarView,
+    PlayerbarSection,
     PlaylistDisplayPanel,
-    PlaylistManagerView,
+    PlaylistManagerSection,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,11 +40,11 @@ class MusicPlayerView(QWidget):
         self.ctx = app_context
 
         # Section views
-        self.playlist_manager_view = PlaylistManagerView(
+        self.playlist_manager_view = PlaylistManagerSection(
             app_context.playlist_viewmodel,
         )
         self.playlist_view = PlaylistDisplayPanel(app_context.playlist_viewmodel)
-        self.player_bar_view = PlayerbarView(
+        self.player_bar_view = PlayerbarSection(
             app_context.playback_viewmodel,
             app_context.volume_viewmodel,
         )
@@ -89,10 +88,10 @@ class MusicPlayerView(QWidget):
         self.resize(*APP_DEFAULT_SIZE)
         self.setMinimumSize(*APP_DEFAULT_SIZE)
         self.setWindowTitle(APP_TITLE)
-        self.setWindowIcon(QIcon(str(MUSIC_PLAYER_ICON_PATH)))
+        self.setWindowIcon(QIcon(str(MUSIC_PLAYER_ICON)))
 
         palette = QPalette()
-        palette.setColor(QPalette.ColorRole.Window, QColor("#07070b"))
+        palette.setColor(QPalette.ColorRole.Window, QColor("#0F1419"))
 
         self.setPalette(palette)
 

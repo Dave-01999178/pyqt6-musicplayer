@@ -39,11 +39,6 @@ class Volume(QObject):
             ValueError: If the new volume is out of range.
 
         """
-        if not (MIN_VOLUME <= new_volume <= MAX_VOLUME):
-            raise ValueError(
-                f"Volume {new_volume} is out of range [{MIN_VOLUME}-{MAX_VOLUME}].",
-            )
-
         self._previous_volume = self._current_volume
         self._current_volume = new_volume
 

@@ -11,18 +11,21 @@ from PyQt6.QtWidgets import (
 )
 
 from pyqt6_music_player.core import (
-    ADD_ICON_PATH,
+    ADD_ICON,
     DEFAULT_SLIDER_RANGE,
     FILE_DIALOG_FILTER,
-    LOAD_FOLDER_ICON_PATH,
-    NEXT_ICON_PATH,
-    PAUSE_ICON_PATH,
-    PLAY_ICON_PATH,
-    PLAY_PAUSE_BTN_ICON_SIZE,
-    PLAY_PAUSE_BTN_SIZE,
+    LOAD_FOLDER_ICON,
+    NEXT_ICON,
+    PAUSE_ICON,
+    PLAY_ICON,
+    PLAYLIST_MANAGER_BTN_ICON_SIZE,
     PLAYLIST_MANAGER_BTN_SIZE,
-    PREV_ICON_PATH,
-    REMOVE_ICON_PATH,
+    PREV_ICON,
+    PRIMARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
+    PRIMARY_PLAYBACK_CONTROL_BTN_SIZE,
+    REMOVE_ICON,
+    SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
+    SECONDARY_PLAYBACK_CONTROL_BTN_SIZE,
     PlaybackState,
     RepeatMode,
     ShuffleMode,
@@ -47,7 +50,7 @@ from pyqt6_music_player.views import (
 
 # ==================== PANELS ====================
 #
-# --- PLAYLIST MANAGER ---
+# --- Playlist manager ---
 class PlaylistManagerPanel(QWidget):
     """QWidget container for grouping playlist-manager widgets.
 
@@ -71,19 +74,22 @@ class PlaylistManagerPanel(QWidget):
 
         # Widgets
         self._add_track_btn = IconButton(
-            ADD_ICON_PATH,
+            ADD_ICON,
+            icon_size=PLAYLIST_MANAGER_BTN_ICON_SIZE,
             widget_size=PLAYLIST_MANAGER_BTN_SIZE,
             button_text="Add track(s)",
             object_name="addTrackBtn",
         )
         self._remove_track_btn = IconButton(
-            REMOVE_ICON_PATH,
+            REMOVE_ICON,
+            icon_size=PLAYLIST_MANAGER_BTN_ICON_SIZE,
             widget_size=PLAYLIST_MANAGER_BTN_SIZE,
-            button_text="Remove track(s)",
+            button_text="Remove",
             object_name="removeTrackBtn",
         )
         self._load_folder_btn = IconButton(
-            LOAD_FOLDER_ICON_PATH,
+            LOAD_FOLDER_ICON,
+            icon_size=PLAYLIST_MANAGER_BTN_ICON_SIZE,
             widget_size=PLAYLIST_MANAGER_BTN_SIZE,
             button_text="Load folder",
             object_name="loadFolderBtn",
@@ -180,25 +186,29 @@ class PlaylistDisplayPanel(QWidget):
         self.selection_model.currentRowChanged.connect(self._on_row_changed)
 
         # PlaylistViewModel -> PlaylistDisplayPanel
-        self._playlist_viewmodel.selected_index_changed.connect(
-            self._on_model_index_changed,
+        self._playlist_viewmodel.playlist_model_position_changed.connect(
+            self._on_playlist_model_position_changed,
+        )
+        self._playlist_viewmodel.playlist_display_order_changed.connect(
+            self._on_playlist_display_order_changed
         )
 
     @pyqtSlot(QModelIndex, QModelIndex)
     def _on_row_changed(self, current_index: QModelIndex, _: QModelIndex) -> None:
-        # Store the index of the selected row in playlist widget
+        # Sync playlist model position to the index of selected row in playlist widget
         if not current_index.isValid():
             return
 
-        row_index = current_index.row()
-
-        self._playlist_viewmodel.set_selected_row(row_index)
+        self._playlist_viewmodel.sync_playlist_model_position(current_index.row())
 
     @pyqtSlot(int)
-    def _on_model_index_changed(self, new_index: int) -> None:
-        # Set the playlist row selection to the given index if it's new
-        if new_index != self._playlist_widget.currentIndex().row():
-            self._playlist_widget.selectRow(new_index)
+    def _on_playlist_display_order_changed(self, row):
+        # Sync the active row
+        self._playlist_widget.set_delegate_active_row(row)
+
+    @pyqtSlot(int)
+    def _on_playlist_model_position_changed(self, new_index: int) -> None:
+        self._playlist_widget.set_delegate_active_row(new_index)
 
 
 # --- NOW-PLAYING ---
@@ -287,14 +297,22 @@ class PlaybackControlsPanel(QWidget):
 
         # Widgets
         self.shuffle_button = ShuffleButton()
-        self.previous_button = IconButton(PREV_ICON_PATH)
+        self.previous_button = IconButton(
+            PREV_ICON,
+            icon_size=SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
+            widget_size=SECONDARY_PLAYBACK_CONTROL_BTN_SIZE,
+        )
         self.play_pause_button = IconButton(
-            PLAY_ICON_PATH,
-            icon_size=PLAY_PAUSE_BTN_ICON_SIZE,
-            widget_size=PLAY_PAUSE_BTN_SIZE,
+            PLAY_ICON,
+            icon_size=PRIMARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
+            widget_size=PRIMARY_PLAYBACK_CONTROL_BTN_SIZE,
             object_name="playPauseBtn",
         )
-        self.next_button = IconButton(NEXT_ICON_PATH)
+        self.next_button = IconButton(
+            NEXT_ICON,
+            icon_size=SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
+            widget_size=SECONDARY_PLAYBACK_CONTROL_BTN_SIZE,
+        )
         self.repeat_button = RepeatButton()
 
         # Setup
@@ -369,15 +387,16 @@ class PlaybackControlsPanel(QWidget):
     def _on_initial_track_add(self) -> None:
         # Enable the panel on initial track add to allow playback operations.
         # Note: The panel is disabled by default on app start.
-        self.setEnabled(True)
+        if not self.isEnabled():
+            self.setEnabled(True)
 
     @pyqtSlot(PlaybackState)
     def _on_player_state_changed(self, player_state: PlaybackState) -> None:
         # Update play-pause button icon to reflect the current playback state.
         icon = (
-            PAUSE_ICON_PATH
+            PAUSE_ICON
             if player_state == PlaybackState.PLAYING
-            else PLAY_ICON_PATH
+            else PLAY_ICON
         )
         self.play_pause_button.setIcon(QIcon(str(icon)))
 
@@ -405,7 +424,7 @@ class PlaybackProgressPanel(QWidget):
         # Viewmodel
         self._playback_viewmodel = playback_viewmodel
 
-        # Widget
+        # Widgets
         self.elapsed_time = QLabel(DefaultTrackInfo.duration)
         self.seek_bar = QSlider()
         self.time_remaining = QLabel(DefaultTrackInfo.duration)

@@ -24,8 +24,13 @@ class PlaylistService:
         self._playlist = playlist_model
 
         # Signals
-        self.tracks_added = Signal()
-        self.selection_index_changed = Signal()
+        self.playlist_changed = Signal()
+        self.playlist_model_position_changed = Signal()
+
+        self._playlist.playlist_changed.connect(self._on_playlist_changed)
+
+    def _on_playlist_changed(self) -> None:
+        self.playlist_changed.emit()
 
     # -- Properties --
     @property
@@ -70,30 +75,38 @@ class PlaylistService:
 
             valid_tracks.append(track)
 
-        add_count = self._playlist.add_tracks(valid_tracks)
+        self._playlist.add_tracks(valid_tracks)
 
-        if add_count > 0:
-            # Emit new track indices
-            new_track_idx = list(range(self.track_count - add_count, self.track_count))
+    def set_playlist_position(self, index: int) -> int:
+        """Set playlist position and notify view of changes.
 
-            self.tracks_added.emit(new_track_idx)
-
-    def set_selected_row(self, index: int) -> int | None:
-        """Set the selected row index.
+        Updates the internal position and emits a signal to trigger
+        delegate active row updates in the UI.
 
         Args:
-            index: The row index to select.
+            index: Target position index in playlist.
 
         Returns:
-            The updated index, or None if invalid or unchanged.
+            New playlist model position index, or None if invalid.
 
         """
-        new_index = self._playlist.set_selected_row(index)
+        new_index = self._playlist.set_position(index)
 
-        if new_index is not None:
-            self.selection_index_changed.emit(new_index)
+        self.playlist_model_position_changed.emit(new_index)
 
         return new_index
+
+    def sync_playlist_model_position(self, index: int) -> None:
+        """Sync playlist position without triggering view updates.
+
+        Used internally when the view selection changes to keep the
+        model in sync without emitting signals (prevents feedback loops).
+
+        Args:
+            index: Position index to sync to.
+
+        """
+        self._playlist.sync_position(index)
 
     def get_track_by_index(self, index: int) -> Track | None:
         """Get track at the specified index.

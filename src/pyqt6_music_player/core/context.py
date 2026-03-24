@@ -49,6 +49,11 @@ def build_context():
     playlist_viewmodel = PlaylistViewModel(playlist_service)
     volume_viewmodel = VolumeViewModel(volume_model)
 
+    # -- Signals --
+    playback_service.playback_order_changed.connect(
+        playlist_viewmodel.update_display_order
+    )
+
     return AppContext(
         playlist_model=playlist_model,
         volume_model=volume_model,

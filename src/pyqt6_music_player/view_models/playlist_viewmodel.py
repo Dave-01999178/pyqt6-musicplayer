@@ -11,7 +11,8 @@ from pyqt6_music_player.utils import format_duration
 class PlaylistViewModel(QAbstractTableModel):
     """Expose playlist tracks as a table model for the playlist view."""
 
-    selected_index_changed = pyqtSignal(int)
+    playlist_model_position_changed = pyqtSignal(int)
+    playlist_display_order_changed = pyqtSignal(int)
     DEFAULT_COLUMNS: ClassVar[tuple[tuple[str, str]]] = (
         ("title", "Title"),
         ("artist", "Artist"),
@@ -30,6 +31,12 @@ class PlaylistViewModel(QAbstractTableModel):
         # Service
         self._playlist_service = playlist_service
 
+        self._track_display_order: list[int] | None = []
+        self._is_shuffled_display: bool = False
+        self._track_index: int | None = None
+        self._active_row: int | None = None
+
+
         # Setup
         self._connect_signals()
 
@@ -45,14 +52,28 @@ class PlaylistViewModel(QAbstractTableModel):
         """
         self._playlist_service.add_tracks(paths)
 
-    def set_selected_row(self, index: int) -> None:
-        """Store the row index from playlist.
+    def sync_playlist_model_position(self, index: int) -> None:
+        index = (
+            self._track_display_order[index]
+            if self._track_display_order
+            else index
+        )
 
-        Args:
-            index: The selected row index in playlist.
+        self._playlist_service.sync_playlist_model_position(index)
 
-        """
-        self._playlist_service.set_selected_row(index)
+    def update_display_order(self, playback_order: list[int]) -> None:
+        self.layoutAboutToBeChanged.emit()
+
+        self._track_display_order = playback_order
+
+        self.layoutChanged.emit()
+
+        self._is_shuffled_display = any(
+            a > b
+            for a, b in zip(playback_order, playback_order[1:])
+        )
+
+        self._sync_active_row()
 
     # QAbstractTableModel methods
     def rowCount(self, parent=None):
@@ -70,7 +91,14 @@ class PlaylistViewModel(QAbstractTableModel):
 
         row = index.row()
         col = index.column()
-        track = self._playlist_service.get_track_by_index(row)
+
+        track_index = (
+            self._track_display_order[row]
+            if self._track_display_order
+            else row
+        )
+
+        track = self._playlist_service.get_track_by_index(track_index)
         field_name = self.DEFAULT_COLUMNS[col][0]
 
         if role == Qt.ItemDataRole.DisplayRole:
@@ -106,18 +134,66 @@ class PlaylistViewModel(QAbstractTableModel):
     # -- Protected/internal methods --
     def _connect_signals(self) -> None:
         # Wire PlaylistService signals to PlaylistViewModel slots.
-        self._playlist_service.tracks_added.connect(self._on_track_added)
-        self._playlist_service.selection_index_changed.connect(
-            self._on_selected_index_changed,
+        self._playlist_service.playlist_changed.connect(self._on_playlist_changed)
+        self._playlist_service.playlist_model_position_changed.connect(
+            self._on_playlist_model_position_changed,
         )
 
-    # TODO: Initial implementation (insertion order), replace later.
-    def _on_track_added(self, new_track_idx: list[int]) -> None:
-        # Displays the newly added tracks(s) in the playlist widget.
-        start, end = new_track_idx[0], new_track_idx[-1]
+    def _sync_active_row(self) -> None:
+        # Active row sync guide
+        #
+        # [0, 1, 2, 3, 4]  # Original playback order from playlist model
+        # [3, 0, 1, 4, 2]  # Shuffled playback order from track navigator
+        # [0, 1, 2, 3, 4]  # Row index
+        self._active_row = (
+            0
+            if self._is_shuffled_display
+            else self._track_index
+        )
 
-        self.beginInsertRows(QModelIndex(), start, end)
+        self.playlist_display_order_changed.emit(self._active_row)
+
+    def _on_playlist_changed(self) -> None:
+        track_count = self._playlist_service.track_count
+        first_row = 0
+        last_row = track_count - 1
+
+        self._track_display_order = list(range(track_count))
+
+        self.beginInsertRows(QModelIndex(), first_row, last_row)
         self.endInsertRows()
 
-    def _on_selected_index_changed(self, new_index) -> None:
-        self.selected_index_changed.emit(new_index)  # type: ignore
+    def _on_playlist_model_position_changed(self, index) -> None:
+        # - SYNC PLAYLIST WIDGET ACTIVE ROW POSITION -
+        #
+        # Use the new index position from model for syncing playlist widget
+        # (playlist model index == playlist widget row index) when not shuffled
+        if not self._is_shuffled_display:
+            self._track_index = index
+
+            self.playlist_model_position_changed.emit(index)
+
+            return
+
+        # TODO: Initial logic/implementation, recheck later.
+        # Convert the current track index from shuffled playback order back to its
+        # original position in playlist model (playlist model index == row index)
+        #
+        # Example:
+        # [0, 1, 2, 3, 4]  # Original playback order from playlist model
+        # [3, 0, 1, 4, 2]  # Shuffled playback order from track navigator
+        # [0, 1, 2, 3, 4]  # Row index
+        if not (0 <= self._active_row < len(self._track_display_order)):
+            return
+
+        next_row_idx = (self._active_row + 1) % len(self._track_display_order)
+        prev_row_idx = (self._active_row - 1) % len(self._track_display_order)
+        if self._track_display_order[next_row_idx] == index:
+            self._active_row = next_row_idx
+
+        elif self._track_display_order[prev_row_idx] == index:
+            self._active_row = prev_row_idx
+
+        self._track_index = index
+
+        self.playlist_model_position_changed.emit(self._active_row)

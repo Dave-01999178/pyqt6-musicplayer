@@ -16,7 +16,7 @@ from .panels import (
     PlaybackProgressPanel,
     VolumeControlsPanel,
 )
-from .section_views import PlayerbarView, PlaylistView, PlaylistManagerView
+from .section_views import PlayerbarSection, PlaylistSection, PlaylistManagerSection
 from .main_view import MusicPlayerView
 
 __all__ = [
@@ -39,9 +39,9 @@ __all__ = [
     "VolumeControlsPanel",
 
     # Section views
-    "PlayerbarView",
-    "PlaylistView",
-    "PlaylistManagerView",
+    "PlayerbarSection",
+    "PlaylistSection",
+    "PlaylistManagerSection",
 
     # Main view
     "MusicPlayerView",
