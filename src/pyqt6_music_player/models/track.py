@@ -5,10 +5,12 @@ from typing import Self
 
 import mutagen
 import numpy as np
+from mutagen import MutagenError
 from numpy.typing import NDArray
 from pydub import AudioSegment
 
 from pyqt6_music_player.core import SUPPORTED_BYTES
+from pyqt6_music_player.exceptions import UnsupportedFileError
 from pyqt6_music_player.utils import get_metadata
 
 
@@ -45,33 +47,31 @@ class Track:
     duration: str | float = DefaultTrackInfo.duration
 
     @classmethod
-    def from_file(cls, path: Path) -> Self | None:
+    def from_file(cls, path: Path) -> Self:
         """Create a Track instance from an audio file.
 
         Args:
             path: The filesystem path to the audio file.
 
         Returns:
-            A Track instance containing the audio file path and its metadata,
-            or None if the file cannot be read or contains invalid audio data.
+            A Track instance containing the audio file path and its metadata.
+
+        Raises:
+            MutagenError: Mutagen detected the file type but cannot read/load the file.
+            UnexpectedFileError: If mutagen couldn't detect the file type.
 
         """
         # -- LOAD --
         try:
             audio = mutagen.File(path)
+        except MutagenError as e:
+            raise MutagenError() from e
 
-        except (mutagen.MutagenError, OSError) as e:
-            logging.warning("Invalid or unreadable audio file: %s (%s)", path, e)
-            return None
-
-        except Exception as e:
-            logging.error("Unexpected error while reading %s: %s", path, e)
-            return None
+        if audio is None:
+            raise UnsupportedFileError()
 
         # -- EXTRACT --
-        else:
-            # Extract the metadata from audio file
-            metadata = get_metadata(audio)
+        metadata = get_metadata(audio)
 
         return cls(
             path=path,
@@ -124,6 +124,7 @@ class AudioPCM:
             path: The filesystem path to the audio file.
 
         """
+        # TODO: Implement proper error handling. Replace broad `except Exception`.
         # -- DECODE AUDIO FILE --
         try:
             audio_segment = AudioSegment.from_file(path)

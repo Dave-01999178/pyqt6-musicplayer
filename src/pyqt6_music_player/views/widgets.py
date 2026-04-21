@@ -559,8 +559,8 @@ class ShuffleButton(IconButton):
 class RepeatButton(IconButton):
     """Button for cycling through repeat modes (off, repeat one, repeat all)."""
 
-    change_repeat_mode_request  = pyqtSignal(RepeatMode)
     MODES: ClassVar[list[RepeatMode]] = list(RepeatMode)
+    change_repeat_mode_request  = pyqtSignal(RepeatMode)
 
     def __init__(
             self,

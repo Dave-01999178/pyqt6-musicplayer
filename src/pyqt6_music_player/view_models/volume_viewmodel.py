@@ -1,6 +1,10 @@
+import logging
+
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from pyqt6_music_player.models import Volume
+
+logger = logging.getLogger(__name__)
 
 
 class VolumeViewModel(QObject):
@@ -14,9 +18,6 @@ class VolumeViewModel(QObject):
         super().__init__()
         self._model = volume_model
 
-        # Establish Model-ViewModel connection.
-        self._connect_signals()
-
     # -- Public methods --
     def set_volume(self, new_volume) -> None:
         """Set the volume.
@@ -25,7 +26,11 @@ class VolumeViewModel(QObject):
             new_volume: The new volume value to set.
 
         """
-        self._model.set_volume(new_volume)
+        try:
+            self._model.set_volume(new_volume)
+            self._on_model_volume_changed(new_volume)
+        except Exception:
+            logger.exception("Unexpected error while changing volume.")
 
     def set_mute(self, mute: bool) -> None:
         """Set the mute state.
@@ -34,19 +39,20 @@ class VolumeViewModel(QObject):
               mute: The new mute state to set.
 
         """
-        self._model.set_muted(mute)
+        try:
+            new_volume = self._model.set_muted(mute)
 
-    # -- Protected/internal methods --
-    def _connect_signals(self):
-        self._model.volume_changed.connect(self._on_model_volume_changed)
-        self._model.mute_changed.connect(self._on_model_mute_changed)
+            self._on_model_volume_changed(new_volume)
+            self._on_model_mute_changed(mute)
+        except Exception:
+            logger.exception("Unexpected error while changing mute state.")
+
+    def refresh(self) -> None:
+        """Re-emit the current volume for initial state sync."""
+        self.model_volume_changed.emit(self._model.current_volume)  # type: ignore
 
     def _on_model_volume_changed(self, new_volume: int) -> None:
         self.model_volume_changed.emit(new_volume)  # type: ignore
 
     def _on_model_mute_changed(self, muted: bool) -> None:
         self.model_mute_state_changed.emit(muted)  # type: ignore
-
-    def refresh(self) -> None:
-        """Re-emit the current volume for initial state sync."""
-        self.model_volume_changed.emit(self._model.current_volume)  # type: ignore

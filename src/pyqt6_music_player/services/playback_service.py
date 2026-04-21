@@ -6,9 +6,9 @@ from pyqt6_music_player.core import (
     PlaybackState,
     RepeatMode,
     ShuffleMode,
-    Signal,
 )
-from pyqt6_music_player.models import AudioPCM, Track, Volume
+from pyqt6_music_player.core.signals import Signal
+from pyqt6_music_player.models import AudioPCM, Track
 from pyqt6_music_player.services import (
     EndBoundary,
     NoTrackLoaded,
@@ -27,11 +27,15 @@ class PlaybackService:
     Manages track selection, playback control, and state synchronization.
     """
 
+    playback_started = Signal()
+    playback_state_changed = Signal()
+    playback_position_changed = Signal()
+
     def __init__(
             self,
             audio_player: AudioPlayerService,
             playlist_service: PlaylistService,
-            volume: Volume,
+            track_navigator: TrackNavigator,
     ):
         """Initialize PlaybackService.
 
@@ -39,26 +43,17 @@ class PlaybackService:
             audio_player: Service managing audio playback and worker thread
                           communication.
             playlist_service: Service managing playlist state and operations.
-            volume: Model managing volume state and operations.
 
         """
         self._audio_player = audio_player
         self._playlist = playlist_service
-        self._volume = volume
-        self._track_navigator = TrackNavigator(self._playlist)
+        self._track_navigator = track_navigator
 
-        # Playback state
+        # State
         self._current_track: Track | None = None
-        self._current_position_sec: float = 0.0
+        self._track_index: int | None = None
+        self._curr_pos_in_sec: float = 0.0
         self._playback_state: PlaybackState = PlaybackState.IDLE
-
-        # Signals
-        self.track_loaded = Signal()
-        self.playback_started = Signal()
-        self.playback_position_changed = Signal()
-        self.playback_state_changed = Signal()
-
-        self.playback_order_changed = Signal()
 
         # Setup
         self._connect_signals()
@@ -83,14 +78,17 @@ class PlaybackService:
 
         Has no effect if the playlist is empty.
         """
-        outcome = self._track_navigator.resolve_initial_track_index()
-
+        outcome = self._track_navigator.resolve_track_index()
         if isinstance(outcome, NoTrackLoaded):
             return
 
-        # Sync playlist selection when defaulting to first track
+        is_stopped = self._playback_state == PlaybackState.STOPPED
+        if isinstance(outcome, EndBoundary) and is_stopped:
+            self._audio_player.repeat_playback()
+            return
+
         track_index = outcome.index
-        self._playlist.set_playlist_position(track_index)
+
         self._play_track_at_index(track_index)
 
     def pause(self) -> None:
@@ -121,13 +119,10 @@ class PlaybackService:
         playback order is reached.
         """
         outcome = self._track_navigator.resolve_next_track_index()
-
-        if isinstance(outcome, NoTrackLoaded | EndBoundary):
+        if isinstance(outcome, EndBoundary | NoTrackLoaded):
             return
 
-        new_selected_index = self._playlist.set_playlist_position(outcome.index)
-        if new_selected_index is not None:
-            self._play_track_at_index(new_selected_index)
+        self._play_track_at_index(outcome.index)
 
     def previous_track(self) -> None:
         """Skip to the previous track or restart the current one.
@@ -136,7 +131,7 @@ class PlaybackService:
         restart threshold, or if the start of the playback order is reached.
         Has no effect if there is no track loaded.
         """
-        is_past_restart_threshold = self._current_position_sec >= RESTART_THRESHOLD_SEC
+        is_past_restart_threshold = self._curr_pos_in_sec >= RESTART_THRESHOLD_SEC
         if is_past_restart_threshold:
             self._restart_current_track()
             return
@@ -149,18 +144,16 @@ class PlaybackService:
             self._restart_current_track()
             return
 
-        new_selected_index = self._playlist.set_playlist_position(outcome.index)
-        if new_selected_index is not None:
-            self._play_track_at_index(new_selected_index)
+        self._play_track_at_index(outcome.index)
 
-    def seek(self, new_position_in_ms: int) -> None:
+    def seek(self, position_in_ms: int) -> None:
         """Seek to the given position.
 
         Args:
-            new_position_in_ms: Target position in milliseconds.
+            position_in_ms: Target position in milliseconds.
 
         """
-        self._audio_player.seek(new_position_in_ms)
+        self._audio_player.seek(position_in_ms)
 
     def set_shuffle_mode(self, shuffle_mode: ShuffleMode) -> None:
         """Set the shuffle mode.
@@ -180,6 +173,9 @@ class PlaybackService:
         """
         self._track_navigator.set_repeat_mode(repeat_mode)
 
+    def set_volume(self, volume: int) -> None:
+        self._audio_player.set_volume(volume / 100)
+
     def get_playback_state(self) -> PlaybackState:
         """Return the current playback state."""
         return self._playback_state
@@ -187,50 +183,50 @@ class PlaybackService:
     # -- Protected/internal methods --
     def _connect_signals(self) -> None:
         # Wire signals to PlaybackService slots
-        self._audio_player.audio_loaded.connect(self._on_player_audio_loaded)
         self._audio_player.playback_started.connect(self._on_playback_started)
         self._audio_player.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
         self._audio_player.playback_finished.connect(self._auto_advance)
-        self._audio_player.playback_state_changed.connect(
-            self._on_playback_state_changed,
-        )
-
-        self._track_navigator.playback_order_changed.connect(self._on_playback_order_changed)
-
-        self._volume.volume_changed.connect(self._on_volume_changed)
-
-    def _on_playback_order_changed(self, playback_order: list[int]) -> None:
-        self.playback_order_changed.emit(playback_order)
-
-    def _on_volume_changed(self, volume: int) -> None:
-        self._audio_player.set_volume(volume / 100)
+        self._audio_player.playback_state_changed.connect(self._on_playback_state_changed)
 
     def _play_track_at_index(self, index: int) -> None:
         # Fetch, load, and play the track at the given playlist index
         track = self._playlist.get_track_by_index(index)
+        if track is None:
+            return  # TODO: Add log
 
-        if track is not None:
-            self._current_track = track
+        audio = AudioPCM.from_file(track.path)
+        if audio is None:
+            return  # TODO: Add log
 
-            self._track_navigator.set_playback_order_position(index)
+        self._current_track = track
+        self._track_index = index
 
-            logger.info(
-                "Playback requested for new selected track: '%s'",
-                track.title,
-            )
+        # Triggers 'playback start' on successful load.
+        self._audio_player.play_audio(audio)
 
-            audio = AudioPCM.from_file(track.path)
-            if audio is None:
-                logger.warning(
-                    "Failed to load audio for track: '%s'",
-                    track.title,
-                )
-                return
+    def _on_playback_started(self) -> None:
+        track_duration_in_ms = int(self._current_track.duration * 1000)
+        self.playback_started.emit(
+            self._current_track.title,
+            self._current_track.artist,
+            track_duration_in_ms,
+        )
 
-            # Triggers 'playback start' on successful load.
-            self._audio_player.load_track_audio(audio)
+        logger.info("Now playing: %s", self._current_track.title)
+
+    def _auto_advance(self):
+        outcome = self._track_navigator.resolve_auto_advance_index()
+
+        if isinstance(outcome, EndBoundary | NoTrackLoaded):
+            return
+
+        if isinstance(outcome, RepeatCurrent):
+            self._audio_player.repeat_playback()
+            return
+
+        self._play_track_at_index(outcome.index)
 
     def _restart_current_track(self):
         # Seek to the beginning and resume playback if currently playing.
@@ -239,36 +235,18 @@ class PlaybackService:
         if self._playback_state == PlaybackState.PLAYING:
             self._audio_player.resume_playback()
 
-    def _auto_advance(self):
-        outcome = self._track_navigator.resolve_auto_advance_index()
-
-        if isinstance(outcome, EndBoundary):
-            return
-
-        if isinstance(outcome, RepeatCurrent):
-            self._audio_player.repeat_playback()
-            return
-
-        new_selected_index = self._playlist.set_playlist_position(outcome.index)
-        if new_selected_index is not None:
-            self._play_track_at_index(new_selected_index)
-
-    def _on_player_audio_loaded(self) -> None:
-        # Emit loaded track then start playback
-        self.track_loaded.emit(self._current_track)
-
-        self._audio_player.start_playback()
-
-    def _on_playback_started(self) -> None:
-        logger.info("Now playing: %s", self._current_track.title)
-
     def _on_playback_position_changed(self, elapsed_time: float) -> None:
-        self._current_position_sec = elapsed_time
-
         # Emit elapsed and remaining time
+        self._curr_pos_in_sec = elapsed_time
+
+        elapsed_time_in_ms = int(elapsed_time * 1000)
         time_remaining = self._current_track.duration - elapsed_time
 
-        self.playback_position_changed.emit(elapsed_time, time_remaining)
+        self.playback_position_changed.emit(
+            elapsed_time,
+            elapsed_time_in_ms,
+            time_remaining,
+        )
 
     def _on_playback_state_changed(self, new_state: PlaybackState):
         # Store and emit new playback state

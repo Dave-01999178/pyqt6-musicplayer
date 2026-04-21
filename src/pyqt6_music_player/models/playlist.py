@@ -1,11 +1,18 @@
 import logging
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
-from pyqt6_music_player.core import Signal
 from pyqt6_music_player.models import Track
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AddTracksResult:
+    track_indices: list[int]
+    add_count: int
+    skipped_count: int
 
 
 class Playlist:
@@ -17,23 +24,14 @@ class Playlist:
         self._tracks: list[Track] = []
         self._track_paths: set[Path] = set()
 
-        self._playlist_position: int | None = None
-
-        self.playlist_changed = Signal()
-
-    # --- Properties ---
+    # -- Properties --
     @property
     def track_count(self) -> int:
         """Return the number of tracks in the playlist."""
         return len(self._tracks)
 
-    @property
-    def selected_row(self) -> int | None:
-        """Return the currently selected row index."""
-        return self._playlist_position
-
-    # --- Public methods ---
-    def add_tracks(self, tracks: Sequence[Track]) -> None:
+    # -- Public methods --
+    def add_tracks(self, tracks: Sequence[Track]) -> AddTracksResult:
         """Add tracks to the playlist.
 
         Args:
@@ -43,35 +41,41 @@ class Playlist:
             Number of tracks added.
 
         """
-        add_count = 0
-
+        new_tracks = []
+        skipped = 0
         for track in tracks:
             track_path = track.path
 
             # No duplicates
             if track_path in self._track_paths:
+                logger.debug("Skipping duplicate file: %s", track.path)
+                skipped += 1
                 continue
 
-            self._tracks.append(track)
+            new_tracks.append(track)
+
             self._track_paths.add(track_path)
 
-            add_count += 1
+            logger.debug("Added track '%s' to the playlist.", track.title)
 
-        if add_count == 1:
-            logger.info("Added track '%s' to the playlist.", tracks[0].title)
-        else:
-            logger.info("Added %d tracks to playlist.", add_count)
+        # Add and sort
+        if len(new_tracks) > 0:
+            self._tracks.extend(new_tracks)
+            self._tracks.sort(key=lambda t: t.title)
 
-        self.playlist_changed.emit()
+        # Summary log
+        logger.info(
+            "Added tracks: %d total, %d added, %d skipped.",
+            len(tracks), len(new_tracks), skipped
+        )
 
-    def get_all_tracks(self) -> list[Track]:
-        """Return all tracks in the playlist.
+        new_track_indices = self._get_track_index(new_tracks)
 
-        Returns:
-            A list of tracks.
-
-        """
-        return self._tracks.copy()
+        return AddTracksResult(
+            new_track_indices,
+            add_count=len(new_tracks),
+            skipped_count=skipped,
+        )
 
     def get_track_by_index(self, index: int) -> Track | None:
         """Get track at the specified index.
@@ -88,44 +92,13 @@ class Playlist:
 
         return self._tracks[index]
 
-    def set_position(self, index: int) -> int:
-        """Set current playlist position.
-
-        Args:
-            index: New position index.
-
-        Returns:
-            Updated playlist position.
-
-        """
-        self._playlist_position = index
-
-        return self._playlist_position
-
-    def sync_position(self, index: int) -> None:
-        """Sync position without triggering updates (internal use only).
-
-        Silently updates the internal position state. Used internally
-        when the view selection changes to keep the model in sync
-        without emitting signals (prevents feedback loops).
-
-        Args:
-            index: Position index to sync.
-
-        """
-        if index == self._playlist_position:
-            return
-
-        self._playlist_position = index
-
-    def has_track(self, track_path: Path) -> bool:
-        """Check if playlist contains a track with the given path.
-
-        Args:
-            track_path: Path to check.
-
-        Returns:
-            True if track exists in playlist; Otherwise, False.
-
-        """
-        return Path(track_path) in self._track_paths
+    # -- Protected/Internal methods --
+    def _get_track_index(self, tracks: list[Track]) -> list[int]:
+        path_to_index = {
+            track.path: track_idx for track_idx, track in enumerate(self._tracks)
+        }
+        return [
+            path_to_index[track.path]
+            for track in tracks
+            if track.path in path_to_index
+        ]

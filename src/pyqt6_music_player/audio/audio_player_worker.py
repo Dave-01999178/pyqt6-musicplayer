@@ -51,8 +51,8 @@ class AudioPlayerWorker(QObject):
 
     # --- Public methods ---
     @pyqtSlot(AudioPCM)
-    def load_track_audio(self, audio_pcm: AudioPCM) -> None:
-        """Load new track audio and reset playback state.
+    def play_audio(self, audio_pcm: AudioPCM) -> None:
+        """Play audio
 
         Releases any existing stream before loading new audio data.
 
@@ -72,26 +72,10 @@ class AudioPlayerWorker(QObject):
         # the previous track's audio callback
         self._track_id += 1
 
+        # Pre-process silence bytes for 'pause' playback.
         self._prepare_silence_bytes()
 
-        self.audio_loaded.emit()
-
-    @pyqtSlot()
-    def start_playback(self) -> None:
-        """Initialize PyAudio, and begin audio playback."""
-
-        if self._audio_pcm is None:
-            logger.warning("Cannot start playback: Audio PCM is not initialized.")
-            return
-
-        try:
-            self._initialize_pyaudio()
-            self._stream.start_stream()
-
-        except Exception as e:
-            logger.error("Failed to start playback. %s", e)
-
-            self._set_status(PlaybackState.ERROR)
+        self._start_playback()
 
     @pyqtSlot()
     def repeat_playback(self):
@@ -226,6 +210,22 @@ class AudioPlayerWorker(QObject):
         bytes_per_buffer = self._frames_per_buffer * bytes_per_frame
 
         self._silence_bytes = b"\x00" * bytes_per_buffer
+
+    def _start_playback(self) -> None:
+        """Initialize PyAudio, and begin audio playback."""
+
+        if self._audio_pcm is None:
+            logger.warning("Cannot start playback: Audio PCM is not initialized.")
+            return
+
+        try:
+            self._initialize_pyaudio()
+            self._stream.start_stream()
+
+        except Exception as e:
+            logger.error("Failed to start playback. %s", e)
+
+            self._set_status(PlaybackState.ERROR)
 
     def _audio_callback(
             self,

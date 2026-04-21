@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from pyqt6_music_player.audio import AudioPlayerService
 from pyqt6_music_player.models import Playlist, Volume
-from pyqt6_music_player.services import PlaybackService, PlaylistService
+from pyqt6_music_player.services import PlaybackService, PlaylistService, PlaybackOrder, TrackNavigator
 from pyqt6_music_player.view_models import (
     PlaybackViewModel,
     PlaylistViewModel,
@@ -33,6 +33,7 @@ class AppContext:
 
 def build_context():
     """Construct and wire all application dependencies."""
+
     # -- Audio --
     audio_player = AudioPlayerService()
 
@@ -41,18 +42,24 @@ def build_context():
     volume_model = Volume()
 
     # -- Services --
-    playlist_service = PlaylistService(playlist_model)
-    playback_service = PlaybackService(audio_player, playlist_service, volume_model)
+    playback_order = PlaybackOrder()
+    track_navigator = TrackNavigator(playback_order)
+
+    playlist_service = PlaylistService(playlist_model, playback_order)
+    playback_service = PlaybackService(
+        audio_player,
+        playlist_service,
+        track_navigator,
+    )
 
     # -- ViewModels --
-    playback_viewmodel = PlaybackViewModel(playlist_service, playback_service)
+    playback_viewmodel = PlaybackViewModel(playback_service)
     playlist_viewmodel = PlaylistViewModel(playlist_service)
     volume_viewmodel = VolumeViewModel(volume_model)
 
-    # -- Signals --
-    playback_service.playback_order_changed.connect(
-        playlist_viewmodel.update_display_order
-    )
+    # -- Wiring --
+    playlist_service.initial_tracks_added.connect(playback_viewmodel.enable_controls)
+    volume_model.volume_changed.connect(playback_service.set_volume)
 
     return AppContext(
         playlist_model=playlist_model,
