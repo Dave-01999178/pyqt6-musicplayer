@@ -19,8 +19,7 @@ class AudioPlayerService(QObject):
     """
 
     # AudioPlayerService signals
-    load_audio_requested = pyqtSignal(AudioPCM)
-    start_playback_requested = pyqtSignal()
+    play_audio_requested = pyqtSignal(AudioPCM)
     repeat_playback_requested = pyqtSignal()
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
@@ -29,7 +28,6 @@ class AudioPlayerService(QObject):
     shutdown_requested = pyqtSignal()
 
     # AudioPlayerWorker signals
-    audio_loaded = pyqtSignal()
     playback_started = pyqtSignal()
     playback_finished = pyqtSignal()
     playback_position_changed = pyqtSignal(float)
@@ -47,18 +45,14 @@ class AudioPlayerService(QObject):
         self._init_thread_and_worker()
 
     # --- Public methods ---
-    def load_track_audio(self, audio_pcm: AudioPCM) -> None:
+    def play_audio(self, audio_pcm: AudioPCM) -> None:
         """Request track audio load to the worker.
 
         Args:
             audio_pcm: PCM audio data to load. Must be a valid AudioPCM instance.
 
         """
-        self.load_audio_requested.emit(audio_pcm)
-
-    def start_playback(self) -> None:
-        """Request playback start to the worker."""
-        self.start_playback_requested.emit()
+        self.play_audio_requested.emit(audio_pcm)
 
     def repeat_playback(self):
         """Request playback repeat to the worker."""
@@ -102,8 +96,7 @@ class AudioPlayerService(QObject):
             return
 
         # Connect service signals to worker.
-        self.load_audio_requested.connect(self._worker.load_track_audio)
-        self.start_playback_requested.connect(self._worker.start_playback)
+        self.play_audio_requested.connect(self._worker.play_audio)
         self.repeat_playback_requested.connect(self._worker.repeat_playback)
         self.pause_playback_requested.connect(self._worker.pause_playback)
         self.resume_playback_requested.connect(self._worker.resume_playback)
@@ -112,7 +105,6 @@ class AudioPlayerService(QObject):
         self.shutdown_requested.connect(self._worker.release_resources)
 
         # Connect worker signals to service.
-        self._worker.audio_loaded.connect(self._on_audio_load)
         self._worker.playback_started.connect(self._on_playback_started)
         self._worker.playback_position_changed.connect(
             self._on_playback_position_changed,
@@ -140,10 +132,6 @@ class AudioPlayerService(QObject):
 
         # Start thread
         self._worker_thread.start()
-
-    @pyqtSlot()
-    def _on_audio_load(self) -> None:
-        self.audio_loaded.emit()
 
     @pyqtSlot()
     def _on_playback_started(self) -> None:

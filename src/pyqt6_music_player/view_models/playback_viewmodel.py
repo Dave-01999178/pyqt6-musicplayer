@@ -1,42 +1,38 @@
 # TODO: Add module docstring
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.core import PlaybackState, RepeatMode, ShuffleMode
-from pyqt6_music_player.models import Track
-from pyqt6_music_player.services import PlaybackService, PlaylistService
+from pyqt6_music_player.core import (
+    PlaybackState,
+    RepeatMode,
+    ShuffleMode,
+)
+from pyqt6_music_player.services import PlaybackService
 from pyqt6_music_player.utils import format_duration
 
 
-# noinspection PyUnresolvedReferences
+
 class PlaybackViewModel(QObject):
     """Expose playback state and commands to the view."""
 
-    track_loaded = pyqtSignal(str, str, int, str)
+    playback_started = pyqtSignal(str, str, int, str)
     playback_position_changed = pyqtSignal(int, str, str)
-    initial_track_added = pyqtSignal()
+    initial_tracks_added = pyqtSignal()
     playback_state_changed = pyqtSignal(PlaybackState)
 
-    def __init__(
-            self,
-            playlist_service: PlaylistService,
-            playback_service: PlaybackService,
-    ):
+    def __init__(self, playback_service: PlaybackService):
         """Initialize PlaybackViewModel and connect to service signals..
 
         Args:
-            playlist_service: Service managing playlist state and operations.
             playback_service: Service managing track loading and audio playback.
 
         """
         super().__init__()
         # Service
-        self._playlist_service = playlist_service
         self._playback_service = playback_service
 
         # Pre-seek playback state tracker.
         self._pre_seek_playback_state: PlaybackState | None = None
 
-        # Setup
         self._connect_signals()
 
     # -- Public methods --
@@ -104,35 +100,26 @@ class PlaybackViewModel(QObject):
         """
         self._playback_service.set_repeat_mode(repeat_mode)
 
+    def enable_controls(self) -> None:
+        self.initial_tracks_added.emit()
+
     # -- Protected/internal methods --
-    def _connect_signals(self) -> None:
-        # Wire service signals to PlaybackViewModel slots.
-        #
-        # PlaylistService -> PlaybackViewModel
-        self._playlist_service.playlist_changed.connect(self._on_track_added)
+    def _connect_signals(self):
+        self._playback_service.playback_started.connect(self._on_playback_started)
+        self._playback_service.playback_state_changed.connect(self._on_playback_state_changed)
+        self._playback_service.playback_position_changed.connect(self._on_playback_position_changed)
 
-        # PlaybackService -> PlaybackViewModel
-        self._playback_service.track_loaded.connect(self._on_track_loaded)
-        self._playback_service.playback_position_changed.connect(
-            self._on_playback_position_changed,
-        )
-        self._playback_service.playback_state_changed.connect(
-            self._on_playback_state_changed,
-        )
+    def _on_playback_started(
+            self,
+            track_title: str,
+            track_artist: str,
+            track_duration_in_ms: int,
+    ) -> None:
+        formatted_duration = format_duration(track_duration_in_ms // 1000)
 
-    # TODO: Change
-    def _on_track_added(self) -> None:
-        # Emit `initial_track_added` signal on first insert
-        self.initial_track_added.emit()
-
-    def _on_track_loaded(self, current_track: Track) -> None:
-        # Emit track duration in milliseconds and formatted strings
-        track_duration_in_ms = int(current_track.duration * 1000)
-        formatted_duration = format_duration(int(current_track.duration))
-
-        self.track_loaded.emit(
-            current_track.title,
-            current_track.album,
+        self.playback_started.emit(
+            track_title,
+            track_artist,
             track_duration_in_ms,
             formatted_duration,
         )
@@ -140,10 +127,10 @@ class PlaybackViewModel(QObject):
     def _on_playback_position_changed(
             self,
             elapsed_time: float,
+            elapsed_time_in_ms: int,
             time_remaining: float,
     ) -> None:
-        # Convert and emit playback position in milliseconds and formatted strings
-        elapsed_time_in_ms = int(elapsed_time * 1000)
+        # Convert and emit playback position and formatted strings
         formatted_elapsed_time = format_duration(elapsed_time)
         formatted_time_remaining = format_duration(time_remaining)
 
@@ -153,5 +140,5 @@ class PlaybackViewModel(QObject):
             formatted_time_remaining,
         )
 
-    def _on_playback_state_changed(self, new_state: PlaybackState) -> None:
-        self.playback_state_changed.emit(new_state)
+    def _on_playback_state_changed(self, playback_state: PlaybackState) -> None:
+        self.playback_state_changed.emit(playback_state)

@@ -1,4 +1,4 @@
-from .playlist_service import PlaylistService
+from .playback_order import PlaybackOrder
 from .track_navigator import (
     EndBoundary,
     NoTrackLoaded,
@@ -7,11 +7,15 @@ from .track_navigator import (
     TrackIndex,
     TrackNavigator,
 )
+from .playlist_service import PlaylistService
 from .playback_service import PlaybackService
 
 __all__ = [
     # playlist_service.py
     "PlaylistService",
+
+    # playback_order.py
+    "PlaybackOrder",
 
     # track_navigator.py
     "EndBoundary",

@@ -1,4 +1,6 @@
 # TODO: Add module docstring
+import logging
+
 from PyQt6.QtCore import QModelIndex, Qt, pyqtSlot
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
@@ -46,6 +48,8 @@ from pyqt6_music_player.views import (
     VolumeButton,
     VolumeLabel,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ==================== PANELS ====================
@@ -122,6 +126,7 @@ class PlaylistManagerPanel(QWidget):
     def _connect_signals(self) -> None:
         # Wire PlaylistManagerPanel signals to their slots
         self._add_track_btn.clicked.connect(self._on_add_track_button_clicked)
+        self._remove_track_btn.clicked.connect(self._on_remove_track_button_clicked)
 
     @pyqtSlot()
     def _on_add_track_button_clicked(self) -> None:
@@ -135,7 +140,12 @@ class PlaylistManagerPanel(QWidget):
             return
 
         # Add the selected audio files to the playlist
+        logger.info("Adding audio files: %s", file_paths)
+
         self._playlist_viewmodel.add_tracks(file_paths)
+
+    def _on_remove_track_button_clicked(self) -> None:
+        self._playlist_viewmodel.remove_track()
 
 
 # --- PLAYLIST ---
@@ -183,32 +193,32 @@ class PlaylistDisplayPanel(QWidget):
         # Establish PlaylistDisplayPanel-PlaylistViewModel connection
         #
         # PlaylistDisplayPanel -> PlaylistViewModel
-        self.selection_model.currentRowChanged.connect(self._on_row_changed)
+        self.selection_model.currentRowChanged.connect(self._on_row_selection_changed)
 
         # PlaylistViewModel -> PlaylistDisplayPanel
-        self._playlist_viewmodel.playlist_model_position_changed.connect(
-            self._on_playlist_model_position_changed,
+        self._playlist_viewmodel.playback_order_position_changed.connect(
+            self._on_playback_order_position_changed,
         )
-        self._playlist_viewmodel.playlist_display_order_changed.connect(
-            self._on_playlist_display_order_changed
+        self._playlist_viewmodel.display_order_changed.connect(
+            self._on_display_order_changed,
         )
 
     @pyqtSlot(QModelIndex, QModelIndex)
-    def _on_row_changed(self, current_index: QModelIndex, _: QModelIndex) -> None:
-        # Sync playlist model position to the index of selected row in playlist widget
+    def _on_row_selection_changed(self, current_index: QModelIndex, _: QModelIndex) -> None:
+        # Sync playlist model position to the index of selected row.
         if not current_index.isValid():
             return
 
-        self._playlist_viewmodel.sync_playlist_model_position(current_index.row())
+        self._playlist_viewmodel.set_selection_index(current_index.row())
+
+    @pyqtSlot()
+    def _on_display_order_changed(self):
+        self.selection_model.clearSelection()
 
     @pyqtSlot(int)
-    def _on_playlist_display_order_changed(self, row):
+    def _on_playback_order_position_changed(self, row):
         # Sync the active row
         self._playlist_widget.set_delegate_active_row(row)
-
-    @pyqtSlot(int)
-    def _on_playlist_model_position_changed(self, new_index: int) -> None:
-        self._playlist_widget.set_delegate_active_row(new_index)
 
 
 # --- NOW-PLAYING ---
@@ -246,7 +256,7 @@ class NowPlayingPanel(QWidget):
         # Setup
         self._init_ui()
 
-        self._viewmodel.track_loaded.connect(self._on_track_loaded)
+        self._viewmodel.playback_started.connect(self._on_playback_started)
 
     # -- Protected/internal methods --
     def _init_ui(self) -> None:
@@ -267,7 +277,7 @@ class NowPlayingPanel(QWidget):
         self.setLayout(main_layout_horizontal)
 
     @pyqtSlot(str, str, int, str)
-    def _on_track_loaded(self, track_title: str, track_artist: str, *_) -> None:
+    def _on_playback_started(self, track_title: str, track_artist: str, *_) -> None:
         # Display loaded track metadata in UI
         self.title_label.setText(track_title)
         self.artist_label.setText(track_artist)
@@ -355,7 +365,7 @@ class PlaybackControlsPanel(QWidget):
         )
 
         # PlaybackViewModel -> PlaybackControlsPanel
-        self._viewmodel.initial_track_added.connect(self._on_initial_track_add)
+        self._viewmodel.initial_tracks_added.connect(self._on_initial_track_add)
         self._viewmodel.playback_state_changed.connect(self._on_player_state_changed)
 
     @pyqtSlot(ShuffleMode)
@@ -464,11 +474,11 @@ class PlaybackProgressPanel(QWidget):
         self.seek_bar.sliderReleased.connect(self._on_slider_released)
 
         # PlaybackViewModel -> PlaybackProgressPanel
-        self._playback_viewmodel.track_loaded.connect(self._on_track_loaded)
+        self._playback_viewmodel.playback_started.connect(self._on_playback_started)
         self._playback_viewmodel.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
-        self._playback_viewmodel.initial_track_added.connect(
+        self._playback_viewmodel.initial_tracks_added.connect(
             self._on_initial_track_added,
         )
 
@@ -485,7 +495,7 @@ class PlaybackProgressPanel(QWidget):
         self._playback_viewmodel.end_seek(self.seek_bar.value())
 
     @pyqtSlot(str, str, int, str)
-    def _on_track_loaded(
+    def _on_playback_started(
             self,
             _title,
             _artist,

@@ -1,38 +1,31 @@
 import weakref
-from collections.abc import Callable
+from typing import Callable
 
 
 class Signal:
-    """Framework-agnostic signal similar to PyQt's Signal."""
-
     def __init__(self):
-        """Initialize Signal."""
-        self._slots: list[Callable] = []
+        self._handlers: list[Callable] = []
 
-    def connect(self, slot: Callable) -> None:
-        """Connect a callback function to this signal."""
-        if slot in self._slots:
+    def connect(self, handler: Callable) -> None:
+        if handler in self._handlers:
             return
 
-        if hasattr(slot, "__self__"):
-            instance = slot.__self__
-
-            self._slots.append(
-                weakref.WeakMethod(slot)
-                if instance is not None
-                else slot,
-            )
+        ref = weakref.WeakMethod(handler) if hasattr(handler, "__self__") else handler
+        self._handlers.append(ref)
 
     def emit(self, *args, **kwargs):
-        """Call all connected callback functions with the given arguments."""
-        for slot in self._slots.copy():
-            if isinstance(slot, weakref.WeakMethod):
-                func = slot()
-                if func is None:
-                    # Remove dead reference
-                    self._slots.remove(slot)
+        dead_refs = []
+        for ref in self._handlers:
+            if isinstance(ref, weakref.WeakMethod):
+                handler = ref()
+                if handler is None:
+                    dead_refs.append(ref)
                     continue
-                func(*args, **kwargs)
 
+                handler(*args, **kwargs)
             else:
-                slot(*args, **kwargs)
+                ref(*args, **kwargs)
+
+        if dead_refs:
+            for ref in dead_refs:
+                self._handlers.remove(ref)

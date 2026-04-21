@@ -1,9 +1,7 @@
-from PyQt6.QtCore import QObject, pyqtSignal
-
-from pyqt6_music_player.core import MAX_VOLUME, MIN_VOLUME
+from pyqt6_music_player.core.signals import Signal
 
 
-class Volume(QObject):
+class Volume:
     """Volume model.
 
     This class is responsible for managing volume, and providing volume related data.
@@ -12,8 +10,7 @@ class Volume(QObject):
     provides methods and properties for viewmodel to interact with, and expose.
     """
 
-    volume_changed = pyqtSignal(int)
-    mute_changed = pyqtSignal(bool)
+    volume_changed = Signal()
 
     def __init__(self):
         """Initialize VolumeModel."""
@@ -39,12 +36,14 @@ class Volume(QObject):
             ValueError: If the new volume is out of range.
 
         """
+        clipped_volume = max(0, min(100, new_volume))
+
         self._previous_volume = self._current_volume
-        self._current_volume = new_volume
+        self._current_volume = clipped_volume
 
-        self.volume_changed.emit(new_volume)  # type: ignore
+        self.volume_changed.emit(self._current_volume)
 
-    def set_muted(self, muted: bool) -> None:
+    def set_muted(self, muted: bool) -> int:
         """Set the current mute state based on the given new state.
 
         Args:
@@ -54,3 +53,5 @@ class Volume(QObject):
         volume_to_use = 0 if muted else self._previous_volume
 
         self.set_volume(volume_to_use)
+
+        return volume_to_use

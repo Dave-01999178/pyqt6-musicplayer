@@ -1,36 +1,38 @@
+import logging
 from collections.abc import Sequence
 from pathlib import Path
 
-from pyqt6_music_player.core import SUPPORTED_AUDIO_FORMAT, Signal
+from mutagen import MutagenError
+
+from pyqt6_music_player.core import SUPPORTED_AUDIO_FORMAT
+from pyqt6_music_player.core.signals import Signal
+from pyqt6_music_player.exceptions import UnsupportedFileError
 from pyqt6_music_player.models import Playlist, Track
+from pyqt6_music_player.services import PlaybackOrder
+
+logger = logging.getLogger(__name__)
 
 
 class PlaylistService:
-    """Manage playlist operations.
+    """Manage playlist operations."""
 
-    Acts as the application layer between the Playlist model and its consumers,
-    handling validation, deduplication, and signal emission.
+    initial_tracks_added = Signal()
+    playback_order_changed = Signal()
+    playback_order_position_changed = Signal()
 
-    """
-
-    def __init__(self, playlist_model: Playlist):
+    def __init__(self, playlist_model: Playlist, playback_order: PlaybackOrder):
         """Initialize PlaylistService.
 
         Args:
             playlist_model: The playlist model.
+            playback_order: The playback order
 
         """
         # Model
         self._playlist = playlist_model
+        self._playback_order = playback_order
 
-        # Signals
-        self.playlist_changed = Signal()
-        self.playlist_model_position_changed = Signal()
-
-        self._playlist.playlist_changed.connect(self._on_playlist_changed)
-
-    def _on_playlist_changed(self) -> None:
-        self.playlist_changed.emit()
+        self._connect_signals()
 
     # -- Properties --
     @property
@@ -38,75 +40,43 @@ class PlaylistService:
         """Return the number of tracks in the playlist."""
         return self._playlist.track_count
 
-    @property
-    def selected_row(self) -> int | None:
-        """Return the currently selected track index."""
-        return self._playlist.selected_row
+    def get_playback_order_snapshot(self) -> list[int]:
+        return self._playback_order.order
 
     # -- Public methods --
-    def add_tracks(self, paths: Sequence[str]) -> None:
-        """Add tracks to the playlist.
+    def add_tracks_from_paths(self, paths: Sequence[str]) -> None:
+        """Load and add tracks from file paths.
 
         Args:
-            paths: A sequence of paths as strings.
+            paths: A sequence of file path strings.
 
         """
-        if not paths:
+        # Normalize paths
+        normalized_paths = self._normalize_paths(paths)
+        if not normalized_paths:
             return
 
-        normalized_paths = self._normalize_to_path(paths)
-        valid_tracks = []
+        # Load tracks from files
+        tracks, errors = self._load_tracks_from_files(normalized_paths)
+        if not tracks:
+            return
 
-        for path in normalized_paths:
-            try:
-                resolved_path = path.resolve(strict=True)
-            except FileNotFoundError:
-                continue
+        # Add tracks
+        result = self._playlist.add_tracks(tracks)
 
-            # No duplicates
-            if self._playlist.has_track(resolved_path):
-                continue
+        total_skipped = result.skipped_count + errors
+        logger.info(
+            "Add tracks completed: %d requested, %d added, %d skipped (%d errors).",
+            len(paths),
+            result.add_count,
+            total_skipped,
+            errors,
+        )
 
-            # Must be a supported format
-            if resolved_path.suffix.lower() not in SUPPORTED_AUDIO_FORMAT:
-                continue
-
-            track = Track.from_file(resolved_path)
-
-            valid_tracks.append(track)
-
-        self._playlist.add_tracks(valid_tracks)
-
-    def set_playlist_position(self, index: int) -> int:
-        """Set playlist position and notify view of changes.
-
-        Updates the internal position and emits a signal to trigger
-        delegate active row updates in the UI.
-
-        Args:
-            index: Target position index in playlist.
-
-        Returns:
-            New playlist model position index, or None if invalid.
-
-        """
-        new_index = self._playlist.set_position(index)
-
-        self.playlist_model_position_changed.emit(new_index)
-
-        return new_index
-
-    def sync_playlist_model_position(self, index: int) -> None:
-        """Sync playlist position without triggering view updates.
-
-        Used internally when the view selection changes to keep the
-        model in sync without emitting signals (prevents feedback loops).
-
-        Args:
-            index: Position index to sync to.
-
-        """
-        self._playlist.sync_position(index)
+        if result.add_count > 0:
+            self._playback_order.add_to_playback_order(result.track_indices)
+            if self.track_count - result.add_count == 0:
+                self.initial_tracks_added.emit()
 
     def get_track_by_index(self, index: int) -> Track | None:
         """Get track at the specified index.
@@ -121,29 +91,103 @@ class PlaylistService:
         return self._playlist.get_track_by_index(index)
 
     # -- Protected/internal methods --
+    def _connect_signals(self):
+        self._playback_order.order_changed.connect(self.playback_order_changed.emit)
+        self._playback_order.position_changed.connect(
+            self.playback_order_position_changed.emit,
+        )
+
     @staticmethod
-    def _normalize_to_path(paths: Sequence[str]) -> list[Path]:
-        """Convert valid path string input into a Path object.
+    def _normalize_paths(paths: Sequence[str]) -> list[Path]:
+        """Validate and normalize file paths.
+
+        Filters out non-existent files, directories, and unsupported formats.
 
         Args:
-            paths: A sequence of paths as strings.
+            paths: Sequence of file path strings.
 
         Returns:
-            list[Path]: The normalized input as Path objects stored in a list.
+            List of validated, resolved Path objects.
 
         """
         normalized_paths = []
+        skipped = 0
+        for p in paths:
+            path = Path(p).expanduser()
 
-        for path in paths:
-            if path in {"", "."}:
+            # Missing
+            if not path.exists():
+                logger.warning("Skipping non-existent file: %s.", path)
+                skipped += 1
                 continue
 
-            normalized_path = Path(path)
-
-            # Skip cwd, empty values, or directories
-            if normalized_path in {Path(""), Path(".")} or normalized_path.is_dir():
+            # Not a file
+            if not path.is_file():
+                logger.warning("Skipping non-file: %s.", path)
+                skipped += 1
                 continue
 
-            normalized_paths.append(normalized_path)
+            # Not supported
+            if path.suffix.lower() not in SUPPORTED_AUDIO_FORMAT:
+                logger.warning("Skipping non-audio or unsupported file: %s.", path)
+                skipped += 1
+                continue
+
+            resolved_path = path.resolve()
+            normalized_paths.append(resolved_path)
+
+            logger.debug("Resolved path: %s", resolved_path)
+
+        logger.info(
+            "Path validation: %d/%d valid (%d skipped).",
+            len(normalized_paths),
+            len(paths),
+            skipped,
+        )
 
         return normalized_paths
+
+    @staticmethod
+    def _load_tracks_from_files(paths: Sequence[Path]) -> tuple[list[Track], int]:
+        """Load Track objects from validated file paths.
+
+        Args:
+            paths: Sequence of validated audio file paths.
+
+        Returns:
+            Tuple of (loaded tracks, error count).
+
+        """
+        tracks = []
+        error_count = 0
+        for path in paths:
+            try:
+                track = Track.from_file(path)
+
+                tracks.append(track)
+
+                logger.debug("Loaded track '%s' from: %s.", track.title, path)
+
+            # Expected error
+            except UnsupportedFileError:
+                # File has correct extension but wrong content
+                logger.warning("File is not a valid audio file: %s", path)
+                error_count += 1
+
+            except MutagenError:
+                # File is audio but has corrupt/unreadable metadata
+                logger.warning("Failed to read metadata from: %s", path)
+                error_count += 1
+
+            # Unexpected errors
+            except Exception:
+                logger.exception("Unexpected error while loading file: %s.", path)
+                error_count += 1
+                continue
+
+        logger.info(
+            "Track loading: %d total, %d loaded, %d errors.",
+            len(paths), len(tracks), error_count
+        )
+
+        return tracks, error_count

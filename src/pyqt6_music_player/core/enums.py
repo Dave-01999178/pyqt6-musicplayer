@@ -1,6 +1,11 @@
 from enum import Enum, auto
 
 
+class OrderMode(Enum):
+    SEQUENTIAL = auto()
+    SHUFFLED = auto()
+
+
 class PlaybackState(Enum):
     """Represents the current playback state."""
 
