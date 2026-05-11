@@ -11,7 +11,8 @@ from pydub import AudioSegment
 
 from pyqt6_music_player.core import SUPPORTED_BYTES
 from pyqt6_music_player.exceptions import UnsupportedFileError
-from pyqt6_music_player.utils import get_metadata
+
+from .metadata_extractor import get_metadata
 
 
 @dataclass(frozen=True)

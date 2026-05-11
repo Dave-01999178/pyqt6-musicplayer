@@ -2,9 +2,10 @@ import logging
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
-from pyqt6_music_player.audio import AudioPlayerWorker
 from pyqt6_music_player.core import PlaybackState
-from pyqt6_music_player.models import AudioPCM
+from pyqt6_music_player.track import AudioPCM
+
+from .audio_player_worker import AudioPlayerWorker
 
 logger = logging.getLogger(__name__)
 

@@ -36,10 +36,10 @@ class Volume:
             ValueError: If the new volume is out of range.
 
         """
-        clipped_volume = max(0, min(100, new_volume))
+        clamped_volume = max(0, min(100, new_volume))
 
         self._previous_volume = self._current_volume
-        self._current_volume = clipped_volume
+        self._current_volume = clamped_volume
 
         self.volume_changed.emit(self._current_volume)
 

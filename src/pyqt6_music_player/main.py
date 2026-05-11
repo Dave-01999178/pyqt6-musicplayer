@@ -7,8 +7,8 @@ from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 
 from pyqt6_music_player.core import STYLESHEET, build_context
+from pyqt6_music_player.main_view import MusicPlayerView
 from pyqt6_music_player.utils import setup_logging
-from pyqt6_music_player.views import MusicPlayerView
 
 logger = logging.getLogger(__name__)
 

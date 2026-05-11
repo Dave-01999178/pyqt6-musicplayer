@@ -50,7 +50,8 @@ from pyqt6_music_player.core import (
     SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
     SECONDARY_PLAYBACK_CONTROL_BTN_OBJ_NAME,
     SECONDARY_PLAYBACK_CONTROL_BTN_SIZE,
-    SHUFFLE_DISABLED_ICON, SHUFFLE_ICON,
+    SHUFFLE_DISABLED_ICON,
+    SHUFFLE_ICON,
     TRACK_METADATA_LABEL_SIZE,
     VOLUME_BTN_ICON_SIZE,
     VOLUME_BTN_SIZE,
@@ -272,12 +273,11 @@ class PlaylistItemDelegate(QStyledItemDelegate):
         self._active_row_text_brush = QBrush(QColor("#00D9FF"))
         self._hover_row_brush = QBrush(QColor("#1ABC9C"))
 
-    # - Public methods -
+    # -- Public methods --
     #
     # Instance methods
     def set_active_row(self, row: int) -> None:
         if row == self._active_row:
-            self._update_row(row)
             return
 
         old_row = self._active_row
@@ -342,7 +342,7 @@ class PlaylistItemDelegate(QStyledItemDelegate):
         if row_index == self._active_row:
             self._draw_active_row_border(painter, option, index)
 
-    # - Protected/Internal methods -
+    # -- Protected/Internal methods --
     def _apply_highlight(self, opt, brush):
         opt.palette.setBrush(QPalette.ColorRole.Highlight, brush)
         opt.palette.setBrush(
@@ -646,6 +646,7 @@ class VolumeButton(IconButton):
                        (width, height) in pixels. Defaults to (15, 15).
             widget_size: Size of the entire button widget as (width, height) in pixels.
                          Defaults to (30, 30).
+
         """
         super().__init__(
             icon_path=icon_path,

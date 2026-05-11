@@ -1,14 +1,10 @@
 # TODO: Add module docstring
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.core import (
-    PlaybackState,
-    RepeatMode,
-    ShuffleMode,
-)
-from pyqt6_music_player.services import PlaybackService
+from pyqt6_music_player.core import PlaybackState, RepeatMode, ShuffleMode
 from pyqt6_music_player.utils import format_duration
 
+from .playback_service import PlaybackService
 
 
 class PlaybackViewModel(QObject):
@@ -20,7 +16,7 @@ class PlaybackViewModel(QObject):
     playback_state_changed = pyqtSignal(PlaybackState)
 
     def __init__(self, playback_service: PlaybackService):
-        """Initialize PlaybackViewModel and connect to service signals..
+        """Initialize PlaybackViewModel.
 
         Args:
             playback_service: Service managing track loading and audio playback.
@@ -40,18 +36,6 @@ class PlaybackViewModel(QObject):
         """Toggle between playing and paused state."""
         self._playback_service.toggle_playback()
 
-    def play(self):
-        """Start playback."""
-        self._playback_service.play()
-
-    def pause(self):
-        """Pause playback."""
-        self._playback_service.pause()
-
-    def resume(self):
-        """Resume paused playback."""
-        self._playback_service.resume()
-
     def next_track(self) -> None:
         """Skip to the next track."""
         self._playback_service.next_track()
@@ -69,13 +53,23 @@ class PlaybackViewModel(QObject):
         if status == PlaybackState.PLAYING:
             self._playback_service.pause()
 
-    def seek(self, new_pos_in_ms: int) -> None:
-        """Seek to the given position during an active seek operation."""
-        self._playback_service.seek(new_pos_in_ms)
+    def seek(self, current_position: int) -> None:
+        """Seek to the given position during an active seek operation.
 
-    def end_seek(self, final_pos_in_ms: int) -> None:
-        """End seek operation, resuming playback if it was playing before seeking."""
-        self._playback_service.seek(final_pos_in_ms)
+        Args:
+            current_position: The current playback position in milliseconds.
+
+        """
+        self._playback_service.seek(current_position)
+
+    def end_seek(self, final_pos: int) -> None:
+        """End seek operation, resuming playback if it was playing before seeking.
+
+        Args:
+            final_pos: The final playback position in milliseconds after seeking.
+
+        """
+        self._playback_service.seek(final_pos)
 
         if self._pre_seek_playback_state == PlaybackState.PLAYING:
             self._playback_service.resume()
@@ -101,13 +95,21 @@ class PlaybackViewModel(QObject):
         self._playback_service.set_repeat_mode(repeat_mode)
 
     def enable_controls(self) -> None:
+        """Enable playback controls."""
         self.initial_tracks_added.emit()
 
     # -- Protected/internal methods --
     def _connect_signals(self):
-        self._playback_service.playback_started.connect(self._on_playback_started)
-        self._playback_service.playback_state_changed.connect(self._on_playback_state_changed)
-        self._playback_service.playback_position_changed.connect(self._on_playback_position_changed)
+        # PlaybackService -> PlaybackViewModel
+        self._playback_service.playback_started.connect(
+            self._on_playback_started,
+        )
+        self._playback_service.playback_state_changed.connect(
+            self._on_playback_state_changed,
+        )
+        self._playback_service.playback_position_changed.connect(
+            self._on_playback_position_changed,
+        )
 
     def _on_playback_started(
             self,
@@ -130,7 +132,6 @@ class PlaybackViewModel(QObject):
             elapsed_time_in_ms: int,
             time_remaining: float,
     ) -> None:
-        # Convert and emit playback position and formatted strings
         formatted_elapsed_time = format_duration(elapsed_time)
         formatted_time_remaining = format_duration(time_remaining)
 

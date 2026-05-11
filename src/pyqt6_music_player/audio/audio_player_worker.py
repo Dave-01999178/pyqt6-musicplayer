@@ -2,21 +2,16 @@ import logging
 
 import numpy as np
 from pyaudio import PyAudio, paComplete, paContinue
-from PyQt6.QtCore import (
-    Q_ARG,
-    QMetaObject,
-    QObject,
-    Qt,
-    pyqtSignal,
-    pyqtSlot,
-)
+from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, Qt, pyqtSignal, pyqtSlot
 
 from pyqt6_music_player.core import PlaybackState
-from pyqt6_music_player.models import AudioPCM
+from pyqt6_music_player.track import AudioPCM
 
 logger = logging.getLogger(__name__)
 
 
+# TODO: Refactor error handling, propagation and logging.
+#  Avoid broad `Exception` and log only when needed.
 # noinspection PyUnresolvedReferences
 class AudioPlayerWorker(QObject):
     """Handles low-level audio playback operations in a separate thread.
