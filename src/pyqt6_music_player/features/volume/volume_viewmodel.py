@@ -6,6 +6,8 @@ from .volume import Volume
 
 logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
+
 
 class VolumeViewModel(QObject):
     """Expose volume state and commands to the view."""
