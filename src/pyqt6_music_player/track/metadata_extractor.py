@@ -48,7 +48,6 @@ def extract_id3_tags(
     def _get_text(tag: str, default: str):
         # Safely extract `text` values from ID3 frames.
         frame = mp3_audio.get(tag)
-
         if frame and hasattr(frame, "text") and frame.text:
             return frame.text[0]
         return default

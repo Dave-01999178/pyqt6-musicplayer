@@ -15,8 +15,8 @@ from .config import (
     NEXT_ICON,
     PAUSE_ICON,
     PLAY_ICON,
-    PLAYLIST_MANAGER_BTN_SIZE,
     PLAYLIST_MANAGER_BTN_ICON_SIZE,
+    PLAYLIST_MANAGER_BTN_SIZE,
     PREV_ICON,
     PRIMARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
     PRIMARY_PLAYBACK_CONTROL_BTN_OBJ_NAME,
@@ -32,10 +32,9 @@ from .config import (
     SHUFFLE_ICON,
     STYLESHEET,
     TRACK_METADATA_LABEL_SIZE,
-    VOLUME_BTN_SIZE,
     VOLUME_BTN_ICON_SIZE,
+    VOLUME_BTN_SIZE,
 )
-
 from .constants import (
     FILE_DIALOG_FILTER,
     MAX_VOLUME,
@@ -44,9 +43,8 @@ from .constants import (
     SUPPORTED_AUDIO_FORMAT,
     SUPPORTED_BYTES,
 )
-
 from .enums import OrderMode, PlaybackState, RepeatMode, ShuffleMode
-
+from .signals import Signal
 from .context import AppContext, build_context
 
 __all__ = [
@@ -100,6 +98,9 @@ __all__ = [
     "PlaybackState",
     "RepeatMode",
     "ShuffleMode",
+
+    # signal.py
+    "Signal",
 
     # context.py
     "AppContext",

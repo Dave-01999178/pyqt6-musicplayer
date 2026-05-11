@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from pyqt6_music_player.models import Volume
+from .volume import Volume
 
 logger = logging.getLogger(__name__)
 

@@ -4,11 +4,12 @@ from pathlib import Path
 
 from mutagen import MutagenError
 
-from pyqt6_music_player.core import SUPPORTED_AUDIO_FORMAT
-from pyqt6_music_player.core.signals import Signal
+from pyqt6_music_player.core import SUPPORTED_AUDIO_FORMAT, Signal
 from pyqt6_music_player.exceptions import UnsupportedFileError
-from pyqt6_music_player.models import Playlist, Track
-from pyqt6_music_player.services import PlaybackOrder
+from pyqt6_music_player.features.playback import PlaybackOrder
+from pyqt6_music_player.track import Track
+
+from .playlist import Playlist
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +19,13 @@ class PlaylistService:
 
     initial_tracks_added = Signal()
     playback_order_changed = Signal()
-    playback_order_position_changed = Signal()
 
     def __init__(self, playlist_model: Playlist, playback_order: PlaybackOrder):
         """Initialize PlaylistService.
 
         Args:
             playlist_model: The playlist model.
-            playback_order: The playback order
+            playback_order: Service managing playback order
 
         """
         # Model
@@ -40,9 +40,6 @@ class PlaylistService:
         """Return the number of tracks in the playlist."""
         return self._playlist.track_count
 
-    def get_playback_order_snapshot(self) -> list[int]:
-        return self._playback_order.order
-
     # -- Public methods --
     def add_tracks_from_paths(self, paths: Sequence[str]) -> None:
         """Load and add tracks from file paths.
@@ -54,48 +51,61 @@ class PlaylistService:
         # Normalize paths
         normalized_paths = self._normalize_paths(paths)
         if not normalized_paths:
-            return
+            return  # Nothing to load
 
         # Load tracks from files
         tracks, errors = self._load_tracks_from_files(normalized_paths)
         if not tracks:
-            return
+            return  # Nothing to add
 
         # Add tracks
         result = self._playlist.add_tracks(tracks)
 
-        total_skipped = result.skipped_count + errors
+        total_skipped = result.skipped_duplicates + errors
         logger.info(
-            "Add tracks completed: %d requested, %d added, %d skipped (%d errors).",
+            "Add tracks completed: "
+            "%d requested, %d added, %d skipped (%d duplicates, %d errors).",
             len(paths),
             result.add_count,
             total_skipped,
+            result.skipped_duplicates,
             errors,
         )
 
+        # Update playback order and notify PlaylistViewModel
         if result.add_count > 0:
-            self._playback_order.add_to_playback_order(result.track_indices)
-            if self.track_count - result.add_count == 0:
+            state = self._playback_order.add_to_order(result.track_indices)
+
+            self.playback_order_changed.emit(state)
+
+            if self._playlist.track_count - result.add_count == 0:
                 self.initial_tracks_added.emit()
 
-    def get_track_by_index(self, index: int) -> Track | None:
+    def get_track_by_index(self, index: int) -> Track:
         """Get track at the specified index.
 
         Args:
             index: The track index.
 
         Returns:
-            The track at given index, or None if invalid.
+            The track at given index.
 
         """
         return self._playlist.get_track_by_index(index)
 
+    def set_position(self, index: int) -> None:
+        """Set the playback-order position to the given index.
+
+        Args:
+            index: The new index to set.
+
+        """
+        self._playback_order.set_position(index)
+
     # -- Protected/internal methods --
-    def _connect_signals(self):
+    def _connect_signals(self) -> None:
+        # PlaylistService -> PlaylistViewModel
         self._playback_order.order_changed.connect(self.playback_order_changed.emit)
-        self._playback_order.position_changed.connect(
-            self.playback_order_position_changed.emit,
-        )
 
     @staticmethod
     def _normalize_paths(paths: Sequence[str]) -> list[Path]:
@@ -111,26 +121,22 @@ class PlaylistService:
 
         """
         normalized_paths = []
-        skipped = 0
         for p in paths:
             path = Path(p).expanduser()
 
             # Missing
             if not path.exists():
                 logger.warning("Skipping non-existent file: %s.", path)
-                skipped += 1
                 continue
 
             # Not a file
             if not path.is_file():
                 logger.warning("Skipping non-file: %s.", path)
-                skipped += 1
                 continue
 
             # Not supported
             if path.suffix.lower() not in SUPPORTED_AUDIO_FORMAT:
                 logger.warning("Skipping non-audio or unsupported file: %s.", path)
-                skipped += 1
                 continue
 
             resolved_path = path.resolve()
@@ -138,6 +144,7 @@ class PlaylistService:
 
             logger.debug("Resolved path: %s", resolved_path)
 
+        skipped = len(paths) - len(normalized_paths)
         logger.info(
             "Path validation: %d/%d valid (%d skipped).",
             len(normalized_paths),
@@ -159,7 +166,6 @@ class PlaylistService:
 
         """
         tracks = []
-        error_count = 0
         for path in paths:
             try:
                 track = Track.from_file(path)
@@ -168,26 +174,27 @@ class PlaylistService:
 
                 logger.debug("Loaded track '%s' from: %s.", track.title, path)
 
-            # Expected error
+            # EXPECTED ERRORS
+            #
+            # File has correct extension but wrong content
             except UnsupportedFileError:
-                # File has correct extension but wrong content
                 logger.warning("File is not a valid audio file: %s", path)
-                error_count += 1
 
+            # File is audio but has corrupt/unreadable metadata
             except MutagenError:
-                # File is audio but has corrupt/unreadable metadata
                 logger.warning("Failed to read metadata from: %s", path)
-                error_count += 1
 
-            # Unexpected errors
+            # UNEXPECTED ERRORS
             except Exception:
                 logger.exception("Unexpected error while loading file: %s.", path)
-                error_count += 1
                 continue
 
+        error_count = len(paths) - len(tracks)
         logger.info(
-            "Track loading: %d total, %d loaded, %d errors.",
-            len(paths), len(tracks), error_count
+            "Track loading: %d/%d loaded (%d errors).",
+            len(tracks),
+            len(paths),
+            error_count,
         )
 
         return tracks, error_count
