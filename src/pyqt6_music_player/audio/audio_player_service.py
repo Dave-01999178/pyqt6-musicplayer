@@ -26,6 +26,7 @@ class AudioPlayerService(QObject):
     resume_playback_requested = pyqtSignal()
     seek_requested = pyqtSignal(int)
     set_volume_requested = pyqtSignal(float)
+    end_playback_requested = pyqtSignal()
     shutdown_requested = pyqtSignal()
 
     # AudioPlayerWorker signals
@@ -74,6 +75,9 @@ class AudioPlayerService(QObject):
     def set_volume(self, volume: float) -> None:
         self.set_volume_requested.emit(volume)
 
+    def end_playback(self) -> None:
+        self.end_playback_requested.emit()
+
     def shutdown(self):
         """Request thread shutdown."""
         if self._worker_thread is None:
@@ -103,6 +107,7 @@ class AudioPlayerService(QObject):
         self.resume_playback_requested.connect(self._worker.resume_playback)
         self.seek_requested.connect(self._worker.seek)
         self.set_volume_requested.connect(self._worker.set_volume)
+        self.end_playback_requested.connect(self._worker.end_playback)
         self.shutdown_requested.connect(self._worker.release_resources)
 
         # Connect worker signals to service.
@@ -124,8 +129,8 @@ class AudioPlayerService(QObject):
         self._worker_thread = QThread()
         self._worker = AudioPlayerWorker()
 
-        # IMPORTANT!!!
         # Move the worker to thread first before connecting signals and starting thread
+        # (important)
         self._worker.moveToThread(self._worker_thread)
 
         # Connect service and worker signals

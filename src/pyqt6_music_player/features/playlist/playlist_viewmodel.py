@@ -3,9 +3,14 @@ from collections.abc import Sequence
 from typing import ClassVar
 
 from PyQt6.QtCore import QAbstractTableModel, Qt, pyqtSignal
+from PyQt6.QtWidgets import QMessageBox
 
 from pyqt6_music_player.core import OrderMode
-from pyqt6_music_player.features.playback import PlaybackOrderState
+from pyqt6_music_player.features.playback import (
+    OrderChangedState,
+    TracksAddedState,
+    TrackRemovedState,
+)
 from pyqt6_music_player.utils import format_duration
 
 from .playlist_service import PlaylistService
@@ -22,7 +27,7 @@ class PlaylistViewModel(QAbstractTableModel):
     )  # Column name, Actual column
 
     display_order_changed = pyqtSignal()
-    playback_order_position_changed = pyqtSignal(int)
+    active_track_position_changed = pyqtSignal(int)
 
     def __init__(self, playlist_service: PlaylistService):
         """Initialize PlaylistViewModel and connect to PlaylistService signals.
@@ -47,7 +52,7 @@ class PlaylistViewModel(QAbstractTableModel):
     # -- Public methods --
     #
     # Instance methods
-    def add_tracks(self, paths: Sequence[str]) -> None:
+    def add_selected_tracks(self, paths: Sequence[str]) -> None:
         """Add tracks to the playlist.
 
         Args:
@@ -56,38 +61,33 @@ class PlaylistViewModel(QAbstractTableModel):
         """
         self._playlist_service.add_tracks_from_paths(paths)
 
-    def set_active_row(self, index: int) -> None:
-        self._on_playback_order_position_changed(index)
+    def remove_selected_track(self) -> None:
+        if not self._can_remove_selected_track():
+            return
 
-    def set_selected_track_index(self, index: int) -> None:
-        """Map a display row to its playlist index and store it.
-
-        Args:
-            index: The selected row in playlist widget.
-
-        """
-        self._selected_row = (
-            self._display_order[index]
-            if self._display_mode == OrderMode.SHUFFLED
-            else index
+        self._playlist_service.remove_track_at_index(
+            self._display_order[self._selected_row],
         )
 
-        # Only forward to PlaybackOrder if no track is actively playing.
-        # Once playback starts, position is owned by the playback domain.
-        if self._active_row is None:
-            self._playlist_service.set_position(index)
+        self._selected_row = None
+
+    def set_active_row(self, index: int) -> None:
+        self._update_active_row(index)
+
+    def set_selected_row(self, index: int) -> None:
+        self._selected_row = index
 
     # QAbstractTableModel methods
     def rowCount(self, parent=None):
-        # Return the number of tracks in the playlist.
+        # Return the number of tracks in the playlist
         return self._playlist_service.track_count
 
     def columnCount(self, parent=None):
-        # Return the number of columns (track metadata).
+        # Return the number of columns (track metadata)
         return len(self.PLAYLIST_COLUMN)
 
     def data(self, index, role=...):
-        # Provides cell data for display and alignment roles.
+        # Provides cell data for display and alignment roles
         if not index.isValid():
             return None
 
@@ -107,7 +107,7 @@ class PlaylistViewModel(QAbstractTableModel):
         return None
 
     def headerData(self, section, orientation, role=...):
-        # Provides header label and alignment for horizontal headers.
+        # Provides header label and alignment for horizontal headers
         column = self.PLAYLIST_COLUMN[section][1]
         is_column_field = (
                 role == Qt.ItemDataRole.DisplayRole
@@ -129,28 +129,66 @@ class PlaylistViewModel(QAbstractTableModel):
     # -- Protected/Internal methods --
     def _connect_signals(self) -> None:
         # PlaylistService -> PlaylistViewModel
-        self._playlist_service.playback_order_changed.connect(
-            self._on_playback_order_changed,
+        self._playlist_service.tracks_added.connect(self._on_tracks_added)
+        self._playlist_service.track_removed.connect(self._on_track_removed)
+        self._playlist_service.shuffle_order_changed.connect(
+            self._on_shuffle_order_changed,
         )
 
-    def _on_playback_order_changed(self, result: PlaybackOrderState) -> None:
+    def _on_tracks_added(self, state: TracksAddedState) -> None:
         # Update the display order
+        self._update_display_order(state.order)
+
+        self._update_active_row(state.position)
+
+    def _on_track_removed(self, state: TrackRemovedState) -> None:
+        # Update the display order
+        self._update_display_order(state.order)
+
+        self._update_active_row(state.position)
+
+    def _on_shuffle_order_changed(self, result: OrderChangedState) -> None:
+        # Update the display order
+        self._update_display_order(result.order)
+
+        self._display_mode = result.mode
+
+        # Ensure active track == active row after the display update
+        self._update_active_row(result.position)
+
+    def _update_display_order(self, display_order: list[int]) -> None:
+        # Update the display order, and mode
         self.layoutAboutToBeChanged.emit()
 
-        self._display_order = result.order
-        self._display_mode = result.mode
+        self._display_order = display_order
 
         self.layoutChanged.emit()
 
         # Reset selection after the display update
         self.display_order_changed.emit()
 
-        # Ensure active track == active row after the display update
-        if self._active_row != result.position:
-            self._on_playback_order_position_changed(result.position)
-
-    def _on_playback_order_position_changed(self, position: int) -> None:
+    def _update_active_row(self, position: int | None) -> None:
         # Sync playlist widget active row to the active track
         self._active_row = position
 
-        self.playback_order_position_changed.emit(position)
+        # Translate None to -1 since the delegate uses -1 as its no-active-row sentinel
+        self.active_track_position_changed.emit(position if position is not None else -1)
+
+    def _can_remove_selected_track(self) -> bool:
+        if not self._display_order:
+            QMessageBox.warning(
+                None,
+                "Empty Playlist",
+                "The playlist is empty. There are no tracks to remove.",
+            )
+            return False
+
+        if self._selected_row is None:
+            QMessageBox.warning(
+                None,
+                "No Track Selected",
+                "Please select a track from the playlist to remove.",
+            )
+            return False
+
+        return True

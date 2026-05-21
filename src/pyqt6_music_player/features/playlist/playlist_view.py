@@ -86,8 +86,9 @@ class PlaylistManagerPanel(QWidget):
     def _connect_signals(self) -> None:
         # IconButton (add track) -> PlaylistManagerPanel
         self._add_track_btn.clicked.connect(self._on_add_track_button_clicked)
+        self._remove_track_btn.clicked.connect(self._on_remove_track_button_clicked)
 
-        # TODO: Implement remove track and load folder
+        # TODO: Implement load folder
 
     @pyqtSlot()
     def _on_add_track_button_clicked(self) -> None:
@@ -103,7 +104,11 @@ class PlaylistManagerPanel(QWidget):
         # Add the selected audio files to the playlist
         logger.info("Adding audio files: %s", file_paths)
 
-        self._playlist_viewmodel.add_tracks(file_paths)
+        self._playlist_viewmodel.add_selected_tracks(file_paths)
+
+    @pyqtSlot()
+    def _on_remove_track_button_clicked(self) -> None:
+        self._playlist_viewmodel.remove_selected_track()
 
 
 # --- PLAYLIST ---
@@ -148,7 +153,7 @@ class PlaylistDisplayPanel(QWidget):
         self.selection_model.currentRowChanged.connect(self._on_row_selection_changed)
 
         # PlaylistViewModel -> PlaylistDisplayPanel
-        self._playlist_viewmodel.playback_order_position_changed.connect(
+        self._playlist_viewmodel.active_track_position_changed.connect(
             self._on_playback_order_position_changed,
         )
         self._playlist_viewmodel.display_order_changed.connect(
@@ -165,12 +170,13 @@ class PlaylistDisplayPanel(QWidget):
             return
 
         # Store the index of selected row in playlist viewmodel
-        self._playlist_viewmodel.set_selected_track_index(current_index.row())
+        self._playlist_viewmodel.set_selected_row(current_index.row())
 
     @pyqtSlot()
     def _on_display_order_changed(self) -> None:
         # Reset row selection when display order changes
         self.selection_model.clearSelection()
+        self.selection_model.clearCurrentIndex()
 
     @pyqtSlot(int)
     def _on_playback_order_position_changed(self, index_position: int) -> None:

@@ -55,6 +55,11 @@ class AudioPlayerWorker(QObject):
             audio_pcm: Track audio data to load for playback.
 
         """
+        if self._status in {PlaybackState.PLAYING, PlaybackState.PAUSED}:
+            self._set_status(PlaybackState.STOPPED)
+
+            logger.info("Playback stopped.")
+
         # PyAudio streams are session-specific and hold native audio resources.
         # They cannot be reused safely across different tracks, so we close the
         # previous stream before creating a new one.
@@ -100,6 +105,15 @@ class AudioPlayerWorker(QObject):
 
         logger.info("Playback unpaused.")
 
+    @pyqtSlot()
+    def end_playback(self) -> None:
+        if self._status in {PlaybackState.PLAYING, PlaybackState.PAUSED}:
+            self._set_status(PlaybackState.IDLE)
+
+            logger.info("Playback stopped.")
+
+        self._release_stream()
+
     @pyqtSlot(int)
     def seek(self, position_in_ms: int):
         """Seek to the given position.
@@ -136,6 +150,11 @@ class AudioPlayerWorker(QObject):
     @pyqtSlot()
     def release_resources(self) -> None:
         """Release PyAudio stream and instance, freeing audio resources."""
+        if self._status in {PlaybackState.PLAYING, PlaybackState.PAUSED}:
+            self._set_status(PlaybackState.STOPPED)
+
+            logger.info("Playback stopped.")
+
         self._release_stream()
         self._release_pyaudio()
 
@@ -341,14 +360,6 @@ class AudioPlayerWorker(QObject):
             return
 
         # Release PyAudio stream safely.
-        #
-        # Stop the audio callback before releasing the stream
-        # This prevents the callback from accessing the stream during closure
-        if self._status in {PlaybackState.PLAYING, PlaybackState.PAUSED}:
-            self._set_status(PlaybackState.STOPPED)
-
-            logger.info("Playback stopped.")
-
         try:
             # Ensure that the stream is not active before closing it for safe release
             if self._stream.is_active():

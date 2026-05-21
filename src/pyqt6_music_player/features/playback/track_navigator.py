@@ -8,7 +8,14 @@ from .playback_order import PlaybackOrder
 # ==================== NAVIGATION OUTCOME TYPES ====================
 @dataclass
 class NoTrackLoaded:
-    """No playback order or position is set."""
+    """The Playlist is empty."""
+
+    pass
+
+
+@dataclass()
+class NoActiveTrack:
+    """Tracks exist but none is currently active, there's no position to move from."""
 
     pass
 
@@ -41,7 +48,12 @@ class RepeatCurrent:
 
 
 type NavigationOutcome = (
-        NoTrackLoaded | TrackIndex | StartBoundary | EndBoundary | RepeatCurrent
+        NoTrackLoaded |
+        NoActiveTrack |
+        TrackIndex |
+        StartBoundary |
+        EndBoundary |
+        RepeatCurrent
 )
 
 
@@ -115,7 +127,7 @@ class TrackNavigator:
             return RepeatCurrent()
 
         # Repeat ALL
-        else:
+        elif self._repeat_mode == RepeatMode.ALL:
             self._playback_order.move(1, wrap=True)
 
         return TrackIndex(self._playback_order.current_track_index)
@@ -132,13 +144,18 @@ class TrackNavigator:
         if self._playback_order.is_empty():
             return NoTrackLoaded()
 
+        if self._playback_order.position is None:
+            return NoActiveTrack()
+
+        # Repeat OFF and ONE
         if self._repeat_mode in {RepeatMode.OFF, RepeatMode.ONE}:
             if self._playback_order.is_at_end():
                 return EndBoundary()
 
             self._playback_order.move(1)
 
-        else:
+        # Repeat ALL
+        elif self._repeat_mode == RepeatMode.ALL:
             self._playback_order.move(1, wrap=True)
 
         return TrackIndex(self._playback_order.current_track_index)
@@ -155,13 +172,18 @@ class TrackNavigator:
         if self._playback_order.is_empty():
             return NoTrackLoaded()
 
+        if self._playback_order.position is None:
+            return NoActiveTrack()
+
+        # Repeat OFF and ONE
         if self._repeat_mode in {RepeatMode.OFF, RepeatMode.ONE}:
             if self._playback_order.is_at_start():
                 return StartBoundary()
 
             self._playback_order.move(-1)
 
-        else:
+        # Repeat ALL
+        elif self._repeat_mode == RepeatMode.ALL:
             self._playback_order.move(-1, wrap=True)
 
         return TrackIndex(self._playback_order.current_track_index)
@@ -182,6 +204,7 @@ class TrackNavigator:
             shuffle_mode: The shuffle mode to apply (ON or OFF).
 
         """
+        # TODO: Move ownership to `PlaybackOrder`
         self._shuffle_mode = shuffle_mode
 
         if self._shuffle_mode == ShuffleMode.OFF:

@@ -14,6 +14,7 @@ class PlaybackViewModel(QObject):
     playback_position_changed = pyqtSignal(int, str, str)
     initial_tracks_added = pyqtSignal()
     playback_state_changed = pyqtSignal(PlaybackState)
+    playback_ended = pyqtSignal()
 
     def __init__(self, playback_service: PlaybackService):
         """Initialize PlaybackViewModel.
@@ -110,6 +111,7 @@ class PlaybackViewModel(QObject):
         self._playback_service.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
+        self._playback_service.playback_ended.connect(self._on_playback_ended)
 
     def _on_playback_started(
             self,
@@ -140,6 +142,9 @@ class PlaybackViewModel(QObject):
             formatted_elapsed_time,
             formatted_time_remaining,
         )
+
+    def _on_playback_ended(self) -> None:
+        self.playback_ended.emit()
 
     def _on_playback_state_changed(self, playback_state: PlaybackState) -> None:
         self.playback_state_changed.emit(playback_state)

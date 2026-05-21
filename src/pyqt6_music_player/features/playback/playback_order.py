@@ -5,17 +5,20 @@ from pyqt6_music_player.core import OrderMode, Signal
 
 
 @dataclass
-class PlaybackOrderState:
-    """Current state of the playback order.
+class TracksAddedState:
+    order: list[int]
+    position: int | None
 
-    Attributes:
-        order: Track indices in their current playback sequence.
-        mode: Whether the order is sequential or shuffled.
-        position: Current position in the order, or None if playback
-                  hasn't started.
 
-    """
+@dataclass
+class TrackRemovedState:
+    order: list[int]
+    position: int | None
+    active_track_removed: bool
 
+
+@dataclass
+class OrderChangedState:
     order: list[int]
     mode: OrderMode
     position: int | None
@@ -28,7 +31,9 @@ class PlaybackOrder:
     order is rebuilt or sorted/shuffled.
     """
 
-    order_changed = Signal()  # emits PlaybackOrderState
+    track_indices_added = Signal()
+    track_index_removed = Signal()
+    order_changed = Signal()
 
     def __init__(self):
         """Initialize PlaybackOrder instance."""
@@ -80,7 +85,7 @@ class PlaybackOrder:
         """Return True if the current position is at the last track."""
         return self._position == len(self._order) - 1
 
-    def add_to_order(self, track_indices: list[int]) -> PlaybackOrderState:
+    def add_indices_to_order(self, track_indices: list[int]) -> TracksAddedState:
         """Add tracks to the playback order, preserving the current mode.
 
         In sequential mode the order is rebuilt as a sorted range.
@@ -91,24 +96,34 @@ class PlaybackOrder:
             track_indices: Ascending list of track indices to add.
 
         """
+        track_indices = track_indices.copy()
+
         if self._mode == OrderMode.SEQUENTIAL:
-            self._add_to_sequential_order(track_indices)
+            self._add_indices_to_sequential_order(track_indices)
             # Keep the position in sync after adding
             if self._position is not None:
-                self._resolve_position(track_indices)
+                self._resolve_position_after_adding_to_order(track_indices)
 
         else:
-            self._add_to_shuffled_order(track_indices)
+            self._add_indices_to_shuffled_order(track_indices)
 
-        return PlaybackOrderState(self._order, self._mode, self._position)
+        return TracksAddedState(self._order, self._position)
 
-    def remove_from_order(self) -> None:
-        if self._mode == OrderMode.SEQUENTIAL:
-            pass
-        else:
-            pass
+    def remove_index_from_order(self, index: int) -> TrackRemovedState:
+        idx_pos = self._order.index(index)
+        is_active_track = self._position == idx_pos
 
-    def move(self, step: int, wrap=False) -> None:
+        self._order = [
+            track_idx - 1 if track_idx > index else track_idx
+            for track_idx in self._order
+            if track_idx != index
+        ]
+
+        self._resolve_position_after_removing_index_from_order(idx_pos)
+
+        return TrackRemovedState(self._order, self._position, is_active_track)
+
+    def move(self, step: int, wrap: bool = False) -> None:
         """Advance the playback position by the given step.
 
         Args:
@@ -142,6 +157,7 @@ class PlaybackOrder:
 
         # Put the active track to the front then shuffle the remaining tracks
         else:
+            active_track_index = self._order[self._position]
             remaining_tracks = [
                 track_idx
                 for track_idx in self._order
@@ -149,7 +165,7 @@ class PlaybackOrder:
             ]
             random.shuffle(remaining_tracks)
 
-            self._order = [self._position, *remaining_tracks]
+            self._order = [active_track_index, *remaining_tracks]
 
             # Point to the active track pinned at the front
             self._position = 0
@@ -157,7 +173,7 @@ class PlaybackOrder:
         self._mode = OrderMode.SHUFFLED
 
         self.order_changed.emit(
-            PlaybackOrderState(
+            OrderChangedState(
                 self._order,
                 self._mode,
                 self._position,
@@ -182,24 +198,15 @@ class PlaybackOrder:
             self._position = position
 
         self.order_changed.emit(
-            PlaybackOrderState(
+            OrderChangedState(
                 self._order,
                 self._mode,
                 self._position,
             ),
         )
 
-    def set_position(self, index: int) -> None:
-        """Mark the track at ``index`` as the selected track.
-
-        Args:
-            index: The index of the selected track.
-
-        """
-        self._position = index
-
     # -- Protected/internal methods --
-    def _add_to_sequential_order(self, new_indices: list[int]) -> None:
+    def _add_indices_to_sequential_order(self, new_indices: list[int]) -> None:
         # REBUILD SEQUENTIAL ORDER (OLD + NEW)
         old_order_count = len(self._order)
         new_order_count = old_order_count + len(new_indices)
@@ -210,7 +217,7 @@ class PlaybackOrder:
             new_indices if old_order_count == 0 else list(range(new_order_count))
         )
 
-    def _add_to_shuffled_order(self, new_indices: list[int]) -> None:
+    def _add_indices_to_shuffled_order(self, new_indices: list[int]) -> None:
         # Find where each existing item lands after the new items are inserted.
         # New items occupy specific slots, so existing items must shift around them.
         #
@@ -243,13 +250,7 @@ class PlaybackOrder:
         self._order = [shifted_positions[i] for i in self._order]
         self._order.extend(new_indices)
 
-    def _remove_from_sequential_order(self):
-        pass
-
-    def _remove_from_shuffled_order(self):
-        pass
-
-    def _resolve_position(self, new_indices: list[int]) -> None:
+    def _resolve_position_after_adding_to_order(self, new_indices: list[int]) -> None:
         # Resolves the new position index after new_indices are inserted into
         # a sequential order.
         #
@@ -277,3 +278,23 @@ class PlaybackOrder:
             occupied.add(candidate)
 
         self._position = candidate
+
+    def _resolve_position_after_removing_index_from_order(self, index: int) -> None:
+        # No active track - position should remain `None`
+        if self._position is None:
+            return
+
+        # Only track removed - position should become `None`
+        if len(self._order) == 0 and index == 0:
+            # Set the position to `None` if it is an active track
+            if self._position is not None:
+                self._position = None
+            return
+
+        # Track removed before or after the active track - shift the position down by 1
+        # if the track removed was before the active track; else, same position
+        self._position = (
+            self._position - 1
+            if index < self._position
+            else self._position
+        )
