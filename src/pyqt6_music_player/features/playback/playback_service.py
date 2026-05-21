@@ -16,7 +16,7 @@ from .track_navigator import (
     NoTrackLoaded,
     RepeatCurrent,
     StartBoundary,
-    TrackNavigator,
+    TrackNavigator, NoActiveTrack,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class PlaybackService:
     playback_changed = Signal()
     playback_state_changed = Signal()
     playback_position_changed = Signal()
+    playback_ended = Signal()
 
     def __init__(
             self,
@@ -118,7 +119,7 @@ class PlaybackService:
         playback order is reached.
         """
         outcome = self._track_navigator.resolve_next_track_index()
-        if isinstance(outcome, EndBoundary | NoTrackLoaded):
+        if isinstance(outcome, EndBoundary | NoTrackLoaded | NoActiveTrack):
             return
 
         self._play_track_at_index(outcome.index)
@@ -136,7 +137,7 @@ class PlaybackService:
             return
 
         outcome = self._track_navigator.resolve_previous_track_index()
-        if isinstance(outcome, NoTrackLoaded):
+        if isinstance(outcome, NoTrackLoaded | NoActiveTrack):
             return
 
         if isinstance(outcome, StartBoundary):
@@ -194,6 +195,9 @@ class PlaybackService:
         )
         self._audio_player.playback_finished.connect(self._auto_advance)
         self._audio_player.playback_state_changed.connect(self._on_playback_state_changed)
+
+        # PlaylistService -> PlaybackService
+        self._playlist.active_track_removed.connect(self._on_active_track_removed)
 
     def _play_track_at_index(self, index: int) -> None:
         # Fetch, load, and play the track at the given playlist index
@@ -259,3 +263,15 @@ class PlaybackService:
         self._playback_state = new_state
 
         self.playback_state_changed.emit(new_state)
+
+    def _on_active_track_removed(self) -> None:
+        outcome = self._track_navigator.resolve_track_index()
+        if isinstance(outcome, NoTrackLoaded):
+            self._audio_player.end_playback()
+
+            self.playback_ended.emit()
+            return
+
+        track_index = outcome.index
+
+        self._play_track_at_index(track_index)

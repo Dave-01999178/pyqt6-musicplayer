@@ -205,6 +205,13 @@ class PlaybackProgressPanel(QWidget):
         self.setLayout(main_layout_horizontal)
         self.setDisabled(True)
 
+    def reset_ui(self) -> None:
+        self.elapsed_time.setText(DefaultTrackInfo.duration)
+        self.time_remaining.setText(DefaultTrackInfo.duration)
+
+        self.seek_bar.setRange(0, 0)
+        self.seek_bar.setValue(0)
+
     def _connect_signals(self) -> None:
         # PlaybackProgressPanel -> PlaybackViewModel
         self.seek_bar.sliderPressed.connect(self._on_slider_pressed)
@@ -219,6 +226,7 @@ class PlaybackProgressPanel(QWidget):
         self._playback_viewmodel.initial_tracks_added.connect(
             self._on_initial_track_added,
         )
+        self._playback_viewmodel.playback_ended.connect(self.reset_ui)
 
     @pyqtSlot()
     def _on_slider_pressed(self) -> None:
@@ -307,6 +315,11 @@ class NowPlayingPanel(QWidget):
         self._init_ui()
 
         self._viewmodel.playback_started.connect(self._on_playback_started)
+        self._viewmodel.playback_ended.connect(self.reset_ui)
+
+    def reset_ui(self) -> None:
+        self.title_label.setText(DEFAULT_TRACK.title)
+        self.artist_label.setText(DEFAULT_TRACK.artist)
 
     # -- Protected/internal methods --
     def _init_ui(self) -> None:

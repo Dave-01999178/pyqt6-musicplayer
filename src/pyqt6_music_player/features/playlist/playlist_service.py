@@ -18,7 +18,10 @@ class PlaylistService:
     """Manage playlist operations."""
 
     initial_tracks_added = Signal()
-    playback_order_changed = Signal()
+    active_track_removed = Signal()
+    tracks_added = Signal()
+    track_removed = Signal()
+    shuffle_order_changed = Signal()
 
     def __init__(self, playlist_model: Playlist, playback_order: PlaybackOrder):
         """Initialize PlaylistService.
@@ -74,12 +77,22 @@ class PlaylistService:
 
         # Update playback order and notify PlaylistViewModel
         if result.add_count > 0:
-            state = self._playback_order.add_to_order(result.track_indices)
+            state = self._playback_order.add_indices_to_order(result.track_indices)
 
-            self.playback_order_changed.emit(state)
+            self.tracks_added.emit(state)
 
             if self._playlist.track_count - result.add_count == 0:
                 self.initial_tracks_added.emit()
+
+    def remove_track_at_index(self, index: int) -> None:
+        self._playlist.remove_track_at_index(index)
+
+        state = self._playback_order.remove_index_from_order(index)
+
+        self.track_removed.emit(state)
+
+        if state.active_track_removed:
+            self.active_track_removed.emit()
 
     def get_track_by_index(self, index: int) -> Track:
         """Get track at the specified index.
@@ -93,19 +106,10 @@ class PlaylistService:
         """
         return self._playlist.get_track_by_index(index)
 
-    def set_position(self, index: int) -> None:
-        """Set the playback-order position to the given index.
-
-        Args:
-            index: The new index to set.
-
-        """
-        self._playback_order.set_position(index)
-
     # -- Protected/internal methods --
     def _connect_signals(self) -> None:
         # PlaylistService -> PlaylistViewModel
-        self._playback_order.order_changed.connect(self.playback_order_changed.emit)
+        self._playback_order.order_changed.connect(self.shuffle_order_changed.emit)
 
     @staticmethod
     def _normalize_paths(paths: Sequence[str]) -> list[Path]:
