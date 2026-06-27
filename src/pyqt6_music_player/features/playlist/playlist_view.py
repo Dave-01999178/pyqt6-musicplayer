@@ -3,22 +3,22 @@ import logging
 from PyQt6.QtCore import QModelIndex, Qt, pyqtSlot
 from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
 
-from pyqt6_music_player.core import (
-    ADD_ICON,
-    FILE_DIALOG_FILTER,
-    LOAD_FOLDER_ICON,
-    PLAYLIST_MANAGER_BTN_ICON_SIZE,
-    PLAYLIST_MANAGER_BTN_SIZE,
-    REMOVE_ICON,
-)
-from pyqt6_music_player.widgets import IconButton, PlaylistWidget
+from pyqt6_music_player.core import ASSETS_PATH, FILE_DIALOG_FILTER, IconButton
 
 from .playlist_viewmodel import PlaylistViewModel
+from .playlist_widgets import PlaylistWidget
+
+# ==================== CONSTANTS ====================
+ADD_ICON = ASSETS_PATH / "add_icon.svg"
+REMOVE_ICON = ASSETS_PATH / "remove_icon.svg"
+LOAD_FOLDER_ICON = ASSETS_PATH / "load_folder_icon.svg"
+PLAYLIST_MANAGER_BTN_SIZE = (120, 40)
+PLAYLIST_MANAGER_BTN_ICON_SIZE = (20, 20)
 
 logger = logging.getLogger(__name__)
 
 
-# --- Playlist manager ---
+# ==================== PANELS ====================
 class PlaylistManagerPanel(QWidget):
     """QWidget container for grouping playlist-manager widgets.
 
@@ -66,25 +66,27 @@ class PlaylistManagerPanel(QWidget):
     # -- Protected/internal methods --
     def _init_ui(self) -> None:
         # Setup instance widgets and layout
-        main_layout_horizontal = QHBoxLayout()
+        #
+        # PANEL LAYOUT: Horizontal box
+        panel_layout = QHBoxLayout()
 
-        # Left widget: Add track button
-        main_layout_horizontal.addWidget(self._add_track_btn)
+        # LEFT WIDGET: Add track button
+        panel_layout.addWidget(self._add_track_btn)
 
-        # Middle widget: Remove track button
-        main_layout_horizontal.addWidget(self._remove_track_btn)
+        # MIDDLE WIDGET: Remove track button
+        panel_layout.addWidget(self._remove_track_btn)
 
-        # Right widget: Load folder button
-        main_layout_horizontal.addWidget(self._load_folder_btn)
+        # RIGHT WIDGET: Load folder button
+        panel_layout.addWidget(self._load_folder_btn)
 
-        main_layout_horizontal.setAlignment(
+        panel_layout.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter,
         )
 
-        self.setLayout(main_layout_horizontal)
+        self.setLayout(panel_layout)
 
     def _connect_signals(self) -> None:
-        # IconButton (add track) -> PlaylistManagerPanel
+        # PlaylistManagerPanel widgets -> PlaylistViewModel
         self._add_track_btn.clicked.connect(self._on_add_track_button_clicked)
         self._remove_track_btn.clicked.connect(self._on_remove_track_button_clicked)
 
@@ -142,11 +144,14 @@ class PlaylistDisplayPanel(QWidget):
     # -- Protected/internal methods --
     def _init_ui(self) -> None:
         # Setup instance widgets and layout
-        instance_layout = QVBoxLayout()
+        #
+        # PANEL LAYOUT: Vertical box
+        panel_layout = QVBoxLayout()
 
-        instance_layout.addWidget(self._playlist_widget)
+        # WIDGET: Playlist table (QTableView)
+        panel_layout.addWidget(self._playlist_widget)
 
-        self.setLayout(instance_layout)
+        self.setLayout(panel_layout)
 
     def _connect_signals(self) -> None:
         # PlaylistDisplayPanel -> PlaylistViewModel

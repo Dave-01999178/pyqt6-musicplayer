@@ -64,13 +64,18 @@ class Playlist:
             skipped_duplicates=duplicate_count,
         )
 
-    def remove_track_at_index(self, index: int):
+    def remove_track_at_index(self, index: int) -> None:
+        """Remove track from the playlist.
+
+        Args:
+            index: Track's position in the playlist.
+
+        """
         target_path = self._tracks[index].path
 
         self._tracks = [track for track in self._tracks if track.path != target_path]
         self._track_paths.remove(target_path)
 
-        return
 
     def get_track_by_index(self, index: int) -> Track:
         """Get track at the specified index.
@@ -103,7 +108,7 @@ class Playlist:
 
         return new_tracks
 
-    def _get_track_indices(self, tracks: list[Track]) -> list[int]:
+    def _get_track_indices(self, tracks: Sequence[Track]) -> list[int]:
         path_to_index = {
             track.path: track_idx for track_idx, track in enumerate(self._tracks)
         }

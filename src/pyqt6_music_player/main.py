@@ -6,8 +6,8 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 
-from pyqt6_music_player.core import STYLESHEET, build_context
-from pyqt6_music_player.main_view import MusicPlayerView
+from pyqt6_music_player.app import MusicPlayerView, build_context
+from pyqt6_music_player.core import STYLESHEET
 from pyqt6_music_player.utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,12 @@ def main() -> None:
     if stylesheet:
         app.setStyleSheet(stylesheet)
 
-    main_view = MusicPlayerView(ctx)
+    main_view = MusicPlayerView(
+        ctx.audio_player,
+        ctx.playlist_viewmodel,
+        ctx.playback_viewmodel,
+        ctx.volume_viewmodel,
+    )
     main_view.show()
 
     logger.info("Application started.")

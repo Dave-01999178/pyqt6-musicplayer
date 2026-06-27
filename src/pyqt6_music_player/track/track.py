@@ -9,25 +9,14 @@ from mutagen import MutagenError
 from numpy.typing import NDArray
 from pydub import AudioSegment
 
-from pyqt6_music_player.core import SUPPORTED_BYTES
-from pyqt6_music_player.exceptions import UnsupportedFileError
+from pyqt6_music_player.core import UnsupportedFileError
 
 from .metadata_extractor import get_metadata
 
-
-@dataclass(frozen=True)
-class DefaultTrackInfo:
-    """Placeholder for missing track metadata."""
-
-    title = "Track Title"
-    artist = "Track Artist"
-    album = "Track Album"
-    duration = "00:00:00"
+SUPPORTED_BYTES = {1, 2, 4}
 
 
 # ==================== TRACK ====================
-#
-# --- Track file path, and metadata ---
 @dataclass(frozen=True, eq=True)
 class Track:
     """Represent an audio track with metadata.
@@ -41,11 +30,11 @@ class Track:
 
     """
 
-    path: Path | None = None
-    title: str = DefaultTrackInfo.title
-    artist: str = DefaultTrackInfo.artist
-    album: str = DefaultTrackInfo.album
-    duration: str | float = DefaultTrackInfo.duration
+    path: Path
+    title: str
+    artist: str
+    album: str
+    duration: float
 
     @classmethod
     def from_file(cls, path: Path) -> Self:
@@ -65,8 +54,8 @@ class Track:
         # -- LOAD --
         try:
             audio = mutagen.File(path)
-        except MutagenError as e:
-            raise MutagenError() from e
+        except MutagenError:
+            raise
 
         if audio is None:
             raise UnsupportedFileError()
@@ -83,7 +72,7 @@ class Track:
         )
 
 
-# --- Audio PCM ---
+# ==================== AUDIO PCM ====================
 @dataclass(frozen=True)
 class AudioPCM:
     """Represents PCM audio samples normalized to [-1.0, 1.0].
@@ -109,9 +98,8 @@ class AudioPCM:
     orig_scale: float
 
     def __post_init__(self) -> None:
-        """Set PCM samples to read-only after initializing."""
+        # Set the PCM samples to read-only after initializing
         arr = self.samples
-
         if not arr.flags.writeable:
             return
 
@@ -180,6 +168,3 @@ class AudioPCM:
             orig_dtype=orig_dtype,
             orig_scale=scale,
         )
-
-
-DEFAULT_TRACK: Track = Track()

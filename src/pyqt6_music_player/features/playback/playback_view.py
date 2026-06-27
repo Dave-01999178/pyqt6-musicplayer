@@ -2,30 +2,20 @@ from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
-from pyqt6_music_player.core import (
-    DEFAULT_SLIDER_RANGE,
-    NEXT_ICON,
-    PAUSE_ICON,
-    PLAY_ICON,
-    PREV_ICON,
-    PRIMARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
-    PRIMARY_PLAYBACK_CONTROL_BTN_SIZE,
-    SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE,
-    SECONDARY_PLAYBACK_CONTROL_BTN_SIZE,
-    PlaybackState,
-    RepeatMode,
-    ShuffleMode,
-)
-from pyqt6_music_player.track import DEFAULT_TRACK, DefaultTrackInfo
-from pyqt6_music_player.widgets import (
-    AlbumArtLabel,
-    IconButton,
-    MarqueeLabel,
-    RepeatButton,
-    ShuffleButton,
-)
+from pyqt6_music_player.core import ASSETS_PATH, IconButton, PlaybackState, RepeatMode
 
 from .playback_viewmodel import PlaybackViewModel
+from .playback_widgets import AlbumArtLabel, MarqueeLabel, RepeatButton, ShuffleButton
+
+# ==================== CONSTANTS ====================
+NEXT_ICON = ASSETS_PATH / "next_icon.svg"
+PAUSE_ICON = ASSETS_PATH / "pause_icon.svg"
+PLAY_ICON = ASSETS_PATH / "play_icon.svg"
+PREV_ICON = ASSETS_PATH / "prev_icon.svg"
+PRIMARY_PLAYBACK_CONTROL_BTN_SIZE = (40, 40)
+PRIMARY_PLAYBACK_CONTROL_BTN_ICON_SIZE = (20, 20)
+SECONDARY_PLAYBACK_CONTROL_BTN_SIZE = (30, 30)
+SECONDARY_PLAYBACK_CONTROL_BTN_ICON_SIZE = (15, 15)
 
 
 # ==================== PANELS ====================
@@ -34,7 +24,7 @@ from .playback_viewmodel import PlaybackViewModel
 class PlaybackControlsPanel(QWidget):
     """QWidget container for grouping playback control widgets.
 
-    This container also acts as the main view layer for playback control including
+    This container also acts as the main view layer for playback controls including
     next, previous, shuffle, repeat and play/pause button.
     """
 
@@ -76,16 +66,18 @@ class PlaybackControlsPanel(QWidget):
     # -- Protected/internal methods --
     def _init_ui(self) -> None:
         # Setup instance widgets and layout
+        #
+        # PANEL LAYOUT: Horizontal box
         main_layout_horizontal = QHBoxLayout()
 
-        # Left widgets: Shuffle, and previous button
+        # LEFT WIDGETS: Shuffle and previous buttons
         main_layout_horizontal.addWidget(self.shuffle_button)
         main_layout_horizontal.addWidget(self.previous_button)
 
-        # Middle widget: Play-pause button
+        # MIDDLE WIDGET: Play-pause button
         main_layout_horizontal.addWidget(self.play_pause_button)
 
-        # Right widgets: Next, and repeat buttons
+        # RIGHT WIDGETS: Next and repeat buttons
         main_layout_horizontal.addWidget(self.next_button)
         main_layout_horizontal.addWidget(self.repeat_button)
 
@@ -95,8 +87,6 @@ class PlaybackControlsPanel(QWidget):
         self.setDisabled(True)
 
     def _connect_signals(self) -> None:
-        # Establish PlaybackControlsPanel-PlaybackViewModel connection.
-        #
         # PlaybackControlsPanel -> PlaybackViewModel
         self.shuffle_button.change_shuffle_mode_request.connect(
             self._on_shuffle_mode_change_requested,
@@ -112,35 +102,30 @@ class PlaybackControlsPanel(QWidget):
         self._viewmodel.initial_tracks_added.connect(self._on_initial_track_add)
         self._viewmodel.playback_state_changed.connect(self._on_player_state_changed)
 
-    @pyqtSlot(ShuffleMode)
-    def _on_shuffle_mode_change_requested(self, shuffle_mode: ShuffleMode) -> None:
-        # Call viewmodel set shuffle mode command
-        self._viewmodel.set_shuffle_mode(shuffle_mode)
+    @pyqtSlot(bool)
+    def _on_shuffle_mode_change_requested(self, enabled: bool) -> None:
+        self._viewmodel.set_shuffle_enabled(enabled)
 
     @pyqtSlot()
     def _on_previous_button_clicked(self) -> None:
-        # Call viewmodel previous-track command
         self._viewmodel.previous_track()
 
     @pyqtSlot()
     def _on_play_pause_button_clicked(self) -> None:
-        # Call viewmodel toggle-playback command
         self._viewmodel.toggle_playback()
 
     @pyqtSlot()
     def _on_next_button_clicked(self) -> None:
-        # Call viewmodel next-track command
         self._viewmodel.next_track()
 
     @pyqtSlot(RepeatMode)
     def _on_repeat_mode_change_request(self, repeat_mode: RepeatMode) -> None:
-        # Call viewmodel set repeat mode command
         self._viewmodel.set_repeat_mode(repeat_mode)
 
     @pyqtSlot()
     def _on_initial_track_add(self) -> None:
-        # Enable the panel on initial track add to allow playback operations.
-        # Note: The panel is disabled by default on app start.
+        # Enable the panel on initial track add to allow playback operations because
+        # the panel is disabled by default on app start.
         if not self.isEnabled():
             self.setEnabled(True)
 
@@ -152,6 +137,7 @@ class PlaybackControlsPanel(QWidget):
             if player_state == PlaybackState.PLAYING
             else PLAY_ICON
         )
+
         self.play_pause_button.setIcon(QIcon(str(icon)))
 
 
@@ -167,17 +153,17 @@ class PlaybackProgressPanel(QWidget):
         """Initialize PlaybackProgressPanel.
 
         Args:
-            playback_viewmodel: The playback control viewmodel.
+            playback_viewmodel: The playback viewmodel.
 
         """
         super().__init__()
         # Viewmodel
-        self._playback_viewmodel = playback_viewmodel
+        self._viewmodel = playback_viewmodel
 
         # Widgets
-        self.elapsed_time = QLabel(DefaultTrackInfo.duration)
+        self.elapsed_time_label = QLabel()
         self.seek_bar = QSlider()
-        self.time_remaining = QLabel(DefaultTrackInfo.duration)
+        self.time_remaining_label = QLabel()
 
         # Setup
         self._init_ui()
@@ -186,31 +172,32 @@ class PlaybackProgressPanel(QWidget):
     # -- Protected/internal methods --
     def _init_ui(self) -> None:
         # Setup instance widgets and layout
+        #
+        # WIDGET INITIAL STATE
+        default_duration = self._viewmodel.active_track_formatted_duration
+
+        # PANEL LAYOUT: Horizontal box
         main_layout_horizontal = QHBoxLayout()
 
-        # Left widget: Elapsed time label
-        main_layout_horizontal.addWidget(self.elapsed_time)
+        # LEFT WIDGET: Elapsed time label
+        self.elapsed_time_label.setText(default_duration)
 
-        # Middle widget: Seek bar
+        main_layout_horizontal.addWidget(self.elapsed_time_label)
+
+        # MIDDLE WIDGET: Seek bar
         self.seek_bar.setOrientation(Qt.Orientation.Horizontal)
-        self.seek_bar.setRange(*DEFAULT_SLIDER_RANGE)
 
         main_layout_horizontal.addWidget(self.seek_bar)
 
-        # Right widget: Time remaining label
-        main_layout_horizontal.addWidget(self.time_remaining)
+        # RIGHT WIDGET: Time remaining label
+        self.time_remaining_label.setText(default_duration)
+
+        main_layout_horizontal.addWidget(self.time_remaining_label)
 
         main_layout_horizontal.setSpacing(10)
 
         self.setLayout(main_layout_horizontal)
         self.setDisabled(True)
-
-    def reset_ui(self) -> None:
-        self.elapsed_time.setText(DefaultTrackInfo.duration)
-        self.time_remaining.setText(DefaultTrackInfo.duration)
-
-        self.seek_bar.setRange(0, 0)
-        self.seek_bar.setValue(0)
 
     def _connect_signals(self) -> None:
         # PlaybackProgressPanel -> PlaybackViewModel
@@ -219,26 +206,26 @@ class PlaybackProgressPanel(QWidget):
         self.seek_bar.sliderReleased.connect(self._on_slider_released)
 
         # PlaybackViewModel -> PlaybackProgressPanel
-        self._playback_viewmodel.playback_started.connect(self._on_playback_started)
-        self._playback_viewmodel.playback_position_changed.connect(
+        self._viewmodel.playback_started.connect(self._on_playback_started)
+        self._viewmodel.playback_position_changed.connect(
             self._on_playback_position_changed,
         )
-        self._playback_viewmodel.initial_tracks_added.connect(
+        self._viewmodel.initial_tracks_added.connect(
             self._on_initial_track_added,
         )
-        self._playback_viewmodel.playback_ended.connect(self.reset_ui)
+        self._viewmodel.playback_cleared.connect(self._on_playback_cleared)
 
     @pyqtSlot()
     def _on_slider_pressed(self) -> None:
-        self._playback_viewmodel.begin_seek()
+        self._viewmodel.begin_seek()
 
     @pyqtSlot()
     def _on_slider_moved(self) -> None:
-        self._playback_viewmodel.seek(self.seek_bar.value())
+        self._viewmodel.seek(self.seek_bar.value())
 
     @pyqtSlot()
     def _on_slider_released(self) -> None:
-        self._playback_viewmodel.end_seek(self.seek_bar.value())
+        self._viewmodel.end_seek(self.seek_bar.value())
 
     @pyqtSlot(str, str, int, str)
     def _on_playback_started(
@@ -249,12 +236,9 @@ class PlaybackProgressPanel(QWidget):
             formatted_duration: str,
     ) -> None:
         # Set the progress bar range based on the total duration in milliseconds
-        # to match the full track duration for smooth movement, and precise seeking.
+        # to match the full track duration and for smooth, and precise seeking.
         self.seek_bar.setRange(0, duration_in_ms)
-
-        # Display the total duration so the user sees the full track length
-        # before playback progresses.
-        self.time_remaining.setText(formatted_duration)
+        self.time_remaining_label.setText(formatted_duration)
 
     @pyqtSlot(int, str, str)
     def _on_playback_position_changed(
@@ -263,16 +247,13 @@ class PlaybackProgressPanel(QWidget):
             formatted_elapsed_time: str,
             formatted_time_remaining: str,
     ) -> None:
-        # Keep the slider position and time displays in sync with the
-        # actual playback position so the UI accurately reflects playback progress.
+        # Keep the slider and time labels in sync with the actual playback progress
         self.seek_bar.blockSignals(True)
         self.seek_bar.setValue(elapsed_time_in_ms)
         self.seek_bar.blockSignals(False)
 
-        # Display the elapsed time and time-remaining so the user sees the
-        # playback progress.
-        self.elapsed_time.setText(formatted_elapsed_time)
-        self.time_remaining.setText(formatted_time_remaining)
+        self.elapsed_time_label.setText(formatted_elapsed_time)
+        self.time_remaining_label.setText(formatted_time_remaining)
 
     @pyqtSlot()
     def _on_initial_track_added(self) -> None:
@@ -280,6 +261,13 @@ class PlaybackProgressPanel(QWidget):
         # Note: The panel is disabled by default on app startup.
         if not self.isEnabled():
             self.setEnabled(True)
+
+    @pyqtSlot(str, str, str)
+    def _on_playback_cleared(self, _title, _artist, formatted_duration: str):
+        self.seek_bar.setValue(0)
+
+        self.elapsed_time_label.setText(formatted_duration)
+        self.time_remaining_label.setText(formatted_duration)
 
 
 class NowPlayingPanel(QWidget):
@@ -302,45 +290,52 @@ class NowPlayingPanel(QWidget):
 
         # Widgets
         self.album_art = AlbumArtLabel()
-        self.title_label = MarqueeLabel(
-            DEFAULT_TRACK.title,
-            object_name="trackTitleLabel",
-        )
-        self.artist_label = MarqueeLabel(
-            DEFAULT_TRACK.artist,
-            object_name="trackArtistLabel",
-        )
+        self.title_label = MarqueeLabel(object_name="trackTitleLabel")
+        self.artist_label = MarqueeLabel(object_name="trackArtistLabel")
 
         # Setup
         self._init_ui()
-
-        self._viewmodel.playback_started.connect(self._on_playback_started)
-        self._viewmodel.playback_ended.connect(self.reset_ui)
-
-    def reset_ui(self) -> None:
-        self.title_label.setText(DEFAULT_TRACK.title)
-        self.artist_label.setText(DEFAULT_TRACK.artist)
+        self._connect_signals()
 
     # -- Protected/internal methods --
     def _init_ui(self) -> None:
         # Setup instance widgets and layout
-        main_layout_horizontal = QHBoxLayout()
+        #
+        # WIDGET INITIAL STATE
+        default_title = self._viewmodel.active_track_title
+        default_artist = self._viewmodel.active_track_artist
 
-        # Left widget: Album art
-        main_layout_horizontal.addWidget(self.album_art)
+        # PANEL LAYOUT: Horizontal box
+        panel_layout = QHBoxLayout()
 
-        # Right section: Title label (top), and artist label (bottom)
+        # LEFT WIDGET: Album art
+        panel_layout.addWidget(self.album_art)
+
+        # RIGHT WIDGET: Vertical box container
         right_section_vertical = QVBoxLayout()
 
+        # RIGHT CONTAINER WIDGETS: Title label (top), and artist label (bottom)
+        self.title_label.setText(default_title)
         right_section_vertical.addWidget(self.title_label)
+
+        self.artist_label.setText(default_artist)
         right_section_vertical.addWidget(self.artist_label)
 
-        main_layout_horizontal.addLayout(right_section_vertical)
+        panel_layout.addLayout(right_section_vertical)
 
-        self.setLayout(main_layout_horizontal)
+        self.setLayout(panel_layout)
+
+    def _connect_signals(self) -> None:
+        self._viewmodel.playback_started.connect(self._on_playback_started)
+        self._viewmodel.playback_cleared.connect(self._on_playback_cleared)
 
     @pyqtSlot(str, str, int, str)
     def _on_playback_started(self, track_title: str, track_artist: str, *_) -> None:
-        # Display active track metadata in UI
+        # Display the active track's metadata in now-playing UI
+        self.title_label.setText(track_title)
+        self.artist_label.setText(track_artist)
+
+    @pyqtSlot(str, str, str)
+    def _on_playback_cleared(self, track_title: str, track_artist: str, *_) -> None:
         self.title_label.setText(track_title)
         self.artist_label.setText(track_artist)

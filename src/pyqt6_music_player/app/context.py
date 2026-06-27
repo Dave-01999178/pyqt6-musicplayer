@@ -2,13 +2,13 @@ from dataclasses import dataclass
 
 from pyqt6_music_player.audio import AudioPlayerService
 from pyqt6_music_player.features import (
+    PlaybackNavigator,
     PlaybackOrder,
     PlaybackService,
     PlaybackViewModel,
     Playlist,
     PlaylistService,
     PlaylistViewModel,
-    TrackNavigator,
     Volume,
     VolumeViewModel,
 )
@@ -37,17 +37,16 @@ class AppContext:
 
 def build_context() -> AppContext:
     """Construct and wire all application dependencies."""
-
-    # -- Leaves --
-    audio_player = AudioPlayerService()
+    # -- Models --
     playlist_model = Playlist()
     volume_model = Volume()
 
     # -- Shared ordering state (internal to playback subsystem) --
     playback_order = PlaybackOrder()
-    track_navigator = TrackNavigator(playback_order)
+    track_navigator = PlaybackNavigator(playback_order)
 
     # -- Services --
+    audio_player = AudioPlayerService()
     playlist_service = PlaylistService(playlist_model, playback_order)
     playback_service = PlaybackService(audio_player, playlist_service, track_navigator)
 
@@ -57,9 +56,12 @@ def build_context() -> AppContext:
     volume_viewmodel = VolumeViewModel(volume_model)
 
     # -- Wiring --
-    playback_service.playback_changed.connect(playlist_viewmodel.set_active_row)
+    playback_service.playback_started.connect(playlist_viewmodel.sync_active_row)
     playlist_service.initial_tracks_added.connect(playback_viewmodel.enable_controls)
     volume_model.volume_changed.connect(playback_service.set_volume)
+
+    # Set initial volume
+    audio_player.set_volume(volume_model.current_volume)
 
     return AppContext(
         audio_player=audio_player,
