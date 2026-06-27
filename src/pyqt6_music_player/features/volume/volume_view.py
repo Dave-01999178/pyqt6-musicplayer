@@ -1,30 +1,18 @@
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtWidgets import QHBoxLayout, QSlider, QWidget
 
-from pyqt6_music_player.core import DEFAULT_SLIDER_RANGE
-from pyqt6_music_player.widgets import VolumeButton, VolumeLabel
-
 from .volume_viewmodel import VolumeViewModel
+from .volume_widgets import VolumeButton, VolumeLabel
 
 
 class VolumeControlsPanel(QWidget):
     """A QWidget container for grouping volume widgets.
 
-    This container also acts as the main view layer for volume and is responsible for:
-     - Organizing and displaying volume widgets.
-     - Handling volume widgets input events by calling the appropriate viewmodel
-       commands (View -> ViewModel).
-     - Displaying current volume state and information.
-
+    This container also acts as the main view layer for volume controls including
+    volume button, volume label and volume slider.
     """
 
     def __init__(self, volume_viewmodel: VolumeViewModel):
-        """Initialize VolumeControlsPanel.
-
-        Args:
-            volume_viewmodel: The volume viewmodel.
-
-        """
         super().__init__()
         # Viewmodel
         self._viewmodel = volume_viewmodel
@@ -41,57 +29,64 @@ class VolumeControlsPanel(QWidget):
     # -- Protected/internal methods --
     def _init_ui(self) -> None:
         # Setup instance widgets and layout
-        main_layout_horizontal = QHBoxLayout()
+        #
+        # PANEL LAYOUT: Horizontal box
+        panel_layout = QHBoxLayout()
 
-        # Left widget: Volume button
-        main_layout_horizontal.addWidget(self._volume_button)
+        # LEFT WIDGET: Volume button
 
-        # Middle widget: Volume slider
+        panel_layout.addWidget(self._volume_button)
+
+        # MIDDLE WIDGET: Volume slider
         self._volume_slider.setOrientation(Qt.Orientation.Horizontal)
-        self._volume_slider.setRange(*DEFAULT_SLIDER_RANGE)
+        self._volume_slider.setRange(
+            self._viewmodel.min_volume,
+            self._viewmodel.max_volume,
+        )  # Fetch range from viewmodel
 
-        main_layout_horizontal.addWidget(self._volume_slider)
+        panel_layout.addWidget(self._volume_slider)
 
-        # Right widget: Volume label
-        main_layout_horizontal.addWidget(self._volume_label)
+        # RIGHT WIDGET: Volume label
+        panel_layout.addWidget(self._volume_label)
 
-        main_layout_horizontal.setSpacing(5)
+        panel_layout.setSpacing(5)
 
-        self.setLayout(main_layout_horizontal)
+        self.setLayout(panel_layout)
 
     def _connect_signals(self) -> None:
-        # Establish VolumeControlsPanel-VolumeViewModel connection.
-        #
         # VolumeControlsPanel -> VolumeViewModel
         self._volume_slider.valueChanged.connect(self._viewmodel.set_volume)
         self._volume_button.toggled.connect(self._viewmodel.set_mute)
 
         # VolumeViewModel -> VolumeControlsPanel
-        self._viewmodel.model_volume_changed.connect(self._on_model_volume_changed)
-        self._viewmodel.model_mute_state_changed.connect(
-            self._on_model_mute_state_changed,
-        )
+        self._viewmodel.volume_changed.connect(self._on_volume_changed)
 
-        # Refresh/re-emit to set UI initial state on startup.
-        self._viewmodel.refresh()
+        # Initial Startup Sync: Read initial state from ViewModel
+        self._on_volume_changed(self._viewmodel.current_volume)
 
     @pyqtSlot(int)
-    def _on_model_volume_changed(self, new_volume: int) -> None:
-        # Update volume button icon.
-        self._volume_button.blockSignals(True)
-        self._volume_button.update_icon(new_volume)
-        self._volume_button.blockSignals(False)
+    def _on_volume_changed(self, new_volume: int) -> None:
+        # Update volume button
+        self._update_button(new_volume)
 
-        # Update volume slider value.
-        self._volume_slider.blockSignals(True)
-        self._volume_slider.setValue(new_volume)
-        self._volume_slider.blockSignals(False)
+        # Update volume slider
+        self._update_slider(new_volume)
 
-        # Update volume label display.
+        # Update volume label.
         self._volume_label.setNum(new_volume)
 
-    @pyqtSlot(bool)
-    def _on_model_mute_state_changed(self, is_muted: bool) -> None:
+    def _update_button(self, new_volume: int) -> None:
+        is_muted = new_volume == 0
+
+        # Icon
+        self._volume_button.update_icon(new_volume)
+
+        # Toggle state
         self._volume_button.blockSignals(True)
         self._volume_button.setChecked(is_muted)
         self._volume_button.blockSignals(False)
+
+    def _update_slider(self, new_volume: int) -> None:
+        self._volume_slider.blockSignals(True)
+        self._volume_slider.setValue(new_volume)
+        self._volume_slider.blockSignals(False)

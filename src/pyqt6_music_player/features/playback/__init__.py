@@ -1,30 +1,26 @@
-from .playback_order import (
-    OrderChangedState,
-    PlaybackOrder,
-    TracksAddedState,
-    TrackRemovedState,
-)
-from .playback_service import PlaybackService
-from .playback_view import (
-    NowPlayingPanel,
-    PlaybackControlsPanel,
-    PlaybackProgressPanel,
-)
-from .playback_viewmodel import PlaybackViewModel
-from .track_navigator import (
+from .playback_navigator import (
     EndBoundary,
     NoTrackLoaded,
+    PlaybackNavigator,
     RepeatCurrent,
     StartBoundary,
-    TrackNavigator,
 )
+from .playback_order import PlaybackOrder
+from .playback_service import PlaybackService
+from .playback_view import NowPlayingPanel, PlaybackControlsPanel, PlaybackProgressPanel
+from .playback_viewmodel import PlaybackViewModel
+from .playback_widgets import AlbumArtLabel, MarqueeLabel, RepeatButton, ShuffleButton
 
 __all__ = [
+    # track_navigator.py
+    "EndBoundary",
+    "NoTrackLoaded",
+    "RepeatCurrent",
+    "StartBoundary",
+    "PlaybackNavigator",
+
     # playback_order.py
-    "OrderChangedState",
     "PlaybackOrder",
-    "TracksAddedState",
-    "TrackRemovedState",
 
     # playback_service.py
     "PlaybackService",
@@ -37,10 +33,9 @@ __all__ = [
     # playback_viewmodel.py
     "PlaybackViewModel",
 
-    # track_navigator.py
-    "EndBoundary",
-    "NoTrackLoaded",
-    "RepeatCurrent",
-    "StartBoundary",
-    "TrackNavigator",
+    # playback_widgets.py
+    "AlbumArtLabel",
+    "MarqueeLabel",
+    "RepeatButton",
+    "ShuffleButton",
 ]

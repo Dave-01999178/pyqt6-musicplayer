@@ -1,2 +1,0 @@
-class UnsupportedFileError(BaseException):
-    pass

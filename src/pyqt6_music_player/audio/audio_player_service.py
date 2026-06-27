@@ -10,23 +10,21 @@ from .audio_player_worker import AudioPlayerWorker
 logger = logging.getLogger(__name__)
 
 
-# noinspection PyUnresolvedReferences
 class AudioPlayerService(QObject):
     """Manages audio playback worker thread and coordinates signal communication.
 
     Acts as a thread-safe interface to the audio player worker, handling thread
     lifecycle and signal routing between the main thread and worker thread.
-
     """
 
     # AudioPlayerService signals
     play_audio_requested = pyqtSignal(AudioPCM)
-    repeat_playback_requested = pyqtSignal()
     pause_playback_requested = pyqtSignal()
     resume_playback_requested = pyqtSignal()
+    repeat_playback_requested = pyqtSignal()
     seek_requested = pyqtSignal(int)
-    set_volume_requested = pyqtSignal(float)
-    end_playback_requested = pyqtSignal()
+    set_volume_requested = pyqtSignal(int)
+    clear_playback_requested = pyqtSignal()
     shutdown_requested = pyqtSignal()
 
     # AudioPlayerWorker signals
@@ -34,10 +32,10 @@ class AudioPlayerService(QObject):
     playback_finished = pyqtSignal()
     playback_position_changed = pyqtSignal(float)
     playback_state_changed = pyqtSignal(PlaybackState)
+    playback_cleared = pyqtSignal()
     player_resources_released = pyqtSignal()
 
     def __init__(self):
-        """Initialize AudioPlayerService and its worker thread."""
         super().__init__()
         # Thread and worker
         self._worker_thread = None
@@ -47,8 +45,12 @@ class AudioPlayerService(QObject):
         self._init_thread_and_worker()
 
     # --- Public methods ---
+    @property
+    def is_thread_running(self) -> bool:
+        return self._worker_thread is not None and self._worker_thread.isRunning()
+
     def play_audio(self, audio_pcm: AudioPCM) -> None:
-        """Request track audio load to the worker.
+        """Request track audio load to the audio worker.
 
         Args:
             audio_pcm: PCM audio data to load. Must be a valid AudioPCM instance.
@@ -57,26 +59,38 @@ class AudioPlayerService(QObject):
         self.play_audio_requested.emit(audio_pcm)
 
     def repeat_playback(self):
-        """Request playback repeat to the worker."""
+        """Request playback repeat to the audio worker."""
         self.repeat_playback_requested.emit()
 
     def pause_playback(self) -> None:
-        """Request playback pause to the worker."""
+        """Request playback pause to the audio worker."""
         self.pause_playback_requested.emit()
 
     def resume_playback(self) -> None:
-        """Request playback resume to the worker."""
+        """Request playback resume to the audio worker."""
         self.resume_playback_requested.emit()
 
     def seek(self, new_position_in_ms: int) -> None:
-        """Request playback position update to the worker."""
+        """Request playback position update to the audio worker.
+
+        Args:
+            new_position_in_ms: Target position in milliseconds.
+
+        """
         self.seek_requested.emit(new_position_in_ms)
 
-    def set_volume(self, volume: float) -> None:
+    def set_volume(self, volume: int) -> None:
+        """Request volume update to the audio worker.
+
+        Args:
+            volume: Volume level in range [0, 100].
+
+        """
         self.set_volume_requested.emit(volume)
 
-    def end_playback(self) -> None:
-        self.end_playback_requested.emit()
+    def clear_playback(self) -> None:
+        """Request playback stop and audio data release to the audio worker."""
+        self.clear_playback_requested.emit()
 
     def shutdown(self):
         """Request thread shutdown."""
@@ -86,37 +100,29 @@ class AudioPlayerService(QObject):
 
         self.shutdown_requested.emit()
 
-    def is_running(self) -> bool:
-        """Check if there's a current running thread.
-
-        Returns:
-            True if there is a running thread; Else, False.
-
-        """
-        return self._worker_thread is not None and self._worker_thread.isRunning()
-
     # --- Protected/internal methods ---
     def _connect_signals(self) -> None:
         if self._worker is None:
             return
 
-        # Connect service signals to worker.
+        # AudioPlayerService -> AudioPlayerWorker
         self.play_audio_requested.connect(self._worker.play_audio)
-        self.repeat_playback_requested.connect(self._worker.repeat_playback)
         self.pause_playback_requested.connect(self._worker.pause_playback)
         self.resume_playback_requested.connect(self._worker.resume_playback)
+        self.repeat_playback_requested.connect(self._worker.restart_playback)
         self.seek_requested.connect(self._worker.seek)
         self.set_volume_requested.connect(self._worker.set_volume)
-        self.end_playback_requested.connect(self._worker.end_playback)
+        self.clear_playback_requested.connect(self._worker.clear_playback)
         self.shutdown_requested.connect(self._worker.release_resources)
 
-        # Connect worker signals to service.
-        self._worker.playback_started.connect(self._on_playback_started)
+        # AudioPlayerWorker -> AudioPlayerService
+        self._worker.playback_started.connect(self.playback_started.emit)
+        self._worker.playback_finished.connect(self.playback_finished.emit)
         self._worker.playback_position_changed.connect(
-            self._on_playback_position_changed,
+            self.playback_position_changed.emit,
         )
-        self._worker.status_changed.connect(self._on_playback_state_changed)
-        self._worker.playback_finished.connect(self._on_playback_finished)
+        self._worker.playback_state_changed.connect(self.playback_state_changed.emit)
+        self._worker.playback_cleared.connect(self.playback_cleared.emit)
         self._worker.resources_released.connect(self._worker_thread.quit)
         self._worker_thread.finished.connect(self._on_thread_finished)
 
@@ -129,8 +135,8 @@ class AudioPlayerService(QObject):
         self._worker_thread = QThread()
         self._worker = AudioPlayerWorker()
 
-        # Move the worker to thread first before connecting signals and starting thread
-        # (important)
+        # Move the worker to thread first before connecting signals and
+        # starting thread (important)
         self._worker.moveToThread(self._worker_thread)
 
         # Connect service and worker signals
@@ -138,22 +144,6 @@ class AudioPlayerService(QObject):
 
         # Start thread
         self._worker_thread.start()
-
-    @pyqtSlot()
-    def _on_playback_started(self) -> None:
-        self.playback_started.emit()
-
-    @pyqtSlot(float)
-    def _on_playback_position_changed(self, frame_pos_as_sec: float) -> None:
-        self.playback_position_changed.emit(frame_pos_as_sec)
-
-    @pyqtSlot()
-    def _on_playback_finished(self):
-        self.playback_finished.emit()
-
-    @pyqtSlot(PlaybackState)
-    def _on_playback_state_changed(self, new_state: PlaybackState) -> None:
-        self.playback_state_changed.emit(new_state)
 
     @pyqtSlot()
     def _on_thread_finished(self):

@@ -1,15 +1,13 @@
-# TODO: Add module docstring
 from collections.abc import Sequence
 from typing import ClassVar
 
 from PyQt6.QtCore import QAbstractTableModel, Qt, pyqtSignal
 from PyQt6.QtWidgets import QMessageBox
 
-from pyqt6_music_player.core import OrderMode
-from pyqt6_music_player.features.playback import (
-    OrderChangedState,
-    TracksAddedState,
-    TrackRemovedState,
+from pyqt6_music_player.core import (
+    OrderChangedEvent,
+    TrackRemovedEvent,
+    TracksAddedEvent,
 )
 from pyqt6_music_player.utils import format_duration
 
@@ -42,7 +40,6 @@ class PlaylistViewModel(QAbstractTableModel):
 
         # Playlist UI state
         self._display_order: list[int] | None = []
-        self._display_mode: OrderMode = OrderMode.SEQUENTIAL
         self._active_row: int | None = None
         self._selected_row: int | None = None
 
@@ -50,8 +47,6 @@ class PlaylistViewModel(QAbstractTableModel):
         self._connect_signals()
 
     # -- Public methods --
-    #
-    # Instance methods
     def add_selected_tracks(self, paths: Sequence[str]) -> None:
         """Add tracks to the playlist.
 
@@ -62,6 +57,7 @@ class PlaylistViewModel(QAbstractTableModel):
         self._playlist_service.add_tracks_from_paths(paths)
 
     def remove_selected_track(self) -> None:
+        """Remove the selected track from playlist."""
         if not self._can_remove_selected_track():
             return
 
@@ -71,13 +67,21 @@ class PlaylistViewModel(QAbstractTableModel):
 
         self._selected_row = None
 
-    def set_active_row(self, index: int) -> None:
-        self._update_active_row(index)
+    def sync_active_row(self) -> None:
+        """Sync the playlist UI active row to the active track."""
+        active_track_index = self._playlist_service.current_track_index
+
+        self._update_active_row(self._display_order.index(active_track_index))
 
     def set_selected_row(self, index: int) -> None:
+        """'selected_row' setter.
+
+        Args:
+            index: The index of the selected row in playlist UI.
+
+        """
         self._selected_row = index
 
-    # QAbstractTableModel methods
     def rowCount(self, parent=None):
         # Return the number of tracks in the playlist
         return self._playlist_service.track_count
@@ -135,23 +139,21 @@ class PlaylistViewModel(QAbstractTableModel):
             self._on_shuffle_order_changed,
         )
 
-    def _on_tracks_added(self, state: TracksAddedState) -> None:
+    def _on_tracks_added(self, state: TracksAddedEvent) -> None:
         # Update the display order
         self._update_display_order(state.order)
 
         self._update_active_row(state.position)
 
-    def _on_track_removed(self, state: TrackRemovedState) -> None:
+    def _on_track_removed(self, state: TrackRemovedEvent) -> None:
         # Update the display order
         self._update_display_order(state.order)
 
         self._update_active_row(state.position)
 
-    def _on_shuffle_order_changed(self, result: OrderChangedState) -> None:
+    def _on_shuffle_order_changed(self, result: OrderChangedEvent) -> None:
         # Update the display order
         self._update_display_order(result.order)
-
-        self._display_mode = result.mode
 
         # Ensure active track == active row after the display update
         self._update_active_row(result.position)
@@ -172,7 +174,7 @@ class PlaylistViewModel(QAbstractTableModel):
         self._active_row = position
 
         # Translate None to -1 since the delegate uses -1 as its no-active-row sentinel
-        self.active_track_position_changed.emit(position if position is not None else -1)
+        self.active_track_position_changed.emit(-1 if position is None else position)
 
     def _can_remove_selected_track(self) -> bool:
         if not self._display_order:

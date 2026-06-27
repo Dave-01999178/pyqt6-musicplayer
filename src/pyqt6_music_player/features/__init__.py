@@ -1,15 +1,15 @@
 from .playback import (
-    PlaybackOrder,
     EndBoundary,
     NoTrackLoaded,
-    RepeatCurrent,
-    StartBoundary,
-    TrackNavigator,
-    PlaybackService,
-    PlaybackViewModel,
     NowPlayingPanel,
     PlaybackControlsPanel,
+    PlaybackNavigator,
+    PlaybackOrder,
     PlaybackProgressPanel,
+    PlaybackService,
+    PlaybackViewModel,
+    RepeatCurrent,
+    StartBoundary,
 )
 from .playlist import (
     Playlist,
@@ -18,22 +18,21 @@ from .playlist import (
     PlaylistService,
     PlaylistViewModel,
 )
-from .volume import Volume, VolumeViewModel, VolumeControlsPanel
-
+from .volume import Volume, VolumeControlsPanel, VolumeViewModel
 
 __all__ = [
     # playback/
-    "PlaybackOrder",
     "EndBoundary",
     "NoTrackLoaded",
-    "RepeatCurrent",
-    "StartBoundary",
-    "TrackNavigator",
-    "PlaybackService",
-    "PlaybackViewModel",
     "NowPlayingPanel",
     "PlaybackControlsPanel",
+    "PlaybackNavigator",
+    "PlaybackOrder",
     "PlaybackProgressPanel",
+    "PlaybackService",
+    "PlaybackViewModel",
+    "RepeatCurrent",
+    "StartBoundary",
 
     # playlist/
     "Playlist",

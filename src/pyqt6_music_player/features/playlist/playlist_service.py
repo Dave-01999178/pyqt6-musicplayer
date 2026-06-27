@@ -4,9 +4,12 @@ from pathlib import Path
 
 from mutagen import MutagenError
 
-from pyqt6_music_player.core import SUPPORTED_AUDIO_FORMAT, Signal
-from pyqt6_music_player.exceptions import UnsupportedFileError
-from pyqt6_music_player.features.playback import PlaybackOrder
+from pyqt6_music_player.core import (
+    SUPPORTED_AUDIO_FORMAT,
+    PlaybackOrderProtocol,
+    Signal,
+    UnsupportedFileError,
+)
 from pyqt6_music_player.track import Track
 
 from .playlist import Playlist
@@ -23,12 +26,16 @@ class PlaylistService:
     track_removed = Signal()
     shuffle_order_changed = Signal()
 
-    def __init__(self, playlist_model: Playlist, playback_order: PlaybackOrder):
+    def __init__(
+            self,
+            playlist_model: Playlist,
+            playback_order: PlaybackOrderProtocol,
+    ):
         """Initialize PlaylistService.
 
         Args:
-            playlist_model: The playlist model.
-            playback_order: Service managing playback order
+            playlist_model: The playlist model
+            playback_order: The service managing playback order
 
         """
         # Model
@@ -42,6 +49,11 @@ class PlaylistService:
     def track_count(self) -> int:
         """Return the number of tracks in the playlist."""
         return self._playlist.track_count
+
+    @property
+    def current_track_index(self) -> int | None:
+        """Return the current track's index position in the playlist."""
+        return self._playback_order.current_track_index
 
     # -- Public methods --
     def add_tracks_from_paths(self, paths: Sequence[str]) -> None:
@@ -61,9 +73,8 @@ class PlaylistService:
         if not tracks:
             return  # Nothing to add
 
-        # Add tracks
+        # Add the loaded tracks to playlist
         result = self._playlist.add_tracks(tracks)
-
         total_skipped = result.skipped_duplicates + errors
         logger.info(
             "Add tracks completed: "
@@ -75,7 +86,8 @@ class PlaylistService:
             errors,
         )
 
-        # Update playback order and notify PlaylistViewModel
+        # Update the PlaybackOrder and notify the PlaylistViewModel when
+        # new tracks are added
         if result.add_count > 0:
             state = self._playback_order.add_indices_to_order(result.track_indices)
 
@@ -85,6 +97,12 @@ class PlaylistService:
                 self.initial_tracks_added.emit()
 
     def remove_track_at_index(self, index: int) -> None:
+        """Remove track from the playlist.
+
+        Args:
+            index: Track's position in the playlist.
+
+        """
         self._playlist.remove_track_at_index(index)
 
         state = self._playback_order.remove_index_from_order(index)
@@ -98,7 +116,7 @@ class PlaylistService:
         """Get track at the specified index.
 
         Args:
-            index: The track index.
+            index: Track's position in the playlist.
 
         Returns:
             The track at given index.
@@ -121,7 +139,7 @@ class PlaylistService:
             paths: Sequence of file path strings.
 
         Returns:
-            List of validated, resolved Path objects.
+            List of validated and resolved Path objects.
 
         """
         normalized_paths = []

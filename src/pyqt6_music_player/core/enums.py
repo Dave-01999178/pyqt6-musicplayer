@@ -2,6 +2,8 @@ from enum import Enum, auto
 
 
 class OrderMode(Enum):
+    """How tracks are sequenced in playback order."""
+
     SEQUENTIAL = auto()
     SHUFFLED = auto()
 
@@ -13,15 +15,11 @@ class PlaybackState(Enum):
     PLAYING = auto()
     PAUSED = auto()
     STOPPED = auto()
-    ERROR = auto()
 
 
 class RepeatMode(Enum):
+    """Controls how tracks are repeated when playback reaches the end."""
+
     OFF = auto()
     ONE = auto()
     ALL = auto()
-
-
-class ShuffleMode(Enum):
-    ON = auto()
-    OFF = auto()

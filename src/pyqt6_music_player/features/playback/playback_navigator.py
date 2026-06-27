@@ -1,50 +1,44 @@
 from dataclasses import dataclass
 
-from pyqt6_music_player.core import RepeatMode, ShuffleMode
-
-from .playback_order import PlaybackOrder
+from pyqt6_music_player.core import PlaybackOrderProtocol, RepeatMode
 
 
-# ==================== NAVIGATION OUTCOME TYPES ====================
-@dataclass
+# ==================== NAVIGATION OUTCOMES ====================
 class NoTrackLoaded:
-    """The Playlist is empty."""
+    """The playlist is empty."""
 
     pass
 
 
-@dataclass()
 class NoActiveTrack:
     """Tracks exist but none is currently active, there's no position to move from."""
 
     pass
 
 
-@dataclass
-class TrackIndex:
-    """A valid track index was resolved."""
-
-    index: int
-
-
-@dataclass
 class StartBoundary:
     """Position is at the first track in the playback order."""
 
     pass
 
 
-@dataclass
 class EndBoundary:
     """Position is at the last track in the playback order."""
 
     pass
 
-@dataclass
+
 class RepeatCurrent:
     """Repeat current track."""
 
     pass
+
+
+@dataclass(frozen=True)
+class TrackIndex:
+    """A valid track index was resolved."""
+
+    index: int
 
 
 type NavigationOutcome = (
@@ -57,12 +51,19 @@ type NavigationOutcome = (
 )
 
 
-# ==================== TRACK NAVIGATOR ====================
-class TrackNavigator:
+NO_TRACK_LOADED = NoTrackLoaded()
+NO_ACTIVE_TRACK = NoActiveTrack()
+START_BOUNDARY = StartBoundary()
+END_BOUNDARY = EndBoundary()
+REPEAT_CURRENT = RepeatCurrent()
+
+
+# ==================== PLAYBACK NAVIGATOR ====================
+class PlaybackNavigator:
     """Resolve next and previous track indices based on the current playback mode."""
 
-    def __init__(self, playback_order: PlaybackOrder):
-        """Initialize TrackNavigator.
+    def __init__(self, playback_order: PlaybackOrderProtocol):
+        """Initialize PlaybackNavigator.
 
         Args:
             playback_order: Domain model maintaining the ordered list of track
@@ -72,7 +73,6 @@ class TrackNavigator:
         """
         self._playback_order = playback_order
         self._repeat_mode: RepeatMode = RepeatMode.OFF
-        self._shuffle_mode = ShuffleMode.OFF
 
     @property
     def current_position(self) -> int | None:
@@ -94,8 +94,8 @@ class TrackNavigator:
             ``TrackIndex`` of the selected track, or first track if none is selected.
 
         """
-        if self._playback_order.is_empty():
-            return NoTrackLoaded()
+        if self._playback_order.is_empty:
+            return NO_TRACK_LOADED
 
         if self._playback_order.position is None:
             self._playback_order.move(0)
@@ -112,19 +112,19 @@ class TrackNavigator:
             ``TrackIndex`` of the next track otherwise.
 
         """
-        if self._playback_order.is_empty():
-            return NoTrackLoaded()
+        if self._playback_order.is_empty:
+            return NO_TRACK_LOADED
 
         # Repeat OFF
         if self._repeat_mode == RepeatMode.OFF:
-            if self._playback_order.is_at_end():
-                return EndBoundary()
+            if self._playback_order.is_at_end:
+                return END_BOUNDARY
 
             self._playback_order.move(1)
 
         # Repeat ONE
         elif self._repeat_mode == RepeatMode.ONE:
-            return RepeatCurrent()
+            return REPEAT_CURRENT
 
         # Repeat ALL
         elif self._repeat_mode == RepeatMode.ALL:
@@ -141,16 +141,16 @@ class TrackNavigator:
             ``TrackIndex`` of the next track otherwise.
 
         """
-        if self._playback_order.is_empty():
-            return NoTrackLoaded()
+        if self._playback_order.is_empty:
+            return NO_TRACK_LOADED
 
         if self._playback_order.position is None:
-            return NoActiveTrack()
+            return NO_ACTIVE_TRACK
 
         # Repeat OFF and ONE
         if self._repeat_mode in {RepeatMode.OFF, RepeatMode.ONE}:
-            if self._playback_order.is_at_end():
-                return EndBoundary()
+            if self._playback_order.is_at_end:
+                return END_BOUNDARY
 
             self._playback_order.move(1)
 
@@ -169,16 +169,16 @@ class TrackNavigator:
             ``TrackIndex`` of the previous track otherwise.
 
         """
-        if self._playback_order.is_empty():
-            return NoTrackLoaded()
+        if self._playback_order.is_empty:
+            return NO_TRACK_LOADED
 
         if self._playback_order.position is None:
-            return NoActiveTrack()
+            return NO_ACTIVE_TRACK
 
         # Repeat OFF and ONE
         if self._repeat_mode in {RepeatMode.OFF, RepeatMode.ONE}:
-            if self._playback_order.is_at_start():
-                return StartBoundary()
+            if self._playback_order.is_at_start:
+                return START_BOUNDARY
 
             self._playback_order.move(-1)
 
@@ -197,17 +197,11 @@ class TrackNavigator:
         """
         self._repeat_mode = repeat_mode
 
-    def set_shuffle_mode(self, shuffle_mode: ShuffleMode) -> None:
-        """Set the shuffle mode.
+    def set_shuffle_enabled(self, enabled: bool) -> None:
+        """Enable or disable shuffle mode.
 
         Args:
-            shuffle_mode: The shuffle mode to apply (ON or OFF).
+            enabled: If True, enables shuffle; if False, disables it.
 
         """
-        # TODO: Move ownership to `PlaybackOrder`
-        self._shuffle_mode = shuffle_mode
-
-        if self._shuffle_mode == ShuffleMode.OFF:
-            self._playback_order.restore_playback_order()
-        else:
-            self._playback_order.shuffle_playback_order()
+        self._playback_order.set_shuffle_enabled(enabled)

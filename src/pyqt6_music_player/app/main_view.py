@@ -9,12 +9,8 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QColor, QIcon, QPalette
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QWidget
 
-from pyqt6_music_player.core import (
-    APP_DEFAULT_SIZE,
-    APP_TITLE,
-    MUSIC_PLAYER_ICON,
-    AppContext,
-)
+from pyqt6_music_player.audio import AudioPlayerService
+from pyqt6_music_player.core import ASSETS_PATH
 from pyqt6_music_player.features import (
     NowPlayingPanel,
     PlaybackControlsPanel,
@@ -27,6 +23,10 @@ from pyqt6_music_player.features import (
     VolumeViewModel,
 )
 
+APP_TITLE = "Music Player"
+APP_ICON = ASSETS_PATH / "mp_icon.svg"
+APP_DEFAULT_SIZE = (750, 750)
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,30 +34,23 @@ logger = logging.getLogger(__name__)
 class MusicPlayerView(QWidget):
     """Main application view."""
 
-    def __init__(self, app_context: AppContext):
-        """Initialize the main view and its child views.
-
-        Args:
-            app_context: Shared application dependencies.
-
-        """
+    def __init__(
+            self,
+            audio_player: AudioPlayerService,
+            playlist_viewmodel: PlaylistViewModel,
+            playback_viewmodel: PlaybackViewModel,
+            volume_viewmodel: VolumeViewModel,
+    ):
         super().__init__()
-        # App context
-        self.ctx = app_context
+        self._audio_player = audio_player
 
         # Section views
-        self.playlist_manager_view = PlaylistManagerSection(
-            app_context.playlist_viewmodel,
-        )
-        self.playlist_view = PlaylistSection(app_context.playlist_viewmodel)
-        self.player_bar_view = PlayerbarSection(
-            app_context.playback_viewmodel,
-            app_context.volume_viewmodel,
-        )
+        self.playlist_manager_view = PlaylistManagerSection(playlist_viewmodel)
+        self.playlist_view = PlaylistSection(playlist_viewmodel)
+        self.player_bar_view = PlayerbarSection(playback_viewmodel, volume_viewmodel)
 
         # Shutdown
         self._shutdown_attempted = False
-        self._timer: QTimer = QTimer()
 
         # Setup
         self._configure_properties()
@@ -66,13 +59,14 @@ class MusicPlayerView(QWidget):
 
     # -- Public methods (Parent) --
     def closeEvent(self, event) -> None:
-        audio_player = self.ctx.audio_player
+        audio_player = self._audio_player
+        should_force_close = self._shutdown_attempted and audio_player.is_thread_running
+
         # Determine if we should immediately close:
         # - If shutdown was already attempted and the player is still running,
         #   let the window close on its own.
         # - If the player is not running, it's safe to close immediately.
-        should_force_close = self._shutdown_attempted and audio_player.is_running()
-        if should_force_close or not audio_player.is_running():
+        if should_force_close or not audio_player.is_thread_running:
             logger.info("Application closed.")
             event.accept()  # Accept the close event to let the window close on its own
             return
@@ -82,6 +76,7 @@ class MusicPlayerView(QWidget):
 
         # Start shutdown
         self._shutdown_attempted = True
+
         logger.info("Shutdown initiated.")
 
         audio_player.shutdown()
@@ -94,7 +89,7 @@ class MusicPlayerView(QWidget):
         self.resize(*APP_DEFAULT_SIZE)
         self.setMinimumSize(*APP_DEFAULT_SIZE)
         self.setWindowTitle(APP_TITLE)
-        self.setWindowIcon(QIcon(str(MUSIC_PLAYER_ICON)))
+        self.setWindowIcon(QIcon(str(APP_ICON)))
 
         palette = QPalette()
         palette.setColor(QPalette.ColorRole.Window, QColor("#0F1419"))
@@ -121,7 +116,7 @@ class MusicPlayerView(QWidget):
 
     def _connect_signals(self) -> None:
         # Close the window once the audio player finishes releasing resources
-        self.ctx.audio_player.player_resources_released.connect(self.close)
+        self._audio_player.player_resources_released.connect(self.close)
 
     def _force_close(self) -> None:
         # Force exit: if the window is still visible, attempt to close it
@@ -137,12 +132,6 @@ class PlaylistManagerSection(QFrame):
     """A customizable frame container for playlist manager panel."""
 
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
-        """Initialize PlaylistManagerSection.
-
-        Args:
-            playlist_viewmodel: The playlist viewmodel.
-
-        """
         super().__init__()
         # Panel
         self._playlist_manager_panel = PlaylistManagerPanel(playlist_viewmodel)
@@ -170,12 +159,6 @@ class PlaylistSection(QFrame):
     """A customizable frame container for playlist display panel."""
 
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
-        """Initialize PlaylistSection.
-
-        Args:
-            playlist_viewmodel: The playlist viewmodel.
-
-        """
         super().__init__()
         # Panel
         self._playlist_display = PlaylistDisplayPanel(playlist_viewmodel)
@@ -208,13 +191,6 @@ class PlayerbarSection(QFrame):
             playback_viewmodel: PlaybackViewModel,
             volume_viewmodel: VolumeViewModel,
     ):
-        """Initialize PlayerbarSection.
-
-        Args:
-            playback_viewmodel: The playback viewmodel.
-            volume_viewmodel: The volume viewmodel.
-
-        """
         super().__init__()
         # Panels
         self._playback_progress_panel = PlaybackProgressPanel(playback_viewmodel)
