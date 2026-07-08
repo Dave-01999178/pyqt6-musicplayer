@@ -11,7 +11,8 @@ from pydub import AudioSegment
 
 from pyqt6_music_player.core import UnsupportedFileError
 
-from .metadata_extractor import get_metadata
+from .art_extractor import extract_album_art
+from .metadata_extractor import extract_metadata
 
 SUPPORTED_BYTES = {1, 2, 4}
 
@@ -25,8 +26,9 @@ class Track:
         path: Filesystem path to the audio file.
         title: Track title.
         artist: Track artist.
-        album: Album name.
+        album: Track album.
         duration: Track duration in seconds (float).
+        album_art: The raw album art bytes.
 
     """
 
@@ -35,6 +37,7 @@ class Track:
     artist: str
     album: str
     duration: float
+    album_art: bytes | None
 
     @classmethod
     def from_file(cls, path: Path) -> Self:
@@ -53,15 +56,16 @@ class Track:
         """
         # -- LOAD --
         try:
-            audio = mutagen.File(path)
+            audio_file = mutagen.File(path)
         except MutagenError:
             raise
 
-        if audio is None:
+        if audio_file is None:
             raise UnsupportedFileError()
 
         # -- EXTRACT --
-        metadata = get_metadata(audio)
+        metadata = extract_metadata(audio_file)
+        album_art = extract_album_art(audio_file)
 
         return cls(
             path=path,
@@ -69,6 +73,7 @@ class Track:
             artist=metadata["artist"],
             album=metadata["album"],
             duration=metadata["duration"],
+            album_art=album_art,
         )
 
 

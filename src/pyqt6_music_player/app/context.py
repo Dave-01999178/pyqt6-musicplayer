@@ -57,7 +57,7 @@ def build_context() -> AppContext:
 
     # -- Wiring --
     playback_service.playback_started.connect(playlist_viewmodel.sync_active_row)
-    playlist_service.initial_tracks_added.connect(playback_viewmodel.enable_controls)
+    playlist_service.initial_tracks_added.connect(playback_viewmodel.enable_playback_ui)
     volume_model.volume_changed.connect(playback_service.set_volume)
 
     # Set initial volume
