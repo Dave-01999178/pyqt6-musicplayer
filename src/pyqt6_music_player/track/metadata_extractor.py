@@ -56,7 +56,7 @@ def extract_id3_tags(
         "title": _get_text("TIT2", defaults.title),
         "artist": _get_text("TPE1", defaults.artist),
         "album": _get_text("TALB", defaults.album),
-        "duration": mp3_audio.info.length,  # always present for valid files.
+        "duration": mp3_audio.info.length,
     }
 
 
@@ -91,11 +91,11 @@ def extract_generic_tags(
         "title": _get_value("title", defaults.title),
         "artist": _get_value("artist", defaults.artist),
         "album": _get_value("album", defaults.album),
-        "duration": audio.info.length,  # always present for valid files.
+        "duration": audio.info.length,
     }
 
 
-def get_metadata(audio: FileType) -> AudioInfoDict:
+def extract_metadata(audio: FileType) -> AudioInfoDict:
     """Orchestrate metadata extraction for the given audio file.
 
     Determines the correct extraction method based on the audio file type.

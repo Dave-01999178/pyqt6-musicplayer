@@ -204,11 +204,11 @@ class PlaybackService:
         # Fetch, load, and play the track at the given index in playlist
         track = self._playlist.get_track_by_index(index)
         if track is None:
-            return  # TODO: Add log?
+            return
 
         audio = AudioPCM.from_file(track.path)
         if audio is None:
-            return  # TODO: Add log?
+            return
 
         self._current_track = track
         self._track_index = index

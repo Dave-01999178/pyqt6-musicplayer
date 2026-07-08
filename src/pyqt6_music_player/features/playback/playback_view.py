@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt, pyqtSlot
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QImage
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
 from pyqt6_music_player.core import ASSETS_PATH, IconButton, PlaybackState, RepeatMode
@@ -227,11 +227,12 @@ class PlaybackProgressPanel(QWidget):
     def _on_slider_released(self) -> None:
         self._viewmodel.end_seek(self.seek_bar.value())
 
-    @pyqtSlot(str, str, int, str)
+    @pyqtSlot(str, str, QImage, int, str)
     def _on_playback_started(
             self,
             _title,
             _artist,
+            _album_art,
             duration_in_ms: int,
             formatted_duration: str,
     ) -> None:
@@ -329,13 +330,21 @@ class NowPlayingPanel(QWidget):
         self._viewmodel.playback_started.connect(self._on_playback_started)
         self._viewmodel.playback_cleared.connect(self._on_playback_cleared)
 
-    @pyqtSlot(str, str, int, str)
-    def _on_playback_started(self, track_title: str, track_artist: str, *_) -> None:
-        # Display the active track's metadata in now-playing UI
+    @pyqtSlot(str, str, QImage,  int, str)
+    def _on_playback_started(
+            self,
+            track_title: str,
+            track_artist: str,
+            track_image: QImage,
+            *_,
+    ) -> None:
+        # Display the active track's album art and metadata.
+        self.album_art.update_image_display(track_image)
         self.title_label.setText(track_title)
         self.artist_label.setText(track_artist)
 
     @pyqtSlot(str, str, str)
     def _on_playback_cleared(self, track_title: str, track_artist: str, *_) -> None:
+        self.album_art.reset_display()
         self.title_label.setText(track_title)
         self.artist_label.setText(track_artist)

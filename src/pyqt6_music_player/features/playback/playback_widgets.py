@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QIcon, QPainter, QPaintEvent, QPixmap
+from PyQt6.QtGui import QIcon, QPainter, QPaintEvent, QPixmap, QImage
 from PyQt6.QtWidgets import QLabel
 
 from pyqt6_music_player.core import ASSETS_PATH, IconButton, RepeatMode
@@ -25,31 +25,46 @@ class AlbumArtLabel(QLabel):
     """Custom QLabel for displaying track album art."""
 
     def __init__(self):
-        """Initialize AlbumArtLabel."""
         super().__init__()
         # Setup
         self._configure_properties()
         self._init_ui()
 
     # -- Public methods --
-    def set_image(self, image) -> None:
-        if image is None:
-            return
+    def update_image_display(self, image: QImage) -> None:
+        """Display the given album art image, or the placeholder if null.
 
-        self._set_image(image)
+        Args:
+            image: The album art to display. A null QImage (or one that
+                failed to load) is treated as "no art" and renders the
+                placeholder instead.
+
+        """
+        self._render_image(image)
+
+    def reset_display(self) -> None:
+        """Reset the display back to the placeholder image."""
+        self._render_image(QImage())
 
     # -- Protected/internal methods --
     def _init_ui(self) -> None:
         # Set instance default album art placeholder
-        self._set_image(ALBUM_ART_PLACEHOLDER)
+        self._render_image(QImage())
 
     def _configure_properties(self) -> None:
         # Configure instance properties
-        self.setFixedSize(75, 75)
+        self.setFixedSize(50, 50)
         self.setScaledContents(False)
 
-    def _set_image(self, image) -> None:
-        pixmap = QPixmap(str(image))
+    def _render_image(self, image: QImage) -> None:
+        # Render placeholder image when the given QImage is null
+        # (no art, or corrupted/unparseable art)
+        pixmap = (
+            QPixmap(str(ALBUM_ART_PLACEHOLDER))
+            if image.isNull()
+            else QPixmap.fromImage(image)
+        )
+
         scaled = pixmap.scaled(
             self.size(),
             Qt.AspectRatioMode.KeepAspectRatio,

@@ -1,4 +1,5 @@
 from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtGui import QImage
 
 from pyqt6_music_player.core import PlaybackState, RepeatMode
 from pyqt6_music_player.utils import format_duration
@@ -15,7 +16,7 @@ DEFAULT_DURATION = 0.0
 class PlaybackViewModel(QObject):
     """Expose playback state and commands to the view."""
 
-    playback_started = pyqtSignal(str, str, int, str)
+    playback_started = pyqtSignal(str, str, QImage, int, str)
     playback_position_changed = pyqtSignal(int, str, str)
     initial_tracks_added = pyqtSignal()
     playback_state_changed = pyqtSignal(PlaybackState)
@@ -62,11 +63,9 @@ class PlaybackViewModel(QObject):
         self._service.toggle_playback()
 
     def next_track(self) -> None:
-        """Skip to the next track."""
         self._service.next_track()
 
     def previous_track(self) -> None:
-        """Skip to the previous track."""
         self._service.previous_track()
 
     def begin_seek(self) -> None:
@@ -119,8 +118,7 @@ class PlaybackViewModel(QObject):
         """
         self._service.set_repeat_mode(repeat_mode)
 
-    def enable_controls(self) -> None:
-        """Enable playback controls."""
+    def enable_playback_ui(self) -> None:
         self.initial_tracks_added.emit()
 
     # -- Protected/internal methods --
@@ -148,15 +146,21 @@ class PlaybackViewModel(QObject):
 
         duration_in_ms = int(current_track.duration * 1000)
         formatted_duration = format_duration(current_track.duration)
+        image = (
+            QImage()  # Emit a null image instead of None.
+            if not current_track.album_art
+            else QImage.fromData(current_track.album_art)
+        )
 
         self.playback_started.emit(
             current_track.title,
             current_track.artist,
+            image,
             duration_in_ms,
             formatted_duration,
         )
 
-        # Cache title and duration for later use.
+        # Store title and duration for later use.
         # This avoids frequent `self._service.current_track` lookup inside
         # `_on_playback_position_changed` method when calculating the
         # 'time remaining' every position update
