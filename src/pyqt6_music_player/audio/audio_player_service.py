@@ -33,12 +33,12 @@ class AudioPlayerService(QObject):
     playback_position_changed = pyqtSignal(float)
     playback_state_changed = pyqtSignal(PlaybackState)
     playback_cleared = pyqtSignal()
-    player_resources_released = pyqtSignal()
+    thread_deleted = pyqtSignal()
 
     def __init__(self):
         super().__init__()
         # Thread and worker
-        self._worker_thread = None
+        self._worker_thread: QThread | None = None
         self._worker = None
 
         # Setup
@@ -46,8 +46,8 @@ class AudioPlayerService(QObject):
 
     # --- Public methods ---
     @property
-    def is_thread_running(self) -> bool:
-        return self._worker_thread is not None and self._worker_thread.isRunning()
+    def has_thread(self) -> bool:
+        return self._worker_thread is not None
 
     def play_audio(self, audio_pcm: AudioPCM) -> None:
         """Request track audio load to the audio worker.
@@ -93,17 +93,36 @@ class AudioPlayerService(QObject):
         self.clear_playback_requested.emit()
 
     def shutdown(self):
-        """Request thread shutdown."""
+        """Request a graceful shutdown of the audio worker."""
+        self.shutdown_requested.emit()
+
+    def quit_thread(self) -> None:
+        """Ask the worker thread's event loop to quit directly.
+
+        Does not wait for the worker's own graceful shutdown to complete
+        first, so the thread may exit before the worker has released its
+        resources.
+        """
         if self._worker_thread is None:
-            self.player_resources_released.emit()
             return
 
-        self.shutdown_requested.emit()
+        self._worker_thread.quit()
+
+    def terminate_thread(self):
+        """Forcibly and immediately kill the worker thread.
+
+        Last resort. The worker gets no chance to release its resources,
+        and completion is not guaranteed to be signaled afterward.
+        """
+        if self._worker_thread is None:
+            return
+
+        self._worker_thread.terminate()
 
     # --- Protected/internal methods ---
     def _connect_signals(self) -> None:
         if self._worker is None:
-            return
+            self._worker_thread.wait()
 
         # AudioPlayerService -> AudioPlayerWorker
         self.play_audio_requested.connect(self._worker.play_audio)
@@ -113,7 +132,7 @@ class AudioPlayerService(QObject):
         self.seek_requested.connect(self._worker.seek)
         self.set_volume_requested.connect(self._worker.set_volume)
         self.clear_playback_requested.connect(self._worker.clear_playback)
-        self.shutdown_requested.connect(self._worker.release_resources)
+        self.shutdown_requested.connect(self._worker.shutdown)
 
         # AudioPlayerWorker -> AudioPlayerService
         self._worker.playback_started.connect(self.playback_started.emit)
@@ -123,26 +142,18 @@ class AudioPlayerService(QObject):
         )
         self._worker.playback_state_changed.connect(self.playback_state_changed.emit)
         self._worker.playback_cleared.connect(self.playback_cleared.emit)
-        self._worker.resources_released.connect(self._worker_thread.quit)
+        self._worker.shutdown_completed.connect(self._worker_thread.quit)
         self._worker_thread.finished.connect(self._on_thread_finished)
 
     def _init_thread_and_worker(self) -> None:
-        # Initialize thread and worker then connect signals.
-        if self._worker_thread is not None:
-            return
-
         # Create thread and worker
         self._worker_thread = QThread()
         self._worker = AudioPlayerWorker()
 
-        # Move the worker to thread first before connecting signals and
-        # starting thread (important)
+        # Move the worker to thread first before connecting the signals and starting
+        # the thread (important)
         self._worker.moveToThread(self._worker_thread)
-
-        # Connect service and worker signals
         self._connect_signals()
-
-        # Start thread
         self._worker_thread.start()
 
     @pyqtSlot()
@@ -155,4 +166,4 @@ class AudioPlayerService(QObject):
 
         logger.info("Worker and thread deleted.")
 
-        self.player_resources_released.emit()
+        self.thread_deleted.emit()

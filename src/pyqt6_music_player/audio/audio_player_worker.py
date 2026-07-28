@@ -24,7 +24,7 @@ class AudioPlayerWorker(QObject):
     playback_position_changed = pyqtSignal(float)
     playback_state_changed = pyqtSignal(PlaybackState)
     playback_cleared = pyqtSignal()
-    resources_released = pyqtSignal()
+    shutdown_completed = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -120,18 +120,22 @@ class AudioPlayerWorker(QObject):
         self._volume = clamped_volume / 100
 
     @pyqtSlot()
-    def release_resources(self) -> None:
-        """Stop the stream before releasing PyAudio resources."""
-        self._stop_playback()
+    def shutdown(self) -> None:
+        try:
+            self._stop_playback()
+        except Exception:
+            logger.exception("Error stopping playback during shutdown.")
 
         self._release_stream()
         self._release_pyaudio()
 
-        self._reset_worker_state()
+        try:
+            self._reset_worker_state()
+        except Exception:
+            logger.exception("Error resetting worker state during shutdown.")
 
-        self.resources_released.emit()
-
-        logger.info("Worker resources released.")
+        self.shutdown_completed.emit()
+        logger.info("Worker shut down.")
 
     # -- Protected/internal methods --
     def _initialize_pyaudio_and_stream(self) -> None:
@@ -300,31 +304,45 @@ class AudioPlayerWorker(QObject):
         self._audio_pcm = None
         self._silence_bytes = None
         self._current_frame_position = 0
-        self._set_playback_state(PlaybackState.IDLE)
+        self._set_playback_state(PlaybackState.IDLE, notify=False)
 
     def _release_stream(self) -> None:
         if self._stream is None:
             return
 
-        # Stop the stream before closing for safe release
-        if self._stream.is_active():
-            self._stream.stop_stream()
+        try:
+            # Stop the stream before closing for safe release
+            if self._stream.is_active():
+                self._stream.stop_stream()
 
-        self._stream.close()
+            self._stream.close()
 
-        self._stream = None
+            logger.info("PyAudio.Stream successfully released.")
 
-        logger.info("PyAudio.Stream successfully released.")
+        # Broad catch is intentional.
+        # Any failure here still means "move on and null the reference"
+        except Exception:
+            logger.exception("Failed to cleanly release PyAudio stream; handle may leak.")
+
+        finally:
+            self._stream = None
 
     def _release_pyaudio(self) -> None:
         if self._pa is None:
             return
 
-        self._pa.terminate()
+        try:
+            self._pa.terminate()
 
-        self._pa = None
+            logger.info("PyAudio instance successfully released.")
 
-        logger.info("PyAudio successfully released.")
+        # Broad catch is intentional.
+        # Any failure here still means "move on and null the reference"
+        except Exception:
+            logger.exception("Failed to cleanly release PyAudio instance; handle may leak.")
+
+        finally:
+            self._pa = None
 
     def _on_frame_position_changed(self, frame_position: int) -> None:
         # Convert and emit frame position in seconds

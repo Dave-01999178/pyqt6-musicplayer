@@ -23,3 +23,13 @@ class RepeatMode(Enum):
     OFF = auto()
     ONE = auto()
     ALL = auto()
+
+
+class ShutdownStage(Enum):
+    """Tracks progress through the shutdown escalation ladder."""
+
+    NOT_STARTED = auto()
+    NORMAL_PENDING = auto()
+    FORCE_QUIT_PENDING = auto()
+    TERMINATE_PENDING = auto()
+    DONE = auto()

@@ -1,5 +1,7 @@
 from typing import Protocol
 
+from PyQt6.QtCore import pyqtBoundSignal
+
 from pyqt6_music_player.track import Track
 
 from .playback_order_events import TrackRemovedEvent, TracksAddedEvent
@@ -37,3 +39,14 @@ class PlaylistServiceProtocol(Protocol):
     active_track_removed: Signal
 
     def get_track_by_index(self, index: int) -> Track: ...
+
+
+class Shutdownable(Protocol):
+    thread_deleted: pyqtBoundSignal
+
+    @property
+    def has_thread(self) -> bool: ...
+
+    def shutdown(self) -> None: ...
+    def quit_thread(self) -> None: ...
+    def terminate_thread(self) -> None: ...
