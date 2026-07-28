@@ -106,8 +106,8 @@ class AudioPlayerWorker(QObject):
         if self._audio_pcm is None:
             return
 
-        if self._state is PlaybackState.PLAYING:
-            self._set_playback_state(PlaybackState.PAUSED, notify=False)
+        if self._state == PlaybackState.PLAYING:
+            self._set_playback_state(PlaybackState.PAUSED)
 
         frame_position = int((position_in_ms / 1000) * self._audio_pcm.sample_rate)
 
@@ -364,6 +364,19 @@ class AudioPlayerWorker(QObject):
         #
         # Ignore stale position updates from last track
         if self._track_id != track_id:
+            return
+
+        # This check is what makes seeking work correctly.
+        #
+        # `QSlider.sliderPressed` signal fires the instant the slider is grabbed,
+        # before any drag occurs, so it reports the current position unchanged.
+        #
+        # Without this guard, that unchanged value would still trigger
+        # `_on_frame_position_changed()`, re-syncing the slider to where it already
+        # is and causing a visible jump/snap-back right as the drag starts.
+        #
+        # This is inherent to PyQt6's QSlider behavior.
+        if frame_position == self._current_frame_position:
             return
 
         self._current_frame_position = frame_position
