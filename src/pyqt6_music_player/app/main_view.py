@@ -5,10 +5,10 @@ that holds all major UI components (playlist, player bar, controls).
 """
 import logging
 
-from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QColor, QIcon, QPalette
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QWidget
 
+from pyqt6_music_player.app.shutdown import ShutdownHandler
 from pyqt6_music_player.audio import AudioPlayerService
 from pyqt6_music_player.core import ASSETS_PATH
 from pyqt6_music_player.features import (
@@ -42,47 +42,40 @@ class MusicPlayerView(QWidget):
             volume_viewmodel: VolumeViewModel,
     ):
         super().__init__()
-        self._audio_player = audio_player
-
         # Section views
         self.playlist_manager_view = PlaylistManagerSection(playlist_viewmodel)
         self.playlist_view = PlaylistSection(playlist_viewmodel)
         self.player_bar_view = PlayerbarSection(playback_viewmodel, volume_viewmodel)
 
         # Shutdown
-        self._shutdown_attempted = False
+        self._shutdown_handler = ShutdownHandler(audio_player)
+        self._shutdown_initiated = False
 
         # Setup
         self._configure_properties()
         self._init_ui()
-        self._connect_signals()
 
-    # -- Public methods (Parent) --
+        # Signals
+        self._shutdown_handler.shutdown_completed.connect(self.close)
+
     def closeEvent(self, event) -> None:
-        audio_player = self._audio_player
-        should_force_close = self._shutdown_attempted and audio_player.is_thread_running
-
-        # Determine if we should immediately close:
-        # - If shutdown was already attempted and the player is still running,
-        #   let the window close on its own.
-        # - If the player is not running, it's safe to close immediately.
-        if should_force_close or not audio_player.is_thread_running:
+        if self._shutdown_handler.can_close:
             logger.info("Application closed.")
-            event.accept()  # Accept the close event to let the window close on its own
+            event.accept()
             return
 
-        # Prevent immediate close while audio-player thread cleanup is in progress
-        event.ignore()  # Ignore the close event so the app stays open
+        event.ignore()
 
-        # Start shutdown
-        self._shutdown_attempted = True
+        # Only shutdown once
+        if self._shutdown_initiated:
+            return
 
-        logger.info("Shutdown initiated.")
+        self._shutdown_initiated = True
 
-        audio_player.shutdown()
+        # Disable UI to prevent any interactions during shutdown
+        self.setDisabled(True)
 
-        # Fallback: force application exit if shutdown hangs
-        QTimer.singleShot(5000, self._force_close)
+        self._shutdown_handler.begin_shutdown()
 
     # -- Protected/internal methods --
     def _configure_properties(self):
@@ -113,16 +106,6 @@ class MusicPlayerView(QWidget):
         main_layout_vertical.setSpacing(10)
 
         self.setLayout(main_layout_vertical)
-
-    def _connect_signals(self) -> None:
-        # Close the window once the audio player finishes releasing resources
-        self._audio_player.player_resources_released.connect(self.close)
-
-    def _force_close(self) -> None:
-        # Force exit: if the window is still visible, attempt to close it
-        if self.isVisible():
-            logger.warning("Force closing application due to shutdown timeout.")
-            self.close()
 
 
 # ==================== SECTION VIEWS ====================

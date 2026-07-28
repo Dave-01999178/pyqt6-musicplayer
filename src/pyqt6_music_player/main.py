@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 def exception_hook(exc_type, value, tb):
     """Handle uncaught exceptions."""
     traceback.print_exception(exc_type, value, tb)
-    sys.exit(1)
 
 
 sys.excepthook = exception_hook
