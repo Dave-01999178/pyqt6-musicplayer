@@ -6,7 +6,11 @@ def setup_logging():
     logger.setLevel(level=logging.DEBUG)
 
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        fmt="%(asctime)s.%(msecs)03d "
+            "- [%(threadName)s] "
+            "- %(levelname)s"
+            "- %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
     )
 
     # Terminal: INFO and above only
