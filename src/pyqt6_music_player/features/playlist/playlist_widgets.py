@@ -25,7 +25,7 @@ HOVER_ROW_COLOR = "#1ABC9C"
 PLAYLIST_WIDGET_OBJ_NAME = "playlistTableView"
 
 
-# ==================== PLAYLIST ====================
+# ==================== CLASSES ====================
 class PlaylistItemDelegate(QStyledItemDelegate):
     """Custom delegate for playlist rows with hover and active row highlighting."""
 
@@ -43,24 +43,21 @@ class PlaylistItemDelegate(QStyledItemDelegate):
         self._hover_row_brush = QBrush(QColor(HOVER_ROW_COLOR))
 
     # -- Public methods --
-    #
-    # Instance methods
     def set_active_row(self, row: int) -> None:
-        """Mark the given row as the active (currently playing) row."""
+        """Mark the row as the active (currently playing) row."""
         if row == self._active_row:
             return
 
         old_row = self._active_row
         self._active_row = row
 
-        # Reset old active row by applying Qt default because current != new row
+        # Refresh both rows so the active-row effect moves off the old row and onto the
+        # new one
         self._update_row(old_row)
-
-        # Apply row effect because new row is current row
         self._update_row(row)
 
     def set_hover_row(self, row: int) -> None:
-        """Mark the given row as hovered."""
+        """Mark the row as hovered."""
         if row != self._hover_row:
             old_row = self._hover_row
             self._hover_row = row
@@ -71,50 +68,50 @@ class PlaylistItemDelegate(QStyledItemDelegate):
             # Apply row effect because new row is current row
             self._update_row(row)
 
-    # Parent methods
+    # -- Overriden methods --
     def paint(self, painter, option, index) -> None:
-        opt = QStyleOptionViewItem(option)  # Stores a copy of `option`
+        # Copy of `option`; stores draw parameters for items in the QTableWidget
+        # (our PlaylistWidget).
+        opt = QStyleOptionViewItem(option)
 
-        # Remove focus visuals (dotted outline or highlights)
-        opt.state &= ~QStyle.StateFlag.State_HasFocus
-        row_index = index.row()
+        # The row in playlist that we are currently drawing
+        current_row = index.row()
+
+        # Current row state is selected - highest priority (Qt default)
         selected = opt.state & QStyle.StateFlag.State_Selected
-
-        # Row selected - highest priority (Qt default)
         if selected:
+            # Let Qt draw selection normally; redraw active-row border if needed,
+            # since default drawing strips it.
             super().paint(painter, opt, index)
-            # Draw border if selected row == active row
-            if row_index == self._active_row:
+            if current_row == self._active_row:
                 self._draw_active_row_border(painter, option, index)
+
             return
 
-        # Hover - second priority
-        if row_index == self._hover_row:
+        # No StateFlag for hover/active, so we use equality checks for those.
+        #
+        # Current row is hovered - second priority
+        if current_row == self._hover_row:
             self._apply_highlight(opt, self._hover_row_brush)
-            # Apply text color if hover row == active row
-            if row_index == self._active_row:
-                opt.palette.setBrush(
-                    QPalette.ColorRole.Text,
-                    QBrush(QColor(self._active_row_text_brush)),
-                )
+            if current_row == self._active_row:
+                self._apply_text_color(opt, self._active_row_text_brush)
 
-        # Active row - lower priority
-        elif row_index == self._active_row:
-            opt.palette.setBrush(
-                QPalette.ColorRole.Text,
-                QBrush(QColor(self._active_row_text_brush)),
-            )
+        # Current row is active - lowest priority
+        elif current_row == self._active_row:
+            self._apply_text_color(opt, self._active_row_text_brush)
             self._apply_highlight(opt, self._active_row_brush)
 
-        # Use the default behavior for the rest
+        # Let Qt draw the rest to maintain the default behavior.
         super().paint(painter, opt, index)
 
-        # Draw border to the active row after painting
-        if row_index == self._active_row:
+        # Draw border after Qt's paint, since `super().paint()` would overwrite it
+        # if done inside the elif branch above
+        if current_row == self._active_row:
             self._draw_active_row_border(painter, option, index)
 
-    # -- Protected/Internal methods --
-    def _apply_highlight(self, opt, brush):
+    # -- Protected methods --
+    @staticmethod
+    def _apply_highlight(opt, brush) -> None:
         opt.palette.setBrush(QPalette.ColorRole.Highlight, brush)
         opt.palette.setBrush(
             QPalette.ColorRole.HighlightedText,
@@ -124,7 +121,14 @@ class PlaylistItemDelegate(QStyledItemDelegate):
         # Treat as selected to highlight the row
         opt.state |= QStyle.StateFlag.State_Selected
 
-    def _draw_active_row_border(self, painter, option, index):
+    @staticmethod
+    def _apply_text_color(opt, brush) -> None:
+        opt.palette.setBrush(
+            QPalette.ColorRole.Text,
+            QBrush(QColor(brush)),
+        )
+
+    def _draw_active_row_border(self, painter, option, index) -> None:
         view = self._parent
         if view is None:
             return
@@ -135,7 +139,7 @@ class PlaylistItemDelegate(QStyledItemDelegate):
 
         row = index.row()
 
-        # Determine row's full span
+        # Get the row's full span
         left_index = model.index(row, 0)
         right_index = model.index(row, model.columnCount() - 1)
 
@@ -173,7 +177,7 @@ class PlaylistItemDelegate(QStyledItemDelegate):
         if model is None:
             return
 
-        # Get first and last index of the row (entire row)
+        # Get the row's full span
         left = model.index(row, 0)
         right = model.index(row, model.columnCount() - 1)
 
@@ -189,14 +193,13 @@ class PlaylistWidget(QTableView):
         super().__init__()
         # Setup
         self._configure_properties()
-        self._connect_signals()
         self._configure_viewport()
         self._init_delegate()
 
+        self.entered.connect(self._on_table_mouse_hover)
+
     # -- Public methods --
-    #
-    # Instance method
-    def set_delegate_active_row(self, row_index: int) -> None:
+    def set_active_row(self, row_index: int) -> None:
         """Set the active row in the playlist.
 
         Args:
@@ -205,13 +208,13 @@ class PlaylistWidget(QTableView):
         """
         self._playlist_delegate.set_active_row(row_index)
 
-    # Parent method
+    # -- Overriden methods --
     def leaveEvent(self, e) -> None:
         # Reset the hover row index when the cursor leaves the viewport
         self._playlist_delegate.set_hover_row(-1)
         super().leaveEvent(e)
 
-    # -- Protected/internal methods --
+    # -- Protected methods --
     def _configure_properties(self) -> None:
         # Configure instance properties and behavior
         header = self.horizontalHeader()
@@ -246,23 +249,14 @@ class PlaylistWidget(QTableView):
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
     def _configure_viewport(self) -> None:
-        # Enable mouse tracking inside QTableView (data/content area e.g. cells)
+        # Enable mouse tracking inside QTableView (data/content area)
         self._viewport = self.viewport()
         if self._viewport is not None:
             self._viewport.setMouseTracking(True)
 
         self.setMouseTracking(True)
 
-    def _connect_signals(self):
-        self.entered.connect(self._on_table_mouse_hover)
-
     def _on_table_mouse_hover(self, index: QModelIndex) -> None:
-        """Update hover row when mouse enters a new row.
-
-        Args:
-            index: The model index of the hovered row.
-
-        """
         if not index.isValid():
             return
 

@@ -22,36 +22,30 @@ class PlaylistViewModel(QAbstractTableModel):
         ("artist", "Artist"),
         ("album", "Album"),
         ("duration", "Duration"),
-    )  # Column name, Actual column
+    )  # (Column name, Column text)
 
     display_order_changed = pyqtSignal()
-    active_track_position_changed = pyqtSignal(int)
+    active_row_index_changed = pyqtSignal(int)
 
     def __init__(self, playlist_service: PlaylistService):
-        """Initialize PlaylistViewModel and connect to PlaylistService signals.
-
-        Args:
-            playlist_service: Service managing playlist state and operations.
-
-        """
         super().__init__()
-        # Service
+        # SERVICE
         self._playlist_service = playlist_service
 
-        # Playlist UI state
-        self._display_order: list[int] | None = []
-        self._active_row: int | None = None
-        self._selected_row: int | None = None
+        # UI STATE
+        self._display_order: list[int] = []
+        self._active_row_index: int | None = None
+        self._selected_row_index: int | None = None
 
-        # Setup
+        # SETUP
         self._connect_signals()
 
     # -- Public methods --
-    def add_selected_tracks(self, paths: Sequence[str]) -> None:
+    def add_tracks(self, paths: Sequence[str]) -> None:
         """Add tracks to the playlist.
 
         Args:
-            paths: A sequence of file path strings.
+            paths: Sequence of file paths.
 
         """
         self._playlist_service.add_tracks_from_paths(paths)
@@ -62,25 +56,25 @@ class PlaylistViewModel(QAbstractTableModel):
             return
 
         self._playlist_service.remove_track_at_index(
-            self._display_order[self._selected_row],
+            self._display_order[self._selected_row_index],
         )
 
-        self._selected_row = None
+        self._selected_row_index = None
 
     def sync_active_row(self) -> None:
-        """Sync the playlist UI active row to the active track."""
-        active_track_index = self._playlist_service.current_track_index
+        """Sync playlist widget active row to the current track."""
+        current_track_index  = self._playlist_service.current_track_index
 
-        self._update_active_row(self._display_order.index(active_track_index))
+        self._update_active_row(self._display_order.index(current_track_index))
 
-    def set_selected_row(self, index: int) -> None:
-        """'selected_row' setter.
+    def set_selected_row_index(self, index: int) -> None:
+        """Store the currently selected row index from the playlist view.
 
         Args:
-            index: The index of the selected row in playlist UI.
+            index: Zero-based row index in the current display order.
 
         """
-        self._selected_row = index
+        self._selected_row_index = index
 
     def rowCount(self, parent=None):
         # Return the number of tracks in the playlist
@@ -130,7 +124,7 @@ class PlaylistViewModel(QAbstractTableModel):
 
         return None
 
-    # -- Protected/Internal methods --
+    # -- Protected methods --
     def _connect_signals(self) -> None:
         # PlaylistService -> PlaylistViewModel
         self._playlist_service.tracks_added.connect(self._on_tracks_added)
@@ -140,26 +134,21 @@ class PlaylistViewModel(QAbstractTableModel):
         )
 
     def _on_tracks_added(self, state: TracksAddedEvent) -> None:
-        # Update the display order
         self._update_display_order(state.order)
 
         self._update_active_row(state.position)
 
     def _on_track_removed(self, state: TrackRemovedEvent) -> None:
-        # Update the display order
         self._update_display_order(state.order)
 
         self._update_active_row(state.position)
 
     def _on_shuffle_order_changed(self, result: OrderChangedEvent) -> None:
-        # Update the display order
         self._update_display_order(result.order)
 
-        # Ensure active track == active row after the display update
         self._update_active_row(result.position)
 
     def _update_display_order(self, display_order: list[int]) -> None:
-        # Update the display order, and mode
         self.layoutAboutToBeChanged.emit()
 
         self._display_order = display_order
@@ -171,10 +160,10 @@ class PlaylistViewModel(QAbstractTableModel):
 
     def _update_active_row(self, position: int | None) -> None:
         # Sync playlist widget active row to the active track
-        self._active_row = position
+        self._active_row_index = position
 
         # Translate None to -1 since the delegate uses -1 as its no-active-row sentinel
-        self.active_track_position_changed.emit(-1 if position is None else position)
+        self.active_row_index_changed.emit(-1 if position is None else position)
 
     def _can_remove_selected_track(self) -> bool:
         if not self._display_order:
@@ -185,7 +174,7 @@ class PlaylistViewModel(QAbstractTableModel):
             )
             return False
 
-        if self._selected_row is None:
+        if self._selected_row_index is None:
             QMessageBox.warning(
                 None,
                 "No Track Selected",

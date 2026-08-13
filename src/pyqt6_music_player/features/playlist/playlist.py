@@ -10,6 +10,15 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AddTracksResult:
+    """Outcome of adding tracks in playlist.
+
+    Attributes:
+        track_indices: Indices of the tracks that were added.
+        add_count: Number of tracks successfully added.
+        skipped_duplicates: Number of tracks skipped as duplicates.
+
+    """
+
     track_indices: list[int]
     add_count: int
     skipped_duplicates: int
@@ -19,7 +28,6 @@ class Playlist:
     """Manages playlist tracks."""
 
     def __init__(self) -> None:
-        """Initialize PlaylistModel."""
         super().__init__()
         self._tracks: list[Track] = []
         self._track_paths: set[Path] = set()
@@ -48,16 +56,15 @@ class Playlist:
 
         add_count = len(new_tracks)
         duplicate_count = len(tracks) - len(new_tracks)
-        logger.info(
+        logger.debug(
             "Add tracks: %d/%d added (%d duplicates)",
             add_count,
             len(tracks),
             duplicate_count,
         )
 
-        # Get new tracks indices for playback order updates
+        # Get the indices of new tracks for playback order updates
         new_tracks_indices = self._get_track_indices(new_tracks)
-
         return AddTracksResult(
             new_tracks_indices,
             add_count=add_count,
@@ -89,7 +96,7 @@ class Playlist:
         """
         return self._tracks[index]
 
-    # -- Protected/Internal methods --
+    # -- Protected methods --
     def _filter_duplicates(self, tracks: Sequence[Track]) -> list[Track]:
         new_tracks = []
         for track in tracks:
