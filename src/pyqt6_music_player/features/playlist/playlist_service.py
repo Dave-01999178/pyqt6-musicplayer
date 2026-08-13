@@ -28,18 +28,11 @@ class PlaylistService:
 
     def __init__(
             self,
-            playlist_model: Playlist,
+            playlist: Playlist,
             playback_order: PlaybackOrderProtocol,
     ):
-        """Initialize PlaylistService.
-
-        Args:
-            playlist_model: The playlist model
-            playback_order: The service managing playback order
-
-        """
         # Model
-        self._playlist = playlist_model
+        self._playlist = playlist
         self._playback_order = playback_order
 
         self._connect_signals()
@@ -63,27 +56,35 @@ class PlaylistService:
             paths: A sequence of file path strings.
 
         """
-        # Normalize paths
-        normalized_paths = self._normalize_paths(paths)
-        if not normalized_paths:
-            return  # Nothing to load
+        # FUTURE IMPROVEMENT: Duplicate tracks are still resolved and loaded
+        # before being filtered out in playlist. If bulk/repeated adds become common
+        # (e.g. watch-folder or re-scan features), consider pre-checking paths against
+        # the playlist earlier to avoid processing duplicates.
+        validated_paths = self._validate_paths(paths)
+        if not validated_paths:
+            logger.warning(
+                "Add tracks aborted: no valid paths from %d selected.",
+                len(paths),
+            )
+            return
 
-        # Load tracks from files
-        tracks, errors = self._load_tracks_from_files(normalized_paths)
+        tracks = self._load_tracks_from_paths(validated_paths)
         if not tracks:
-            return  # Nothing to add
+            logger.warning(
+                "Add tracks aborted: no tracks loaded from %d valid path(s).",
+                len(validated_paths),
+            )
+            return
 
-        # Add the loaded tracks to playlist
         result = self._playlist.add_tracks(tracks)
-        total_skipped = result.skipped_duplicates + errors
         logger.info(
-            "Add tracks completed: "
-            "%d requested, %d added, %d skipped (%d duplicates, %d errors).",
+            "Add tracks completed: %d requested, %d added "
+            "(%d invalid paths, %d load errors, %d duplicates).",
             len(paths),
             result.add_count,
-            total_skipped,
+            len(paths) - len(validated_paths),
+            len(validated_paths) - len(tracks),
             result.skipped_duplicates,
-            errors,
         )
 
         # Update the PlaybackOrder and notify the PlaylistViewModel when
@@ -124,16 +125,16 @@ class PlaylistService:
         """
         return self._playlist.get_track_by_index(index)
 
-    # -- Protected/internal methods --
+    # -- Protected methods --
     def _connect_signals(self) -> None:
         # PlaylistService -> PlaylistViewModel
         self._playback_order.order_changed.connect(self.shuffle_order_changed.emit)
 
     @staticmethod
-    def _normalize_paths(paths: Sequence[str]) -> list[Path]:
-        """Validate and normalize file paths.
+    def _validate_paths(paths: Sequence[str]) -> list[Path]:
+        """Validate paths and resolve them to absolute paths.
 
-        Filters out non-existent files, directories, and unsupported formats.
+        Filters out non-existent paths, directories, and unsupported audio formats.
 
         Args:
             paths: Sequence of file path strings.
@@ -142,51 +143,59 @@ class PlaylistService:
             List of validated and resolved Path objects.
 
         """
-        normalized_paths = []
+        logger.debug("Path validation: starting for %d path(s).", len(paths))
+
+        validated_paths = []
+        seen_resolved_paths = set()
         for p in paths:
             path = Path(p).expanduser()
 
-            # Missing
-            if not path.exists():
-                logger.warning("Skipping non-existent file: %s.", path)
-                continue
-
-            # Not a file
-            if not path.is_file():
-                logger.warning("Skipping non-file: %s.", path)
-                continue
-
-            # Not supported
+            # Fast-fail on unsupported formats: check extension first before disk I/O.
+            # This avoids expensive filesystem operations on files we'll reject anyway.
             if path.suffix.lower() not in SUPPORTED_AUDIO_FORMAT:
-                logger.warning("Skipping non-audio or unsupported file: %s.", path)
+                logger.warning(
+                    "Skipping non-audio or unsupported audio format: %s.",
+                    path,
+                )
+                continue
+
+            if not path.is_file():
+                logger.warning("Skipping non-existent file or directory: %s.", path)
                 continue
 
             resolved_path = path.resolve()
-            normalized_paths.append(resolved_path)
 
-            logger.debug("Resolved path: %s", resolved_path)
+            if resolved_path in seen_resolved_paths:
+                logger.debug("Skipping batch duplicate: %s", resolved_path)
+                continue
 
-        skipped = len(paths) - len(normalized_paths)
-        logger.info(
+            validated_paths.append(resolved_path)
+            seen_resolved_paths.add(resolved_path)
+
+            logger.debug("Validated path: %s", resolved_path)
+
+        logger.debug(
             "Path validation: %d/%d valid (%d skipped).",
-            len(normalized_paths),
+            len(validated_paths),
             len(paths),
-            skipped,
+            len(paths) - len(validated_paths),
         )
 
-        return normalized_paths
+        return validated_paths
 
     @staticmethod
-    def _load_tracks_from_files(paths: Sequence[Path]) -> tuple[list[Track], int]:
-        """Load Track objects from validated file paths.
+    def _load_tracks_from_paths(paths: Sequence[Path]) -> list[Track]:
+        """Load Track objects from validated paths.
 
         Args:
             paths: Sequence of validated audio file paths.
 
         Returns:
-            Tuple of (loaded tracks, error count).
+            List of Track objects.
 
         """
+        logger.debug("Track loading: starting for %d path(s).", len(paths))
+
         tracks = []
         for path in paths:
             try:
@@ -198,11 +207,11 @@ class PlaylistService:
 
             # EXPECTED ERRORS
             #
-            # File has correct extension but wrong content
+            # File has audio extension but content is invalid or unsupported.
             except UnsupportedFileError:
                 logger.warning("File is not a valid audio file: %s", path)
 
-            # File is audio but has corrupt/unreadable metadata
+            # Failed to parse metadata (corruption, unsupported format, etc.).
             except MutagenError:
                 logger.warning("Failed to read metadata from: %s", path)
 
@@ -211,12 +220,11 @@ class PlaylistService:
                 logger.exception("Unexpected error while loading file: %s.", path)
                 continue
 
-        error_count = len(paths) - len(tracks)
-        logger.info(
+        logger.debug(
             "Track loading: %d/%d loaded (%d errors).",
             len(tracks),
             len(paths),
-            error_count,
+            len(paths) - len(tracks),
         )
 
-        return tracks, error_count
+        return tracks

@@ -18,7 +18,7 @@ PLAYLIST_MANAGER_BTN_ICON_SIZE = (20, 20)
 logger = logging.getLogger(__name__)
 
 
-# ==================== PANELS ====================
+# ==================== CLASSES ====================
 class PlaylistManagerPanel(QWidget):
     """QWidget container for grouping playlist-manager widgets.
 
@@ -26,17 +26,11 @@ class PlaylistManagerPanel(QWidget):
     """
 
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
-        """Initialize PlaylistManagerPanel and connect signals.
-
-        Args:
-            playlist_viewmodel: The playlist viewmodel.
-
-        """
         super().__init__()
-        # Viewmodel
+        # VIEWMODEL
         self._playlist_viewmodel = playlist_viewmodel
 
-        # Widgets
+        # WIDGETS
         self._add_track_btn = IconButton(
             ADD_ICON,
             icon_size=PLAYLIST_MANAGER_BTN_ICON_SIZE,
@@ -59,61 +53,51 @@ class PlaylistManagerPanel(QWidget):
             object_name="loadFolderBtn",
         )
 
-        # Setup
+        # SETUP
         self._init_ui()
         self._connect_signals()
 
-    # -- Protected/internal methods --
+    # -- Protected methods --
     def _init_ui(self) -> None:
-        # Setup instance widgets and layout
-        #
-        # PANEL LAYOUT: Horizontal box
-        panel_layout = QHBoxLayout()
+        layout = QHBoxLayout()
 
-        # LEFT WIDGET: Add track button
-        panel_layout.addWidget(self._add_track_btn)
+        layout.addWidget(self._add_track_btn)
+        layout.addWidget(self._remove_track_btn)
+        layout.addWidget(self._load_folder_btn)
 
-        # MIDDLE WIDGET: Remove track button
-        panel_layout.addWidget(self._remove_track_btn)
-
-        # RIGHT WIDGET: Load folder button
-        panel_layout.addWidget(self._load_folder_btn)
-
-        panel_layout.setAlignment(
+        layout.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter,
         )
 
-        self.setLayout(panel_layout)
+        self.setLayout(layout)
 
     def _connect_signals(self) -> None:
         # PlaylistManagerPanel widgets -> PlaylistViewModel
         self._add_track_btn.clicked.connect(self._on_add_track_button_clicked)
         self._remove_track_btn.clicked.connect(self._on_remove_track_button_clicked)
 
-        # TODO: Implement load folder
-
     @pyqtSlot()
     def _on_add_track_button_clicked(self) -> None:
+        # Open QFileDialog
         file_paths, _ = QFileDialog.getOpenFileNames(
             parent=self,
             filter=FILE_DIALOG_FILTER,
         )
 
-        # Do nothing if the file dialog is cancelled.
+        # QFileDialog was closed or cancelled.
         if not file_paths:
             return
 
-        # Add the selected audio files to the playlist
-        logger.info("Adding audio files: %s", file_paths)
+        logger.info("Adding %d selected file(s) to the playlist", len(file_paths))
+        logger.debug("Selected file(s): %s", file_paths)
 
-        self._playlist_viewmodel.add_selected_tracks(file_paths)
+        self._playlist_viewmodel.add_tracks(file_paths)
 
     @pyqtSlot()
     def _on_remove_track_button_clicked(self) -> None:
         self._playlist_viewmodel.remove_selected_track()
 
 
-# --- PLAYLIST ---
 class PlaylistDisplayPanel(QWidget):
     """QWidget container for the main playlist widget.
 
@@ -121,34 +105,25 @@ class PlaylistDisplayPanel(QWidget):
     """
 
     def __init__(self, playlist_viewmodel: PlaylistViewModel):
-        """Initialize PlaylistDisplayPanel and connect signals.
-
-        Args:
-            playlist_viewmodel: The playlist viewmodel.
-
-        """
         super().__init__()
-        # Viewmodel
+        # VIEWMODEL
         self._playlist_viewmodel = playlist_viewmodel
 
-        # Widgets
+        # WIDGETS
         self._playlist_widget = PlaylistWidget()
         self._playlist_widget.setModel(self._playlist_viewmodel)
 
+        # Retrieve the selection model to track and manage selected row
         self.selection_model = self._playlist_widget.selectionModel()
 
-        # Setup
+        # SETUP
         self._init_ui()
         self._connect_signals()
 
-    # -- Protected/internal methods --
+    # -- Protected methods --
     def _init_ui(self) -> None:
-        # Setup instance widgets and layout
-        #
-        # PANEL LAYOUT: Vertical box
         panel_layout = QVBoxLayout()
 
-        # WIDGET: Playlist table (QTableView)
         panel_layout.addWidget(self._playlist_widget)
 
         self.setLayout(panel_layout)
@@ -158,8 +133,8 @@ class PlaylistDisplayPanel(QWidget):
         self.selection_model.currentRowChanged.connect(self._on_row_selection_changed)
 
         # PlaylistViewModel -> PlaylistDisplayPanel
-        self._playlist_viewmodel.active_track_position_changed.connect(
-            self._on_playback_order_position_changed,
+        self._playlist_viewmodel.active_row_index_changed.connect(
+            self._on_active_row_index_changed,
         )
         self._playlist_viewmodel.display_order_changed.connect(
             self._on_display_order_changed,
@@ -174,8 +149,7 @@ class PlaylistDisplayPanel(QWidget):
         if not current_index.isValid():
             return
 
-        # Store the index of selected row in playlist viewmodel
-        self._playlist_viewmodel.set_selected_row(current_index.row())
+        self._playlist_viewmodel.set_selected_row_index(current_index.row())
 
     @pyqtSlot()
     def _on_display_order_changed(self) -> None:
@@ -184,6 +158,5 @@ class PlaylistDisplayPanel(QWidget):
         self.selection_model.clearCurrentIndex()
 
     @pyqtSlot(int)
-    def _on_playback_order_position_changed(self, index_position: int) -> None:
-        # Sync the active row to the position of active track
-        self._playlist_widget.set_delegate_active_row(index_position)
+    def _on_active_row_index_changed(self, index_position: int) -> None:
+        self._playlist_widget.set_active_row(index_position)
